@@ -1,0 +1,20 @@
+[package]
+name = "marduk"
+version = "0.1.0"
+authors = ["Matthew Maurer <matthew.r.maurer@gmail.com>"]
+
+[dependencies]
+num-traits = "0.1"
+mktemp = "0.3"
+
+[dependencies.mycroft]
+git = "ssh://git@github.com/maurer/mycroft.git"
+
+[dependencies.mycroft-support]
+git = "ssh://git@github.com/maurer/mycroft.git"
+
+[dependencies.mycroft-macros]
+git = "ssh://git@github.com/maurer/mycroft.git"
+
+[dependencies.bap]
+git = "https://github.com/maurer/bap-rust"
