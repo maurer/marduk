@@ -3,6 +3,9 @@ use bap::high::bitvector::BitVector;
 use bap::basic::{Image, Bap, BasicDisasm};
 use bap::high::bil::{Statement, Expression}; //, Variable, Type, BinOp};
 
+const MAX_CHOP: usize = 3;
+const MAX_STACK: usize = 5;
+
 macro_rules! vec_error {
     ($e:expr) => {{
         let name: ::bap::basic::Result<_> = $e;
@@ -20,6 +23,73 @@ macro_rules! get_image {
             Err(_) => return Vec::new()
         }
     }}
+}
+
+pub fn flow_use(i: &FuncsFlowUseIn) -> Vec<FuncsFlowUseOut> {
+    if tprop::sema_uses(i.bil, i.a_var) {
+        vec![FuncsFlowUseOut {}]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn call_stack_chop(i: &FuncsCallStackChopIn) -> Vec<FuncsCallStackChopOut> {
+    let chop2 = if !i.chop.contains(i.addr1) {
+        if i.chop.len() >= MAX_CHOP {
+            return Vec::new();
+        }
+        let mut chop2 = i.chop.clone();
+        chop2.push(i.addr1.clone());
+        chop2
+    } else {
+        i.chop.clone()
+    };
+    if i.stack.len() >= MAX_STACK {
+        return Vec::new();
+    }
+    let mut stack2 = i.stack.clone();
+    stack2.push((i.file1.clone(), i.ret_addr.clone()));
+    vec![
+        FuncsCallStackChopOut {
+            chop2: chop2,
+            stack2: stack2,
+        },
+    ]
+}
+
+pub fn ret_stack(i: &FuncsRetStackIn) -> Vec<FuncsRetStackOut> {
+    let mut stack = i.stack.clone();
+    match stack.pop() {
+        Some((name, addr)) => {
+            vec![
+                FuncsRetStackOut {
+                    stack2: stack,
+                    file2: name,
+                    addr2: addr,
+                },
+            ]
+        }
+        None => Vec::new(),
+    }
+}
+
+pub fn ret_no_stack(i: &FuncsRetNoStackIn) -> Vec<FuncsRetNoStackOut> {
+    let mut chop2 = i.chop.clone();
+    if !i.chop.contains(i.dst_addr) {
+        if i.chop.len() >= MAX_CHOP {
+            return Vec::new();
+        }
+        chop2.push(i.dst_addr.clone())
+    }
+    vec![FuncsRetNoStackOut { chop2: chop2 }]
+}
+
+pub fn clobbers(i: &FuncsClobbersIn) -> Vec<FuncsClobbersOut> {
+    if i.a_var.is_clobbered() {
+        Vec::new()
+    } else {
+        vec![FuncsClobbersOut {}]
+    }
 }
 
 pub fn dump_segments(i: &FuncsDumpSegmentsIn) -> Vec<FuncsDumpSegmentsOut> {
@@ -240,4 +310,202 @@ pub fn is_free_name(i: &FuncsIsFreeNameIn) -> Vec<FuncsIsFreeNameOut> {
     } else {
         Vec::new()
     }
+}
+
+mod tprop {
+    use bap::high::bitvector::BitVector;
+    use bap::high::bil::{Statement, Expression, Variable, Type, BinOp};
+    use avar::AVar;
+    fn hv_match(bad: &Vec<AVar>, e: &Expression) -> bool {
+        match *e {
+            Expression::Var(ref v) => {
+                bad.contains(&AVar {
+                    inner: v.clone(),
+                    offset: None,
+                })
+            }
+            Expression::Load { index: ref idx, .. } => {
+                match promote_idx(idx) {
+                    Some(hv) => bad.contains(&hv),
+                    None => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn is_reg(r: &Variable) -> bool {
+        match r.type_ {
+            Type::Immediate(_) => true,
+            _ => false,
+        }
+    }
+
+    fn is_mem(m: &Variable) -> bool {
+        match m.type_ {
+            Type::Memory { .. } => true,
+            _ => false,
+        }
+    }
+
+    fn add_hvar(mut bad: Vec<AVar>, hv: AVar) -> Vec<AVar> {
+        if !bad.contains(&hv) {
+            bad.push(hv)
+        }
+        bad
+    }
+
+    fn rem_hvar(bad: Vec<AVar>, hv: AVar) -> Vec<AVar> {
+        bad.into_iter().filter(|x| *x != hv).collect()
+    }
+
+    fn promote_idx(idx: &Expression) -> Option<AVar> {
+        match *idx {
+            Expression::Var(ref v) => {
+                Some(AVar {
+                    inner: v.clone(),
+                    offset: Some(BitVector::from_u64(0, 64)),
+                })
+            }
+            Expression::BinOp {
+                op: BinOp::Add,
+                ref lhs,
+                ref rhs,
+            } => {
+                match **lhs {
+                    Expression::Var(ref v) => {
+                        match **rhs {
+                            Expression::Const(ref bv) => {
+                                Some(AVar {
+                                    inner: v.clone(),
+                                    offset: Some(bv.clone()),
+                                })
+                            }
+                            _ => None,
+                        }
+                    }
+                    Expression::Const(ref bv) => {
+                        match **rhs {
+                            Expression::Var(ref v) => {
+                                Some(AVar {
+                                    inner: v.clone(),
+                                    offset: Some(bv.clone()),
+                                })
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn check_idx(idx: &Expression, var: &AVar) -> bool {
+        match *idx {
+            Expression::Var(ref v) => (var.offset == None) && (var.inner == *v),
+            Expression::BinOp {
+                op: _,
+                ref lhs,
+                ref rhs,
+            } => check_idx(lhs, var) || check_idx(rhs, var),
+            _ => false,
+        }
+    }
+
+    fn deref_var_expr(expr: &Expression, var: &AVar) -> bool {
+        match *expr {
+            Expression::Load { index: ref idx, .. } => check_idx(idx, var),
+
+            Expression::Store { index: ref idx, .. } => check_idx(idx, var),
+
+            Expression::Cast { ref arg, .. } => deref_var_expr(arg, var),
+            _ => false,
+        }
+    }
+
+
+    fn deref_var_step(stmt: &Statement, var: &AVar) -> bool {
+        use bap::high::bil::Statement::Move;
+        match *stmt {
+            Move { rhs: ref e, .. } => deref_var_expr(e, var),
+            _ => false,
+        }
+    }
+
+    pub fn sema_uses(sema: &[Statement], var: &AVar) -> bool {
+        let mut vars = vec![var.clone()];
+        for stmt in sema {
+            for var in &vars {
+                if deref_var_step(stmt, var) {
+                    return true;
+                }
+            }
+            vars = proc_stmt(vars, stmt);
+        }
+        return false;
+    }
+
+    pub fn proc_stmt(bad: Vec<AVar>, stmt: &Statement) -> Vec<AVar> {
+        use bap::high::bil::Statement::*;
+        match *stmt {
+            // Register update
+            Move {
+                lhs: ref reg,
+                rhs: ref e,
+            } if is_reg(&reg) => {
+                if hv_match(&bad, &e) {
+                    add_hvar(
+                        bad,
+                        AVar {
+                            inner: reg.clone(),
+                            offset: None,
+                        },
+                    )
+                } else {
+                    rem_hvar(
+                        bad,
+                        AVar {
+                            inner: reg.clone(),
+                            offset: None,
+                        },
+                    )
+                }
+            }
+            // Memory Write
+            Move {
+                lhs: ref mem,
+                rhs: ref e,
+            } if is_mem(&mem) => {
+                match *e {
+                    Expression::Store {
+                        memory: _,
+                        index: ref idx,
+                        value: ref val,
+                        endian: _,
+                        size: _,
+                    } => {
+                        if hv_match(&bad, &val) {
+                            promote_idx(idx).map_or(bad.clone(), |hidx| add_hvar(bad, hidx))
+                        } else {
+                            promote_idx(idx).map_or(bad.clone(), |hidx| rem_hvar(bad, hidx))
+                        }
+                    }
+                    _ => bad,
+                }
+            }
+            _ => bad,
+        }
+    }
+}
+
+pub fn xfer_taint(i: &FuncsXferTaintIn) -> Vec<FuncsXferTaintOut> {
+    i.bil
+        .iter()
+        .fold(vec![i.a_var.clone()], tprop::proc_stmt)
+        .into_iter()
+        .filter(|v| v.not_temp())
+        .map(|a_var2| FuncsXferTaintOut { a_var2: a_var2 })
+        .collect()
 }

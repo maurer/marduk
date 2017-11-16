@@ -12,6 +12,12 @@ impl AVar {
     pub fn not_temp(&self) -> bool {
         !self.inner.tmp
     }
+    pub fn is_clobbered(&self) -> bool {
+        match self.inner.name.as_str() {
+            "RAX" | "RCX" | "RDX" | "R8" | "R9" | "R10" | "R11" => true,
+            _ => false,
+        }
+    }
 }
 
 pub fn get_arg0() -> AVar {

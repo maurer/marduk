@@ -1,5 +1,4 @@
 CFLAGS=-fomit-frame-pointer
-hardeningDisable=all
 
 all: func link external.so simple safe path_sensitive remalloc loop
 

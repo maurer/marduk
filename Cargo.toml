@@ -8,13 +8,13 @@ num-traits = "0.1"
 mktemp = "0.3"
 
 [dependencies.mycroft]
-git = "ssh://git@github.com/maurer/mycroft.git"
+path = "../mycroft"
 
 [dependencies.mycroft-support]
-git = "ssh://git@github.com/maurer/mycroft.git"
+path = "../mycroft/mycroft-support"
 
 [dependencies.mycroft-macros]
-git = "ssh://git@github.com/maurer/mycroft.git"
+path = "../mycroft/mycroft-macros"
 
 [dependencies.bap]
 git = "https://github.com/maurer/bap-rust"
