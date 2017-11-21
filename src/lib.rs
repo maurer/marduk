@@ -86,49 +86,8 @@ impl ::std::fmt::Display for datalog::GetAliasResult {
         )
     }
 }
-fn print_state(db: &datalog::Database) {
-    println!("disas: {}", db.query_get_disasms().len());
-    println!("alias: {}", db.query_get_alias().len());
-    println!("---\npad");
-    for pad in db.query_link_pad() {
-        println!("{}", pad)
-    }
-    println!("---\nsucc");
-    for s in db.query_succ() {
-        println!("{}", s)
-    }
-    println!("---\nfunc");
-    for f in db.query_func() {
-        println!("{}", f)
-    }
 
-    println!("---\ncall_site");
-    for cs in db.query_call_site() {
-        println!("{}", cs)
-    }
-    println!("---\nalias");
-    for alias in db.query_get_alias() {
-        println!("{}", alias)
-    }
-    //println!("---\nmalloc_call");
-    //for fc in db.query_get_malloc_call() {
-    //    println!("{}", fc)
-    //}
-    //println!("---\nfree_call");
-    //for fc in db.query_get_free_call() {
-    //    println!("{}", fc)
-    //}
-    //println!("---\nlive");
-    //for fc in db.query_live() {
-    //    println!("{}", fc)
-    //}
-    println!("---\nuaf");
-    for flow in db.query_get_uaf_flow() {
-        println!("{}", flow)
-    }
-}
-
-pub fn uaf(files: &[&str]) {
+pub fn uaf(files: &[String]) -> datalog::Database {
     use datalog::Database;
     let mut db = Database::new();
     for file_name in files {
@@ -142,35 +101,5 @@ pub fn uaf(files: &[&str]) {
             contents: in_raw,
         });
     }
-    let mut step = 0;
-    while db.run_rules_once() {
-        println!("step: {}", step);
-        step = step + 1;
-
-        print_state(&db);
-    }
-    //db.run_rules();
-    print_state(&db);
+    db
 }
-
-#[test]
-fn artificial() {
-    uaf(
-        &[
-            "samples/artificial/func",
-            "samples/artificial/external.so",
-            "samples/artificial/link",
-            "samples/artificial/loop",
-            "samples/artificial/path_sensitive",
-            "samples/artificial/remalloc",
-            "samples/artificial/safe",
-            "samples/artificial/simple",
-        ],
-    )
-}
-/*
-#[test]
-fn simple() {
-    uaf(&["samples/artificial/func"])
-}
-*/
