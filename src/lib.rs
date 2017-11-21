@@ -9,6 +9,8 @@ pub mod avar;
 pub mod datalog;
 pub mod funcs;
 
+pub use datalog::Database;
+
 impl ::std::fmt::Display for datalog::FuncResult {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::result::Result<(), ::std::fmt::Error> {
         write!(f, "{}@{}:{}", self.file, self.entry, self.addr)
@@ -87,8 +89,7 @@ impl ::std::fmt::Display for datalog::GetAliasResult {
     }
 }
 
-pub fn uaf(files: &[String]) -> datalog::Database {
-    use datalog::Database;
+pub fn uaf(files: &[String]) -> Database {
     let mut db = Database::new();
     for file_name in files {
         use std::io::Read;

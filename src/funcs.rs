@@ -11,7 +11,7 @@ macro_rules! vec_error {
         let name: ::bap::basic::Result<_> = $e;
         match name {
             Ok(i) => vec![i],
-            Err(e) => return Vec::new()
+            Err(_) => return Vec::new()
         }
     }}
 }
