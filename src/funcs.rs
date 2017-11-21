@@ -1,7 +1,7 @@
 use datalog::*;
 use bap::high::bitvector::BitVector;
-use bap::basic::{Image, Bap, BasicDisasm};
-use bap::high::bil::{Statement, Expression}; //, Variable, Type, BinOp};
+use bap::basic::{Bap, BasicDisasm, Image};
+use bap::high::bil::{Expression, Statement};
 
 const MAX_CHOP: usize = 3;
 const MAX_STACK: usize = 5;
@@ -11,7 +11,7 @@ macro_rules! vec_error {
         let name: ::bap::basic::Result<_> = $e;
         match name {
             Ok(i) => vec![i],
-            Err(e) => panic!("{}", e) //return Vec::new()
+            Err(e) => return Vec::new()
         }
     }}
 }
@@ -60,15 +60,13 @@ pub fn call_stack_chop(i: &FuncsCallStackChopIn) -> Vec<FuncsCallStackChopOut> {
 pub fn ret_stack(i: &FuncsRetStackIn) -> Vec<FuncsRetStackOut> {
     let mut stack = i.stack.clone();
     match stack.pop() {
-        Some((name, addr)) => {
-            vec![
-                FuncsRetStackOut {
-                    stack2: stack,
-                    file2: name,
-                    addr2: addr,
-                },
-            ]
-        }
+        Some((name, addr)) => vec![
+            FuncsRetStackOut {
+                stack2: stack,
+                file2: name,
+                addr2: addr,
+            },
+        ],
         None => Vec::new(),
     }
 }
@@ -291,7 +289,11 @@ pub fn is_computed_jump(i: &FuncsIsComputedJumpIn) -> Vec<FuncsIsComputedJumpOut
 pub fn get_arch(i: &FuncsGetArchIn) -> Vec<FuncsGetArchOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
-        vec![FuncsGetArchOut { arch: image.arch().unwrap() }]
+        vec![
+            FuncsGetArchOut {
+                arch: image.arch().unwrap(),
+            },
+        ]
     })
 }
 
@@ -314,22 +316,18 @@ pub fn is_free_name(i: &FuncsIsFreeNameIn) -> Vec<FuncsIsFreeNameOut> {
 
 mod tprop {
     use bap::high::bitvector::BitVector;
-    use bap::high::bil::{Statement, Expression, Variable, Type, BinOp};
+    use bap::high::bil::{BinOp, Expression, Statement, Type, Variable};
     use avar::AVar;
     fn hv_match(bad: &Vec<AVar>, e: &Expression) -> bool {
         match *e {
-            Expression::Var(ref v) => {
-                bad.contains(&AVar {
-                    inner: v.clone(),
-                    offset: None,
-                })
-            }
-            Expression::Load { index: ref idx, .. } => {
-                match promote_idx(idx) {
-                    Some(hv) => bad.contains(&hv),
-                    None => false,
-                }
-            }
+            Expression::Var(ref v) => bad.contains(&AVar {
+                inner: v.clone(),
+                offset: None,
+            }),
+            Expression::Load { index: ref idx, .. } => match promote_idx(idx) {
+                Some(hv) => bad.contains(&hv),
+                None => false,
+            },
             _ => false,
         }
     }
@@ -361,43 +359,31 @@ mod tprop {
 
     fn promote_idx(idx: &Expression) -> Option<AVar> {
         match *idx {
-            Expression::Var(ref v) => {
-                Some(AVar {
-                    inner: v.clone(),
-                    offset: Some(BitVector::from_u64(0, 64)),
-                })
-            }
+            Expression::Var(ref v) => Some(AVar {
+                inner: v.clone(),
+                offset: Some(BitVector::from_u64(0, 64)),
+            }),
             Expression::BinOp {
                 op: BinOp::Add,
                 ref lhs,
                 ref rhs,
-            } => {
-                match **lhs {
-                    Expression::Var(ref v) => {
-                        match **rhs {
-                            Expression::Const(ref bv) => {
-                                Some(AVar {
-                                    inner: v.clone(),
-                                    offset: Some(bv.clone()),
-                                })
-                            }
-                            _ => None,
-                        }
-                    }
-                    Expression::Const(ref bv) => {
-                        match **rhs {
-                            Expression::Var(ref v) => {
-                                Some(AVar {
-                                    inner: v.clone(),
-                                    offset: Some(bv.clone()),
-                                })
-                            }
-                            _ => None,
-                        }
-                    }
+            } => match **lhs {
+                Expression::Var(ref v) => match **rhs {
+                    Expression::Const(ref bv) => Some(AVar {
+                        inner: v.clone(),
+                        offset: Some(bv.clone()),
+                    }),
                     _ => None,
-                }
-            }
+                },
+                Expression::Const(ref bv) => match **rhs {
+                    Expression::Var(ref v) => Some(AVar {
+                        inner: v.clone(),
+                        offset: Some(bv.clone()),
+                    }),
+                    _ => None,
+                },
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -454,7 +440,8 @@ mod tprop {
             Move {
                 lhs: ref reg,
                 rhs: ref e,
-            } if is_reg(&reg) => {
+            } if is_reg(&reg) =>
+            {
                 if hv_match(&bad, &e) {
                     add_hvar(
                         bad,
@@ -477,7 +464,8 @@ mod tprop {
             Move {
                 lhs: ref mem,
                 rhs: ref e,
-            } if is_mem(&mem) => {
+            } if is_mem(&mem) =>
+            {
                 match *e {
                     Expression::Store {
                         memory: _,
@@ -485,13 +473,11 @@ mod tprop {
                         value: ref val,
                         endian: _,
                         size: _,
-                    } => {
-                        if hv_match(&bad, &val) {
-                            promote_idx(idx).map_or(bad.clone(), |hidx| add_hvar(bad, hidx))
-                        } else {
-                            promote_idx(idx).map_or(bad.clone(), |hidx| rem_hvar(bad, hidx))
-                        }
-                    }
+                    } => if hv_match(&bad, &val) {
+                        promote_idx(idx).map_or(bad.clone(), |hidx| add_hvar(bad, hidx))
+                    } else {
+                        promote_idx(idx).map_or(bad.clone(), |hidx| rem_hvar(bad, hidx))
+                    },
                     _ => bad,
                 }
             }

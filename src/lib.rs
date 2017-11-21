@@ -1,8 +1,8 @@
 #![feature(proc_macro)]
-extern crate mycroft_support;
-extern crate mycroft_macros;
 extern crate bap;
 extern crate mktemp;
+extern crate mycroft_macros;
+extern crate mycroft_support;
 extern crate num_traits;
 
 pub mod avar;
