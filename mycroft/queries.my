@@ -1,0 +1,28 @@
+?func: func {
+    file_name: file,
+    entry: entry,
+    addr: addr
+}
+?call_site: call_site {
+    call_file: call_file,
+    call_addr: call_addr,
+    dst_file,
+    dst_addr
+}
+?succ: succ {
+    file_name: name,
+    src_addr: src,
+    dst_addr: dst,
+    is_call: call 
+}
+?get_disasms: lift {file_name: file_name, address: addr, disassembly: disasm}
+?get_free_call: free_call {file_name: name, addr: addr}
+?get_malloc_call: malloc_call {file_name: name, addr: addr}
+?get_alias: path_alias {initial_file: file0, initial_addr: addr0, current_file: file, current_addr: addr, aliased_var: a_var, freed: freed, alias_set: alias_set}
+?get_uaf_flow: use_after_free_flow {
+    initial_file: name,
+    initial_addr: addr,
+    alias_set: alias
+}
+?link_pad: link_pad {file_name: name, pad_name: pad_name, pad_addr: addr}
+?live: live {file_name: name, addr: addr}

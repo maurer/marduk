@@ -1,0 +1,118 @@
+file {name: String, contents: Bytes}
+segment {
+    file_name: String,
+    contents: Bytes,
+    start: BitVector,
+    end: BitVector,
+    read: bool,
+    write: bool,
+    execute: bool
+}
+sym {
+    file_name: String,
+    name: String,
+    start: BitVector,
+    end: BitVector
+}
+lift {
+    file_name: String,
+    address: BitVector,
+    bil: Sema,
+    fallthrough: BitVector,
+    disassembly: String,
+    is_call: bool,
+    is_ret: bool
+}
+succ_over {
+    file_name: String,
+    src: BitVector,
+    dst: BitVector
+}
+live {
+    file_name: String,
+    addr: BitVector
+}
+prog_arch {
+    file_name: String,
+    arch: Arch
+}
+link_pad {
+    file_name: String,
+    pad_name: String,
+    pad_addr: BitVector
+}
+path_alias {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: u64,
+    stack: Stack,
+    chop: Chop,
+    current_file: String,
+    current_addr: BitVector,
+    aliased_var: AVar,
+    freed: bool
+}
+succ {
+    file_name: String,
+    src_addr: BitVector,
+    dst_addr: BitVector,
+    is_call: bool
+}
+free_call {
+    file_name: String,
+    addr: BitVector
+}
+malloc_call {
+    file_name: String,
+    addr: BitVector
+}
+path_alias_trace {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: u64,
+    stack: Stack,
+    current_file: String,
+    current_addr: BitVector,
+    aliased_var: AVar,
+    freed: bool,
+    steps: usize
+}
+use_after_free_flow {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: u64,
+    stack: Stack,
+    final_file: String,
+    final_addr: BitVector,
+    loc: AVar
+}
+use_after_free {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: u64,
+    stack: Stack,
+    final_file: String,
+    final_addr: BitVector,
+    loc: AVar,
+    steps: usize
+}
+func {
+    file_name: String,
+    entry: BitVector,
+    addr: BitVector
+}
+call_site {
+    call_file: String,
+    call_addr: BitVector,
+    dst_file: String,
+    dst_addr: BitVector
+}
+skip_func {
+    file_name: String,
+    addr: BitVector
+}
+func_uses {
+    file_name: String,
+    addr: BitVector,
+    var: AVar
+}
