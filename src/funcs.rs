@@ -90,25 +90,25 @@ pub fn clobbers(i: &FuncsClobbersIn) -> Vec<FuncsClobbersOut> {
     }
 }
 
+// RUSTC-R see whether the let binding can be removed and this warning avoided
+#[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_segments(i: &FuncsDumpSegmentsIn) -> Vec<FuncsDumpSegmentsOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let segs = image.segments();
-        let out = {
-            segs.iter()
-                .map(|seg| {
-                    let mem = seg.memory();
-                    FuncsDumpSegmentsOut {
-                        seg_contents: mem.data().to_vec(),
-                        start: BitVector::from_basic(&mem.min_addr()),
-                        end: BitVector::from_basic(&mem.max_addr()),
-                        read: seg.is_readable(),
-                        write: seg.is_writable(),
-                        execute: seg.is_executable(),
-                    }
-                })
-                .collect()
-        };
+        let out = segs.iter()
+            .map(|seg| {
+                let mem = seg.memory();
+                FuncsDumpSegmentsOut {
+                    seg_contents: mem.data().to_vec(),
+                    start: BitVector::from_basic(&mem.min_addr()),
+                    end: BitVector::from_basic(&mem.max_addr()),
+                    read: seg.is_readable(),
+                    write: seg.is_writable(),
+                    execute: seg.is_executable(),
+                }
+            })
+            .collect();
         out
     })
 }
@@ -133,14 +133,14 @@ pub fn dump_plt(i: &FuncsDumpPltIn) -> Vec<FuncsDumpPltOut> {
             .expect("objdump grep pipeline failure")
             .stdout,
     ).unwrap();
-    out.split("\n")
+    out.split('\n')
         .filter(|x| *x != "")
         .map(|line| {
-            let mut it = line.split(" ");
+            let mut it = line.split(' ');
             let addr64 = u64::from_str_radix(it.next().unwrap(), 16).unwrap();
             let addr = BitVector::from_u64(addr64, 64);
             let unparsed = it.next().expect(&format!("No name? {}", line));
-            let name = unparsed[1..].split("@").next().unwrap();
+            let name = unparsed[1..].split('@').next().unwrap();
             FuncsDumpPltOut {
                 pad_name: name.to_string(),
                 pad_addr: addr,
@@ -149,22 +149,21 @@ pub fn dump_plt(i: &FuncsDumpPltIn) -> Vec<FuncsDumpPltOut> {
         .collect()
 }
 
+// RUSTC-R see whether the let binding can be removed and this warning avoided
+#[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
-        let out = {
-            let syms = image.symbols();
-            let out = syms.iter()
-                .map(|sym| {
-                    FuncsDumpSymsOut {
-                        name: sym.name(),
-                        start: BitVector::from_basic(&sym.memory().min_addr()),
-                        end: BitVector::from_basic(&sym.memory().max_addr()),
-                    }
-                })
-                .collect();
-            out
-        };
+        let syms = image.symbols();
+        let out = syms.iter()
+            .map(|sym| {
+                FuncsDumpSymsOut {
+                    name: sym.name(),
+                    start: BitVector::from_basic(&sym.memory().min_addr()),
+                    end: BitVector::from_basic(&sym.memory().max_addr()),
+                }
+            })
+            .collect();
         out
     })
 }
@@ -189,8 +188,8 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
         let mut first = true;
         let mut addr = addr;
         while !may_jump {
-            let disas = BasicDisasm::new(&bap, *i.arch)?;
-            let code = disas.disasm(&bin, addr)?;
+            let disas = BasicDisasm::new(bap, *i.arch)?;
+            let code = disas.disasm(bin, addr)?;
             let len = code.len() as u64;
             let insn = code.insn();
             let sema = insn.semantics();
@@ -222,7 +221,7 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
 }
 
 pub fn sema_succ(i: &FuncsSemaSuccIn) -> Vec<FuncsSemaSuccOut> {
-    let (mut targets, fall) = stmt_succ(&i.bil);
+    let (mut targets, fall) = stmt_succ(i.bil);
     if fall {
         targets.push(i.fall.clone());
     }
@@ -234,14 +233,14 @@ pub fn sema_succ(i: &FuncsSemaSuccIn) -> Vec<FuncsSemaSuccOut> {
 
 fn stmt_succ(stmts: &[Statement]) -> (Vec<BitVector>, bool) {
     use bap::high::bil::Statement::*;
-    if stmts.len() == 0 {
+    if stmts.is_empty() {
         return (Vec::new(), true);
     }
-    match &stmts[0] {
-        &Jump(Expression::Const(ref v)) => (vec![v.clone()], false),
-        &Jump(_) => (vec![], false),
-        &While { cond: _, ref body } => {
-            let (mut tgts, fall) = stmt_succ(&body);
+    match stmts[0] {
+        Jump(Expression::Const(ref v)) => (vec![v.clone()], false),
+        Jump(_) => (vec![], false),
+        While { ref body, .. } => {
+            let (mut tgts, fall) = stmt_succ(body);
             if fall {
                 let (mut tgts2, fall2) = stmt_succ(&stmts[1..]);
                 let mut tgt_res = Vec::new();
@@ -252,13 +251,13 @@ fn stmt_succ(stmts: &[Statement]) -> (Vec<BitVector>, bool) {
                 (tgts, fall)
             }
         }
-        &IfThenElse {
-            cond: _,
+        IfThenElse {
             ref then_clause,
             ref else_clause,
+            ..
         } => {
-            let (mut then_tgts, then_fall) = stmt_succ(&then_clause);
-            let (mut else_tgts, else_fall) = stmt_succ(&else_clause);
+            let (mut then_tgts, then_fall) = stmt_succ(then_clause);
+            let (mut else_tgts, else_fall) = stmt_succ(else_clause);
             let fall = then_fall || else_fall;
             let mut tgt_res = Vec::new();
             tgt_res.append(&mut then_tgts);
@@ -275,11 +274,17 @@ fn stmt_succ(stmts: &[Statement]) -> (Vec<BitVector>, bool) {
     }
 }
 
+fn is_const(e: &Expression) -> bool {
+    match *e {
+        Expression::Const(_) => true,
+        _ => false,
+    }
+}
+
 pub fn is_computed_jump(i: &FuncsIsComputedJumpIn) -> Vec<FuncsIsComputedJumpOut> {
     for stmt in i.bil.iter() {
         match *stmt {
-            Statement::Jump(Expression::Const(_)) => (),
-            Statement::Jump(_) => return vec![FuncsIsComputedJumpOut {}],
+            Statement::Jump(ref e) if !is_const(e) => return vec![FuncsIsComputedJumpOut {}],
             _ => (),
         }
     }
@@ -318,7 +323,7 @@ mod tprop {
     use bap::high::bitvector::BitVector;
     use bap::high::bil::{BinOp, Expression, Statement, Type, Variable};
     use avar::AVar;
-    fn hv_match(bad: &Vec<AVar>, e: &Expression) -> bool {
+    fn hv_match(bad: &[AVar], e: &Expression) -> bool {
         match *e {
             Expression::Var(ref v) => bad.contains(&AVar {
                 inner: v.clone(),
@@ -353,8 +358,8 @@ mod tprop {
         bad
     }
 
-    fn rem_hvar(bad: Vec<AVar>, hv: AVar) -> Vec<AVar> {
-        bad.into_iter().filter(|x| *x != hv).collect()
+    fn rem_hvar(bad: Vec<AVar>, hv: &AVar) -> Vec<AVar> {
+        bad.into_iter().filter(|x| x != hv).collect()
     }
 
     fn promote_idx(idx: &Expression) -> Option<AVar> {
@@ -392,9 +397,7 @@ mod tprop {
         match *idx {
             Expression::Var(ref v) => (var.offset == None) && (var.inner == *v),
             Expression::BinOp {
-                op: _,
-                ref lhs,
-                ref rhs,
+                ref lhs, ref rhs, ..
             } => check_idx(lhs, var) || check_idx(rhs, var),
             _ => false,
         }
@@ -402,10 +405,9 @@ mod tprop {
 
     fn deref_var_expr(expr: &Expression, var: &AVar) -> bool {
         match *expr {
-            Expression::Load { index: ref idx, .. } => check_idx(idx, var),
-
-            Expression::Store { index: ref idx, .. } => check_idx(idx, var),
-
+            Expression::Load { index: ref idx, .. } | Expression::Store { index: ref idx, .. } => {
+                check_idx(idx, var)
+            }
             Expression::Cast { ref arg, .. } => deref_var_expr(arg, var),
             _ => false,
         }
@@ -430,7 +432,7 @@ mod tprop {
             }
             vars = proc_stmt(vars, stmt);
         }
-        return false;
+        false
     }
 
     pub fn proc_stmt(bad: Vec<AVar>, stmt: &Statement) -> Vec<AVar> {
@@ -440,9 +442,9 @@ mod tprop {
             Move {
                 lhs: ref reg,
                 rhs: ref e,
-            } if is_reg(&reg) =>
+            } if is_reg(reg) =>
             {
-                if hv_match(&bad, &e) {
+                if hv_match(&bad, e) {
                     add_hvar(
                         bad,
                         AVar {
@@ -453,7 +455,7 @@ mod tprop {
                 } else {
                     rem_hvar(
                         bad,
-                        AVar {
+                        &AVar {
                             inner: reg.clone(),
                             offset: None,
                         },
@@ -464,19 +466,17 @@ mod tprop {
             Move {
                 lhs: ref mem,
                 rhs: ref e,
-            } if is_mem(&mem) =>
+            } if is_mem(mem) =>
             {
                 match *e {
                     Expression::Store {
-                        memory: _,
                         index: ref idx,
                         value: ref val,
-                        endian: _,
-                        size: _,
-                    } => if hv_match(&bad, &val) {
+                        ..
+                    } => if hv_match(&bad, val) {
                         promote_idx(idx).map_or(bad.clone(), |hidx| add_hvar(bad, hidx))
                     } else {
-                        promote_idx(idx).map_or(bad.clone(), |hidx| rem_hvar(bad, hidx))
+                        promote_idx(idx).map_or(bad.clone(), |hidx| rem_hvar(bad, &hidx))
                     },
                     _ => bad,
                 }

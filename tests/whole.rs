@@ -25,5 +25,5 @@ fn check_uaf(names: &[&'static str], bugs: &[u64], max_fp: usize) {
 
 #[test]
 fn gnome_nettool() {
-    check_uaf(&["gnome-nettool"], &[0x4114ab], 0);
+    check_uaf(&["gnome-nettool"], &[0x41_14ab], 0);
 }
