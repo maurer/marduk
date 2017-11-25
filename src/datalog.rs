@@ -20,6 +20,7 @@ const ZERO: usize = 0;
 mycroft_files!(
     "mycroft/schema.my",
     "mycroft/queries.my",
-    "mycroft/rules.my"
+    "mycroft/load.my",
+    "mycroft/uaf_flow.my"
 );
 pub use self::mycroft_program::*;

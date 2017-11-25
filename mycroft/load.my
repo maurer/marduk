@@ -1,0 +1,83 @@
+// ! Loading
+// Use BAP to extract segments from the object file
+bap_dump_segments: segment {
+    file_name,
+    contents: seg_contents,
+    start,
+    end,
+    read,
+    write,
+    execute
+} <- file {name: file_name, contents} + ::funcs::dump_segments
+
+// Use objdump's disassembler to locate PLT entries via string munging
+objdump_dump_plt: link_pad {
+    file_name,
+    pad_name,
+    pad_addr
+} <- file {name: file_name, contents} + ::funcs::dump_plt
+
+// Use BAP to extract symbols from the object file
+bap_dump_syms: sym {
+    file_name,
+    name,
+    start,
+    end
+} <- file {name: file_name, contents} + ::funcs::dump_syms
+
+// Use BAP to detect the architecture of the file
+bap_arch: prog_arch { file_name: file_name, arch: arch } <- file {name: file_name, contents: contents} + ::funcs::get_arch
+
+// ! Lifting
+// Mark all symbols as live
+syms_live: live {file_name, addr} <- sym {file_name: file_name, start: addr}
+
+// Lift to IR all live addresses
+bap_sema: lift {
+    file_name: file_name,
+    address: addr,
+    bil: bil,
+    disassembly: disasm,
+    fallthrough: fall,
+    is_call: call,
+    is_ret: ret
+} <- live {file_name: file_name, addr: addr} & segment {file_name: file_name, contents: seg_contents, start: seg_start, end: seg_end} & prog_arch {file_name: file_name, arch: arch} + ::funcs::lift
+
+// Compute potential successors to a block based on the lifted semantics
+sema_succ: succ {file_name: file_name, src_addr: src_addr, dst_addr, is_call} <- lift {file_name: file_name, address: src_addr, bil: bil, fallthrough: fall, is_call} + ::funcs::sema_succ
+
+// If an block performs a computed call, assume it returns doing nothing and skip it (a bit of a hack)
+skip_computed_call: succ {file_name: file_name, src_addr: src_addr, dst_addr: fall_addr, is_call: ~false} <- lift {file_name: file_name, address: src_addr, fallthrough: fall_addr, is_call: ~true, bil: bil} + ::funcs::is_computed_jump
+
+// Successors of live blocks are live
+live_succ_live: live { file_name: file_name, addr: dst_addr } <- succ {file_name: file_name, src_addr: src_addr, dst_addr} & live {file_name: file_name, addr: src_addr}
+
+// Calls are assumed to return, so fallthroughs of calls are live
+live_call_live: live { file_name: file_name, addr: fall } <- lift { file_name: file_name, fallthrough: fall, is_call: ~true }
+
+// ! Annotations
+// Assume any function in the PLT with "malloc" in the name is an allocator
+malloc_call_by_name: malloc_call {file_name: file_name, addr: addr} <- link_pad { file_name: file_name, pad_name: func_name, pad_addr: tgt_addr } & succ { file_name: file_name, src_addr: addr, dst_addr: tgt_addr, is_call: ~true } + ::funcs::is_malloc_name
+
+// Whitelist of freeing functions
+free_call_by_name: free_call {file_name: file_name, addr: addr} <- link_pad { file_name: file_name, pad_name: func_name, pad_addr: tgt_addr } & succ { file_name: file_name, src_addr: addr, dst_addr: tgt_addr, is_call: ~true } + ::funcs::is_free_name
+
+// puts uses its sole argument
+puts_uses: func_uses {file_name: name, addr: addr, var: ~(::avar::get_arg0())} <- link_pad {file_name: name, pad_name: ~("puts".to_string()), pad_addr: tgt} & succ {file_name: name, src_addr: addr, dst_addr: tgt }
+
+// ! Functions 
+// If we have a non-call successor, it's also a step-over successor
+succ_over_normal: succ_over { file_name: name, src: src, dst } <- succ { file_name: name, src_addr: src, dst_addr: dst, is_call: ~false }
+// If we have a calling successor, the step-over successor is the fallthrough, not the call target
+succ_over_skip_call: succ_over { file_name: name, src: src, dst } <- succ { file_name: name, src_addr: src, is_call: ~true } & lift { file_name: name, address: src, fallthrough: dst }
+
+// Assume symbols give us function starts
+func_start: func {file_name: name, entry: addr, addr: addr } <- sym { file_name: name, start: addr }
+// If a block is in a function, its step-over successor is in the same function
+func_walk_over: func {file_name: name, entry: entry, addr: next } <- func {file_name: name, entry: entry, addr: addr } & succ_over {file_name: name, src: addr, dst: next}
+
+// Intra-object call sites
+call_site_internal: call_site { call_file: name, call_addr: src_addr, dst_file: name, dst_addr } <- succ { file_name: name, src_addr: src_addr, dst_addr, is_call: ~true }
+
+// Inter-object call sites
+call_site_dyn: call_site { call_file: src_name, call_addr: src_addr, dst_file: dst_name, dst_addr } <- succ { file_name: name, src_addr: src_addr, dst_addr: pad_addr, is_call: ~true } & link_pad {file_name: src_name, pad_name: func_name, pad_addr: pad} & sym { file_name: dst_name, name: func_name, start: dst_addr }
