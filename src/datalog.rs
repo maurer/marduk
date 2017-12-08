@@ -16,6 +16,10 @@ fn new_chop() -> Chop {
     Vec::new()
 }
 
+fn or(x: bool, y: bool) -> bool {
+    x || y
+}
+
 const ZERO: usize = 0;
 mycroft_files!(
     "mycroft/schema.my",

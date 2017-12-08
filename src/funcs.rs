@@ -25,6 +25,27 @@ macro_rules! get_image {
     }}
 }
 
+//pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
+//    let mut hs = Vec::new();
+//    for stmt in i.sema.iter() {
+//        tprop::heap_prop(stmt, &mut hs)
+//    }
+//
+//    hs.into_iter()
+//        .enumerate()
+//        .flat_map(|(idx, h): (usize, _)| {
+//            // RUSTC-R I shouldn't need to tell it to copy a usize into a closure...
+//            let q = idx;
+//            h.into_iter().map(move |var| {
+//                FuncsHeapInitOut {
+//                    a_s: q,
+//                    heap_var: var,
+//                }
+//            })
+//        })
+//        .collect()
+//}
+//
 pub fn flow_use(i: &FuncsFlowUseIn) -> Vec<FuncsFlowUseOut> {
     if tprop::sema_uses(i.bil, i.a_var) {
         vec![FuncsFlowUseOut {}]
@@ -321,6 +342,49 @@ mod tprop {
     use bap::high::bitvector::BitVector;
     use bap::high::bil::{BinOp, Expression, Statement, Type, Variable};
     use avar::AVar;
+    use std::collections::HashSet;
+    use std::iter::FromIterator;
+
+    pub fn heap_prop(stmt: &Statement, ks: &mut Vec<HashSet<AVar>>) {
+        let mut all_tracked = HashSet::new();
+        for ass in ks.iter_mut() {
+            *ass = HashSet::from_iter(
+                proc_stmt(ass.iter().cloned().collect::<Vec<_>>(), stmt).into_iter(),
+            );
+            all_tracked.extend(ass.iter().cloned());
+        }
+        match *stmt {
+            Statement::Move { ref lhs, ref rhs } if is_reg(lhs) => {
+                match *rhs {
+                    Expression::Load { ref index, .. } => {
+                        let hvar = AVar {
+                            inner: lhs.clone(),
+                            offset: None,
+                        };
+                        if !all_tracked.contains(&hvar) {
+                            // This variable doesn't contain a tracked pointer already
+                            match promote_idx(index) {
+                                Some(ref hv) if !stack_hvar(hv) => {
+                                    let mut x = HashSet::new();
+                                    x.insert(hvar);
+                                    ks.push(x);
+                                }
+                                _ => (),
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            _ => (),
+        }
+    }
+
+    fn stack_hvar(hv: &AVar) -> bool {
+        let name = &hv.inner.name;
+        (name == "RBP") || (name == "RSP")
+    }
+
     fn hv_match(bad: &[AVar], e: &Expression) -> bool {
         match *e {
             Expression::Var(ref v) => {

@@ -20,9 +20,18 @@ impl Display for CallSiteResult {
     }
 }
 
-impl Display for GetUafFlowResult {
+impl Display for GetUafFlowFullResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}@{}:{}", self.name, self.addr, self.alias)
+        write!(
+            f,
+            "{}@{}:{} -> {}@{}:{}",
+            self.name,
+            self.addr,
+            self.alias,
+            self.use_name,
+            self.use_addr,
+            self.use_var
+        )
     }
 }
 

@@ -4,6 +4,10 @@ skip_dyn: skip_func { file_name: name, addr: addr } <- link_pad { file_name: nam
 // Begin alias tracking anywhere we see a malloc call
 flow_start_malloc: path_alias {initial_file: file, initial_addr: addr, alias_set: ~ZERO, stack: ~(new_stack()), chop: ~(new_chop()), current_file: file, current_addr: step, aliased_var: ~(::avar::get_ret()), freed: ~false} <- malloc_call {file_name: file, addr: addr} & lift {file_name: file, address: addr, fallthrough: step}
 
+// Also start tracking values moved off the heap
+// Temp disabled
+//flow_start_heap: path_alias {initial_file: file, initial_addr: addr, alias_set: a_s, stack: ~(new_stack()), chop: ~(new_chop()), current_file: file, current_addr: step, aliased_var: heap_var, freed: ~false} <- lift {file_name: file, address: addr, fallthrough: step, bil: sema} + ::funcs::heap_init
+
 // If we see a free, mark all aliased values as potentially freed
 flow_free: path_alias {initial_file: file0, initial_addr: addr0, alias_set: alias_set, stack: stack, chop: chop, current_file: free_file, current_addr: next, aliased_var: a_var, freed: ~true} <- path_alias {initial_file: file0, initial_addr: addr0, alias_set: alias_set, stack: stack, chop: chop, current_file: free_file, current_addr: free_addr, aliased_var: ~(::avar::get_arg0())} & lift {file_name: free_file, address: free_addr, fallthrough: next} & free_call {file_name: free_file, addr: free_addr} & path_alias {initial_file: file0, initial_addr: addr0, alias_set: alias_set, stack: stack, chop: chop, current_file: free_file, current_addr: free_addr, aliased_var: a_var}
 
