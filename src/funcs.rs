@@ -497,7 +497,6 @@ mod tprop {
             _ => (),
         }
     }
-
     fn stack_hvar(hv: &AVar) -> bool {
         let name = &hv.inner.name;
         (name == "RBP") || (name == "RSP")
