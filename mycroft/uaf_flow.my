@@ -1,5 +1,26 @@
+use_after_free_flow {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: usize,
+    stack: Stack,
+    final_file: String,
+    final_addr: BitVector,
+    loc: AVar
+}
+
 // If we call into the PLT, register this call as skippable if it's not defined
 skip_dyn: skip_func { file_name: name, addr: addr } <- link_pad { file_name: name, pad_name, pad_addr: tgt } & succ {file_name: name, src_addr: addr, dst_addr: tgt, is_call: ~true} & all_funcs { names } + ::funcs::exclude_names
+path_alias {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: usize,
+    stack: Stack,
+    chop: Chop,
+    current_file: String,
+    current_addr: BitVector,
+    aliased_var: AVar,
+    freed: bool^or
+}
 
 // Begin alias tracking anywhere we see a malloc call
 flow_start_malloc@2: path_alias {initial_file: file, initial_addr: addr, alias_set: ~ZERO, stack: ~(new_stack()), chop: ~(new_chop()), current_file: file, current_addr: step, aliased_var: ~(::avar::get_ret()), freed: ~false} <- malloc_call {file_name: file, addr: addr} & lift {file_name: file, address: addr, fallthrough: step}

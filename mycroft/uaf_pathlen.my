@@ -1,3 +1,27 @@
+path_alias_trace {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: usize,
+    chop: Chop,
+    stack: Stack,
+    current_file: String,
+    current_addr: BitVector,
+    aliased_var: AVar,
+    freed: bool^or,
+    steps: usize
+}
+
+use_after_free {
+    initial_file: String,
+    initial_addr: BitVector,
+    alias_set: usize,
+    stack: Stack,
+    final_file: String,
+    final_addr: BitVector,
+    loc: AVar,
+    steps: usize
+}
+
 // Begin alias tracking anywhere we found a use after free in the flow analysis from malloc
 path_start_malloc: path_alias_trace {initial_file, initial_addr, alias_set: ~ZERO, stack: ~(new_stack()), chop: ~(new_chop()), current_file: initial_file, current_addr, aliased_var, freed: ~false, steps: ~ZERO} <- path_alias {initial_file, initial_addr, alias_set: ~ZERO, current_file: initial_file, current_addr, aliased_var} & use_after_free_flow {initial_file, initial_addr, alias_set: ~ZERO} & lift {file_name: initial_file, address: initial_addr, fallthrough: current_addr}
 
