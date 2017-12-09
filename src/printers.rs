@@ -64,8 +64,29 @@ impl Display for GetUafFlowFullResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(
             f,
-            "{}@{}:{} -> {}@{}:{}",
-            self.name, self.addr, self.alias, self.use_name, self.use_addr, self.use_var
+            "{}@{}:{}->{}@{}:{}",
+            self.initial_file,
+            self.initial_addr,
+            self.alias_set,
+            self.final_file,
+            self.final_addr,
+            self.loc
+        )
+    }
+}
+
+impl Display for DefinesResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}@{} defs {:?}", self.file, self.addr, self.registers)
+    }
+}
+
+impl Display for ReachingResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(
+            f,
+            "{}@{:?}:{}->{}",
+            self.file, self.def_addr, self.register, self.reached_addr
         )
     }
 }
@@ -101,16 +122,6 @@ impl Display for GetMallocCallResult {
 impl Display for LiveResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}@{}", self.name, self.addr)
-    }
-}
-
-impl Display for GetAliasResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(
-            f,
-            "{}@{}:{} -> {}@{}:{} : {}",
-            self.file0, self.addr0, self.alias_set, self.file, self.addr, self.a_var, self.freed
-        )
     }
 }
 

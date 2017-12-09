@@ -19,6 +19,8 @@ fn print_state(db: &marduk::datalog::Database) {
     for q in db.query_get_uaf_full() {
         println!("{}", q);
     }
+    println!("Defines generated: {}", db.query_defines().len());
+    println!("Reaches generated: {}", db.query_reaching().len());
 }
 
 fn main() {

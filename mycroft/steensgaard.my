@@ -1,0 +1,12 @@
+// TODO parameterize constraints on file?
+constraint(Constraints^concat)
+
+malloc_constraint: constraint(c) <- malloc_call{addr} + ::funcs::malloc_constraint
+
+gen_constraints: constraint(c) <- lift {address: addr, bil, is_call: ~false} & func {entry: func_base, addr} & chain(addr, dc) + ::funcs::gen_constraints
+
+steens_may_sets(Vars)
+solve_constraints: steens_may_sets(vs) <- ~constraint(cs) + ::funcs::steens_solve
+
+steens_point(Var, Vars)
+expand_steens: steens_point(v, vs) <- steens_may_sets(vs) + ::funcs::steens_expando

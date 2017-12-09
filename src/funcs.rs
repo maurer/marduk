@@ -1,9 +1,10 @@
 use datalog::*;
 use bap::high::bitvector::BitVector;
 use bap::basic::{Bap, BasicDisasm, Image};
-use bap::high::bil::{Expression, Statement};
+use bap::high::bil::{Expression, Statement, Type, Variable};
 use avar::AVar;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use steensgaard;
 
 const MAX_CHOP: usize = 3;
 const MAX_STACK: usize = 5;
@@ -26,6 +27,12 @@ macro_rules! get_image {
             Err(_) => return Vec::new()
         }
     }}
+}
+pub fn steens_solve(i: &FuncsSteensSolveIn) -> Vec<FuncsSteensSolveOut> {
+    steensgaard::constraints_to_may_alias(i.cs.clone())
+        .into_iter()
+        .map(|vs| FuncsSteensSolveOut { vs: vs })
+        .collect()
 }
 
 pub fn exclude_names(i: &FuncsExcludeNamesIn) -> Vec<FuncsExcludeNamesOut> {
@@ -112,6 +119,20 @@ pub fn flow_use(i: &FuncsFlowUseIn) -> Vec<FuncsFlowUseOut> {
         Vec::new()
     }
 }
+
+pub fn steens_expando(i: &FuncsSteensExpandoIn) -> Vec<FuncsSteensExpandoOut> {
+    i.vs
+        .iter()
+        .map(|v| FuncsSteensExpandoOut { v: v.clone() })
+        .collect()
+}
+
+fn is_normal_reg(r: &Variable) -> bool {
+    match r.type_ {
+        Type::Immediate(x) => x > 1,
+        _ => false,
+    }
+}
 pub fn trace_use(i: &FuncsTraceUseIn) -> Vec<FuncsTraceUseOut> {
     if tprop::sema_uses(i.bil, i.a_var) {
         vec![FuncsTraceUseOut {}]
@@ -162,6 +183,88 @@ pub fn call_stack_chop_inner(
     let mut stack2 = stack.to_vec();
     stack2.push((file1.clone(), ret_addr.clone()));
     vec![(chop2, stack2)]
+}
+
+fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<String>) {
+    match *stmt {
+        Statement::Move { ref lhs, .. } => {
+            if !lhs.tmp && is_normal_reg(lhs) {
+                defs.insert(lhs.name.clone());
+            }
+        }
+        Statement::While { ref body, .. } => for stmt in body {
+            defines_stmt(stmt, defs);
+        },
+        Statement::IfThenElse {
+            ref then_clause,
+            ref else_clause,
+            ..
+        } => {
+            for stmt in then_clause {
+                defines_stmt(stmt, defs);
+            }
+            for stmt in else_clause {
+                defines_stmt(stmt, defs);
+            }
+        }
+        _ => (),
+    }
+}
+
+pub fn gen_constraints(i: &FuncsGenConstraintsIn) -> Vec<FuncsGenConstraintsOut> {
+    steensgaard::extract_constraints(i.bil, i.dc.clone(), i.addr, i.func_base)
+        .into_iter()
+        .map(|c| FuncsGenConstraintsOut { c: vec![c] })
+        .collect()
+}
+
+pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
+    let mut out = BTreeMap::new();
+    out.insert(i.register.clone(), i.def_addr.clone());
+    vec![FuncsDefChainOut { dc: out }]
+}
+
+pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstraintOut> {
+    use steensgaard::*;
+    vec![
+        FuncsMallocConstraintOut {
+            c: vec![
+                Constraint::AddrOf {
+                    a: Var::Register {
+                        site: i.addr.clone(),
+                        register: "RAX".to_string(),
+                    },
+                    b: Var::Alloc {
+                        site: i.addr.clone(),
+                    },
+                },
+            ],
+        },
+    ]
+}
+
+pub fn defines(i: &FuncsDefinesIn) -> Vec<FuncsDefinesOut> {
+    let mut defs = BTreeSet::new();
+    for stmt in i.bil {
+        defines_stmt(stmt, &mut defs);
+    }
+    vec![
+        FuncsDefinesOut {
+            registers: defs.into_iter().collect(),
+        },
+    ]
+}
+
+pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersOut> {
+    let mut def_addr_singleton = BTreeSet::new();
+    def_addr_singleton.insert(i.def_addr.clone());
+    i.registers
+        .iter()
+        .map(|s| FuncsExpandRegistersOut {
+            register: s.clone(),
+            def_addr_singleton: def_addr_singleton.clone(),
+        })
+        .collect()
 }
 
 pub fn ret_stack(i: &FuncsRetStackIn) -> Vec<FuncsRetStackOut> {
@@ -218,6 +321,14 @@ pub fn clobbers(i: &FuncsClobbersIn) -> Vec<FuncsClobbersOut> {
         Vec::new()
     } else {
         vec![FuncsClobbersOut {}]
+    }
+}
+
+pub fn exclude_registers(i: &FuncsExcludeRegistersIn) -> Vec<FuncsExcludeRegistersOut> {
+    if i.prev_defines.contains(i.register) {
+        Vec::new()
+    } else {
+        vec![FuncsExcludeRegistersOut {}]
     }
 }
 

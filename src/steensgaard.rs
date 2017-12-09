@@ -2,17 +2,18 @@ use bap::high::bitvector::BitVector;
 use bap::high::bil::Statement;
 use bap::high::bil;
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-#[derive(Clone)]
+#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
     StackSlot { func_addr: BitVector, offset: usize },
     Register { site: BitVector, register: String },
+    Alloc { site: BitVector },
 }
 
 // Maps a register at a code address to the list of possible definition sites (for a specific
 // address)
-type DefChain = HashMap<String, BTreeSet<BitVector>>;
+pub type DefChain = BTreeMap<String, BTreeSet<BitVector>>;
 
 fn move_walk<
     A,
@@ -56,7 +57,8 @@ fn move_walk<
 
             // Merge back else defs info
             for (k, v) in else_defs {
-                defs.entry(k).or_insert_with(BTreeSet::new).union(&v);
+                let e = defs.entry(k).or_insert_with(BTreeSet::new);
+                *e = e.union(&v).cloned().collect()
             }
 
             let mut out = then_out;
@@ -67,6 +69,7 @@ fn move_walk<
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 enum E {
     AddrOf(Var),
     Base(Var),
@@ -183,7 +186,36 @@ fn extract_move(
     func_addr: &BitVector,
 ) -> Vec<Constraint> {
     match lhs.type_ {
-        bil::Type::Memory { .. } => panic!("memlog"),
+        bil::Type::Memory { .. } => {
+            use self::E::*;
+            let (index, rhs) = if let bil::Expression::Store {
+                ref index,
+                ref value,
+                ..
+            } = *rhs
+            {
+                (index, value)
+            } else {
+                panic!("Writing to memory, but the expression isn't a store")
+            };
+            let lhs_vars = extract_expr(index, defs, cur_addr, func_addr);
+            let rhs_vars = extract_expr(rhs, defs, cur_addr, func_addr);
+            let mut out = Vec::new();
+            for lhs_evar in lhs_vars {
+                for rhs_evar in rhs_vars.clone() {
+                    out.push(match (lhs_evar.clone(), rhs_evar) {
+                        (AddrOf(l), AddrOf(r)) => Constraint::AddrOf { a: l, b: r },
+                        (AddrOf(l), Base(r)) => Constraint::Asgn { a: l, b: r },
+                        (AddrOf(l), Deref(r)) => Constraint::Deref { a: l, b: r },
+                        (Deref(_), _) => panic!("**a = x ?"),
+                        (Base(_), AddrOf(_)) => panic!("*a = &b?"),
+                        (Base(l), Base(r)) => Constraint::Write { a: l, b: r },
+                        (Base(l), Deref(r)) => Constraint::Xfer { a: l, b: r },
+                    })
+                }
+            }
+            out
+        }
         bil::Type::Immediate(_) => {
             let lv = Var::Register {
                 site: cur_addr.clone(),
@@ -217,6 +249,7 @@ fn extract_move(
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Constraint {
     // a = &b;
     AddrOf { a: Var, b: Var },
@@ -226,6 +259,8 @@ pub enum Constraint {
     Deref { a: Var, b: Var },
     // *a = b
     Write { a: Var, b: Var },
+    // *a = *b
+    Xfer { a: Var, b: Var },
 }
 
 pub fn extract_constraints(
@@ -239,4 +274,152 @@ pub fn extract_constraints(
         constraints.extend(move_walk(stmt, &mut defs, addr, func_addr, &extract_move));
     }
     constraints
+}
+
+#[derive(Default, Debug, Eq, PartialOrd, Ord, PartialEq, Clone, Copy)]
+struct UFS {
+    rank: usize,
+    parent: Option<usize>,
+}
+
+struct UF {
+    backing: Vec<UFS>,
+    pays: Vec<Option<Var>>,
+    inv: HashMap<Var, usize>,
+    points_to: Vec<Option<usize>>,
+}
+
+impl UF {
+    fn new() -> Self {
+        UF {
+            backing: Vec::new(),
+            pays: Vec::new(),
+            inv: HashMap::new(),
+            points_to: Vec::new(),
+        }
+    }
+    fn uf_find(&self, k: usize) -> usize {
+        match self.backing[k].parent {
+            Some(p) => self.uf_find(p),
+            None => k,
+        }
+    }
+    // Finds the key that matches the var, or creates the set if it doesn't exist
+    fn force_find(&mut self, v: Var) -> usize {
+        let k0 = {
+            let backing = &mut self.backing;
+            let pays = &mut self.pays;
+            let points_to = &mut self.points_to;
+
+            *self.inv.entry(v.clone()).or_insert_with(|| {
+                backing.push(Default::default());
+                pays.push(Some(v));
+                points_to.push(None);
+                pays.len() - 1
+            })
+        };
+        self.uf_find(k0)
+    }
+    // Finds the points to set for this key, or synthesizes one if it does not exist
+    fn force_points_to(&mut self, k: usize) -> usize {
+        match self.points_to[k] {
+            Some(v) => v,
+            None => {
+                self.backing.push(Default::default());
+                self.pays.push(None);
+                let v = self.pays.len() - 1;
+                self.points_to.push(None);
+                self.points_to[k] = Some(v);
+                v
+            }
+        }
+    }
+
+    fn uf_union(&mut self, k0: usize, k1: usize) {
+        use std::cmp::Ordering;
+        let r0 = self.uf_find(k0);
+        let r1 = self.uf_find(k1);
+        if r0 == r1 {
+            return;
+        }
+        match self.backing[r0].rank.cmp(&self.backing[r1].rank) {
+            Ordering::Less => self.backing[r0].parent = Some(r1),
+            Ordering::Greater => self.backing[r1].parent = Some(r0),
+            Ordering::Equal => {
+                self.backing[r0].parent = Some(r1);
+                self.backing[r1].rank += 1;
+            }
+        }
+    }
+
+    fn merge(&mut self, ka: usize, kb: usize) {
+        if ka == kb {
+            return;
+        }
+        self.uf_union(ka, kb);
+        match (self.points_to[ka], self.points_to[kb]) {
+            (Some(pa), Some(pb)) => self.merge(pa, pb),
+            (Some(pa), None) => self.points_to[kb] = Some(pa),
+            (None, Some(pb)) => self.points_to[ka] = Some(pb),
+            (None, None) => (),
+        }
+    }
+
+    fn dump_sets(&self) -> Vec<Vec<Var>> {
+        let mut merger: HashMap<usize, Vec<Var>> = HashMap::new();
+        for (key, mvar) in self.pays.iter().enumerate() {
+            match *mvar {
+                Some(ref var) => merger
+                    .entry(self.uf_find(key))
+                    .or_insert(Vec::new())
+                    .push(var.clone()),
+                None => (),
+            }
+        }
+        merger.into_iter().map(|x| x.1).collect()
+    }
+
+    fn process(&mut self, c: Constraint) {
+        use self::Constraint::*;
+        match c {
+            // a = &b
+            AddrOf { a, b } => self.process(Write { a, b }),
+            // a = b
+            Asgn { a, b } => {
+                let ka = self.force_find(a);
+                let kb = self.force_find(b);
+                self.merge(ka, kb);
+            }
+            // a = *b
+            Deref { a, b } => {
+                let ka = self.force_find(a);
+                let kb = self.force_find(b);
+                let pb = self.force_points_to(kb);
+                self.merge(ka, pb);
+            }
+            // *a = b
+            Write { a, b } => {
+                let ka = self.force_find(a);
+                let kb = self.force_find(b);
+                let pa = self.force_points_to(ka);
+                self.merge(pa, kb)
+            }
+            // *a = *b
+            Xfer { a, b } => {
+                let ka = self.force_find(a);
+                let kb = self.force_find(b);
+                let pa = self.force_points_to(ka);
+                let pb = self.force_points_to(kb);
+                self.merge(pa, pb)
+            }
+        }
+    }
+}
+
+pub fn constraints_to_may_alias(cs: Vec<Constraint>) -> Vec<Vec<Var>> {
+    let mut uf = UF::new();
+    for c in cs {
+        uf.process(c)
+    }
+    uf.dump_sets()
 }

@@ -30,12 +30,12 @@
     alias_set: alias
 }
 ?get_uaf_flow_full: use_after_free_flow {
-    initial_file: name,
-    initial_addr: addr,
-    alias_set: alias,
-    final_file: use_name,
-    final_addr: use_addr,
-    loc: use_var
+    initial_file,
+    initial_addr,
+    alias_set,
+    final_file,
+    final_addr,
+    loc
 }
 ?get_uaf_full: use_after_free {
     initial_file: name,
