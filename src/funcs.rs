@@ -306,7 +306,6 @@ pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
 }
 
 pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
-    use std::fmt::Write;
     use num_traits::cast::ToPrimitive;
     let start = i.seg_start.to_u64().unwrap();
     let addr = i.addr.to_u64().unwrap();
@@ -315,38 +314,18 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
         return vec![];
     }
     vec_error!(Bap::with(|bap| {
-        let mut stmts = Vec::new();
-        let mut disasm = String::new();
-        let mut is_call = false;
-        let mut is_ret = false;
-        let mut fall: u64 = 0;
-        let mut bin: &[u8] = &i.seg_contents[((addr - start) as usize)..];
-        let mut may_jump = false;
-        let mut first = true;
-        let mut addr = addr;
-        while !may_jump {
-            let disas = BasicDisasm::new(bap, *i.arch)?;
-            let code = disas.disasm(bin, addr)?;
-            let len = code.len() as u64;
-            let insn = code.insn();
-            let sema = insn.semantics();
-            if !first && (insn.is_call() || insn.is_return()) {
-                break;
-            }
-            first = false;
-            stmts.extend(sema.iter().map(|bb| Statement::from_basic(&bb)));
-            write!(&mut disasm, "{}\n", insn.to_string()).unwrap();
-            is_call = insn.is_call();
-            is_ret = insn.is_return();
-            fall = addr + len;
-            may_jump = insn.may_affect_control_flow();
-            if !may_jump {
-                bin = &bin[(len as usize)..];
-                addr = fall;
-            }
-        }
+        let bin: &[u8] = &i.seg_contents[((addr - start) as usize)..];
+        let disas = BasicDisasm::new(bap, *i.arch)?;
+        let code = disas.disasm(bin, addr)?;
+        let len = code.len() as u64;
+        let insn = code.insn();
+        let sema = insn.semantics();
+        let stmts = sema.iter().map(|bb| Statement::from_basic(&bb)).collect();
+        let disasm = insn.to_string();
+        let is_call = insn.is_call();
+        let is_ret = insn.is_return();
+        let fall = addr + len;
 
-        disasm.pop();
         Ok(FuncsLiftOut {
             bil: stmts,
             disasm: disasm,
