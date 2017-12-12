@@ -10,12 +10,13 @@ fn check_uaf(names: &[&'static str], bugs: &[u64], max_fp: usize) {
         .collect();
     let mut db = uaf(&names);
     db.run_rules();
-    let ans = db.query_get_uaf_flow();
+    let ans = db.query_get_uaf();
     // Make sure we found all the bugs
     for bug in bugs {
-        assert!(ans.iter().any(|found| {
-            found.addr == BitVector::from_u64(*bug, 64)
-        }));
+        assert!(
+            ans.iter()
+                .any(|found| { found.addr == BitVector::from_u64(*bug, 64) })
+        );
     }
 
     // Make sure we don't have more false positives than allowed

@@ -2,9 +2,12 @@ use datalog::*;
 use bap::high::bitvector::BitVector;
 use bap::basic::{Bap, BasicDisasm, Image};
 use bap::high::bil::{Expression, Statement};
+use avar::AVar;
+use std::collections::BTreeSet;
 
 const MAX_CHOP: usize = 3;
 const MAX_STACK: usize = 5;
+const MAX_PATH: usize = 50;
 
 macro_rules! vec_error {
     ($e:expr) => {{
@@ -25,27 +28,65 @@ macro_rules! get_image {
     }}
 }
 
-//pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
-//    let mut hs = Vec::new();
-//    for stmt in i.sema.iter() {
-//        tprop::heap_prop(stmt, &mut hs)
-//    }
-//
-//    hs.into_iter()
-//        .enumerate()
-//        .flat_map(|(idx, h): (usize, _)| {
-//            // RUSTC-R I shouldn't need to tell it to copy a usize into a closure...
-//            let q = idx;
-//            h.into_iter().map(move |var| {
-//                FuncsHeapInitOut {
-//                    a_s: q,
-//                    heap_var: var,
-//                }
-//            })
-//        })
-//        .collect()
-//}
-//
+pub fn exclude_names(i: &FuncsExcludeNamesIn) -> Vec<FuncsExcludeNamesOut> {
+    if i.names.contains(i.pad_name) {
+        Vec::new()
+    } else {
+        vec![FuncsExcludeNamesOut {}]
+    }
+}
+
+pub fn singleton_string(i: &FuncsSingletonStringIn) -> Vec<FuncsSingletonStringOut> {
+    let mut s = BTreeSet::new();
+    s.insert(i.name.clone());
+    vec![FuncsSingletonStringOut { names: s }]
+}
+
+pub fn inc_path(i: &FuncsIncPathIn) -> Vec<FuncsIncPathOut> {
+    if i.steps < MAX_PATH {
+        vec![
+            FuncsIncPathOut {
+                steps_plus_one: i.steps + 1,
+            },
+        ]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn inc_path2(i: &FuncsIncPath2In) -> Vec<FuncsIncPath2Out> {
+    if i.steps < MAX_PATH {
+        vec![
+            FuncsIncPath2Out {
+                steps_plus_one: i.steps + 1,
+            },
+        ]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
+    let mut hs = Vec::new();
+    for stmt in i.sema.iter() {
+        tprop::heap_prop(stmt, &mut hs)
+    }
+
+    hs.into_iter()
+        .enumerate()
+        .flat_map(|(idx, h): (usize, _)| {
+            // RUSTC-R I shouldn't need to tell it to copy a usize into a closure...
+            let q = idx;
+            h.into_iter().map(move |var| {
+                FuncsHeapInitOut {
+                    a_s: q + 1,
+                    heap_var: var,
+                }
+            })
+        })
+        .collect()
+}
+
 pub fn flow_use(i: &FuncsFlowUseIn) -> Vec<FuncsFlowUseOut> {
     if tprop::sema_uses(i.bil, i.a_var) {
         vec![FuncsFlowUseOut {}]
@@ -53,43 +94,85 @@ pub fn flow_use(i: &FuncsFlowUseIn) -> Vec<FuncsFlowUseOut> {
         Vec::new()
     }
 }
+pub fn trace_use(i: &FuncsTraceUseIn) -> Vec<FuncsTraceUseOut> {
+    if tprop::sema_uses(i.bil, i.a_var) {
+        vec![FuncsTraceUseOut {}]
+    } else {
+        Vec::new()
+    }
+}
 
 pub fn call_stack_chop(i: &FuncsCallStackChopIn) -> Vec<FuncsCallStackChopOut> {
-    let chop2 = if !i.chop.contains(i.addr1) {
-        if i.chop.len() >= MAX_CHOP {
+    call_stack_chop_inner(i.stack.as_slice(), i.chop, i.addr1, i.file1, i.ret_addr)
+        .into_iter()
+        .map(|(chop2, stack2)| {
+            FuncsCallStackChopOut {
+                chop2: chop2,
+                stack2: stack2,
+            }
+        })
+        .collect()
+}
+pub fn call_stack_chop_trace(i: &FuncsCallStackChopTraceIn) -> Vec<FuncsCallStackChopTraceOut> {
+    call_stack_chop_inner(i.stack.as_slice(), i.chop, i.addr1, i.file1, i.ret_addr)
+        .into_iter()
+        .map(|(chop2, stack2)| {
+            FuncsCallStackChopTraceOut {
+                chop2: chop2,
+                stack2: stack2,
+            }
+        })
+        .collect()
+}
+
+pub fn call_stack_chop_inner(
+    stack: &[(String, BitVector)],
+    chop: &[BitVector],
+    addr1: &BitVector,
+    file1: &String,
+    ret_addr: &BitVector,
+) -> Vec<(Vec<BitVector>, Vec<(String, BitVector)>)> {
+    let chop2 = if !chop.contains(addr1) {
+        if chop.len() >= MAX_CHOP {
             return Vec::new();
         }
-        let mut chop2 = i.chop.clone();
-        chop2.push(i.addr1.clone());
+        let mut chop2 = chop.to_vec();
+        chop2.push(addr1.clone());
         chop2
     } else {
-        i.chop.clone()
+        chop.to_vec()
     };
-    if i.stack.len() >= MAX_STACK {
+    if stack.len() >= MAX_STACK {
         return Vec::new();
     }
-    let mut stack2 = i.stack.clone();
-    stack2.push((i.file1.clone(), i.ret_addr.clone()));
-    vec![
-        FuncsCallStackChopOut {
-            chop2: chop2,
-            stack2: stack2,
-        },
-    ]
+    let mut stack2 = stack.to_vec();
+    stack2.push((file1.clone(), ret_addr.clone()));
+    vec![(chop2, stack2)]
 }
 
 pub fn ret_stack(i: &FuncsRetStackIn) -> Vec<FuncsRetStackOut> {
     let mut stack = i.stack.clone();
     match stack.pop() {
-        Some((name, addr)) => {
-            vec![
-                FuncsRetStackOut {
-                    stack2: stack,
-                    file2: name,
-                    addr2: addr,
-                },
-            ]
-        }
+        Some((name, addr)) => vec![
+            FuncsRetStackOut {
+                stack2: stack,
+                file2: name,
+                addr2: addr,
+            },
+        ],
+        None => Vec::new(),
+    }
+}
+pub fn ret_stack_trace(i: &FuncsRetStackTraceIn) -> Vec<FuncsRetStackTraceOut> {
+    let mut stack = i.stack.clone();
+    match stack.pop() {
+        Some((name, addr)) => vec![
+            FuncsRetStackTraceOut {
+                stack2: stack,
+                file2: name,
+                addr2: addr,
+            },
+        ],
         None => Vec::new(),
     }
 }
@@ -105,11 +188,30 @@ pub fn ret_no_stack(i: &FuncsRetNoStackIn) -> Vec<FuncsRetNoStackOut> {
     vec![FuncsRetNoStackOut { chop2: chop2 }]
 }
 
+pub fn ret_no_stack_trace(i: &FuncsRetNoStackTraceIn) -> Vec<FuncsRetNoStackTraceOut> {
+    let mut chop2 = i.chop.clone();
+    if !i.chop.contains(i.dst_addr) {
+        if i.chop.len() >= MAX_CHOP {
+            return Vec::new();
+        }
+        chop2.push(i.dst_addr.clone())
+    }
+    vec![FuncsRetNoStackTraceOut { chop2: chop2 }]
+}
+
 pub fn clobbers(i: &FuncsClobbersIn) -> Vec<FuncsClobbersOut> {
     if i.a_var.is_clobbered() {
         Vec::new()
     } else {
         vec![FuncsClobbersOut {}]
+    }
+}
+
+pub fn clobbers_trace(i: &FuncsClobbersTraceIn) -> Vec<FuncsClobbersTraceOut> {
+    if i.a_var.is_clobbered() {
+        Vec::new()
+    } else {
+        vec![FuncsClobbersTraceOut {}]
     }
 }
 
@@ -317,7 +419,11 @@ pub fn is_computed_jump(i: &FuncsIsComputedJumpIn) -> Vec<FuncsIsComputedJumpOut
 pub fn get_arch(i: &FuncsGetArchIn) -> Vec<FuncsGetArchOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
-        vec![FuncsGetArchOut { arch: image.arch().unwrap() }]
+        vec![
+            FuncsGetArchOut {
+                arch: image.arch().unwrap(),
+            },
+        ]
     })
 }
 
@@ -387,18 +493,14 @@ mod tprop {
 
     fn hv_match(bad: &[AVar], e: &Expression) -> bool {
         match *e {
-            Expression::Var(ref v) => {
-                bad.contains(&AVar {
-                    inner: v.clone(),
-                    offset: None,
-                })
-            }
-            Expression::Load { index: ref idx, .. } => {
-                match promote_idx(idx) {
-                    Some(hv) => bad.contains(&hv),
-                    None => false,
-                }
-            }
+            Expression::Var(ref v) => bad.contains(&AVar {
+                inner: v.clone(),
+                offset: None,
+            }),
+            Expression::Load { index: ref idx, .. } => match promote_idx(idx) {
+                Some(hv) => bad.contains(&hv),
+                None => false,
+            },
             _ => false,
         }
     }
@@ -438,29 +540,23 @@ mod tprop {
                 op: BinOp::Add,
                 ref lhs,
                 ref rhs,
-            } => {
-                match **lhs {
-                    Expression::Var(ref v) => {
-                        match **rhs {
-                            Expression::Const(ref bv) => Some(AVar {
-                                inner: v.clone(),
-                                offset: Some(bv.clone()),
-                            }),
-                            _ => None,
-                        }
-                    }
-                    Expression::Const(ref bv) => {
-                        match **rhs {
-                            Expression::Var(ref v) => Some(AVar {
-                                inner: v.clone(),
-                                offset: Some(bv.clone()),
-                            }),
-                            _ => None,
-                        }
-                    }
+            } => match **lhs {
+                Expression::Var(ref v) => match **rhs {
+                    Expression::Const(ref bv) => Some(AVar {
+                        inner: v.clone(),
+                        offset: Some(bv.clone()),
+                    }),
                     _ => None,
-                }
-            }
+                },
+                Expression::Const(ref bv) => match **rhs {
+                    Expression::Var(ref v) => Some(AVar {
+                        inner: v.clone(),
+                        offset: Some(bv.clone()),
+                    }),
+                    _ => None,
+                },
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -468,17 +564,18 @@ mod tprop {
     fn check_idx(idx: &Expression, var: &AVar) -> bool {
         match *idx {
             Expression::Var(ref v) => (var.offset == None) && (var.inner == *v),
-            Expression::BinOp { ref lhs, ref rhs, .. } => {
-                check_idx(lhs, var) || check_idx(rhs, var)
-            }
+            Expression::BinOp {
+                ref lhs, ref rhs, ..
+            } => check_idx(lhs, var) || check_idx(rhs, var),
             _ => false,
         }
     }
 
     fn deref_var_expr(expr: &Expression, var: &AVar) -> bool {
         match *expr {
-            Expression::Load { index: ref idx, .. } |
-            Expression::Store { index: ref idx, .. } => check_idx(idx, var),
+            Expression::Load { index: ref idx, .. } | Expression::Store { index: ref idx, .. } => {
+                check_idx(idx, var)
+            }
             Expression::Cast { ref arg, .. } => deref_var_expr(arg, var),
             _ => false,
         }
@@ -513,7 +610,8 @@ mod tprop {
             Move {
                 lhs: ref reg,
                 rhs: ref e,
-            } if is_reg(reg) => {
+            } if is_reg(reg) =>
+            {
                 if hv_match(&bad, e) {
                     add_hvar(
                         bad,
@@ -536,7 +634,8 @@ mod tprop {
             Move {
                 lhs: ref mem,
                 rhs: ref e,
-            } if is_mem(mem) => {
+            } if is_mem(mem) =>
+            {
                 match *e {
                     Expression::Store {
                         index: ref idx,
@@ -558,11 +657,32 @@ mod tprop {
 }
 
 pub fn xfer_taint(i: &FuncsXferTaintIn) -> Vec<FuncsXferTaintOut> {
-    i.bil
-        .iter()
-        .fold(vec![i.a_var.clone()], tprop::proc_stmt)
+    xfer_taint_inner(i.bil, i.a_var)
+        .into_iter()
+        .map(|a_var2| FuncsXferTaintOut { a_var2: a_var2 })
+        .collect()
+}
+
+pub fn xfer_taint_trace(i: &FuncsXferTaintTraceIn) -> Vec<FuncsXferTaintTraceOut> {
+    xfer_taint_inner(i.bil, i.a_var)
+        .into_iter()
+        .filter_map(|a_var2| {
+            if i.steps < MAX_PATH {
+                Some(FuncsXferTaintTraceOut {
+                    a_var2: a_var2,
+                    steps_plus_one: i.steps + 1,
+                })
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+pub fn xfer_taint_inner(bil: &[Statement], a_var: &AVar) -> Vec<AVar> {
+    bil.iter()
+        .fold(vec![a_var.clone()], tprop::proc_stmt)
         .into_iter()
         .filter(|v| v.not_temp())
-        .map(|a_var2| FuncsXferTaintOut { a_var2: a_var2 })
         .collect()
 }

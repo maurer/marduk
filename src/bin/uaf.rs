@@ -38,10 +38,19 @@ fn print_state(db: &marduk::datalog::Database) {
     //for fc in db.query_live() {
     //    println!("{}", fc)
     //}
-    println!("---\nuaf");
-    for flow in db.query_get_uaf_flow_full() {
+    println!("---\nflow");
+    for flow in db.query_flow() {
         println!("{}", flow)
     }
+
+    println!("---\ntrace");
+    for trace in db.query_trace() {
+        println!("{}", trace)
+    }
+    //println!("---\nuaf_flow");
+    //for q in db.query_get_uaf_flow_full() {
+    //    println!("{}", q);
+    //}
 }
 
 

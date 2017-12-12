@@ -25,6 +25,8 @@ bap_dump_syms: sym {
     end
 } <- file {name: file_name, contents} + ::funcs::dump_syms
 
+allsyms: all_funcs {names} <- sym {name} + ::funcs::singleton_string
+
 // Use BAP to detect the architecture of the file
 bap_arch: prog_arch { file_name: file_name, arch: arch } <- file {name: file_name, contents: contents} + ::funcs::get_arch
 

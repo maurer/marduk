@@ -24,6 +24,11 @@
     initial_addr: addr,
     alias_set: alias
 }
+?get_uaf: use_after_free {
+    initial_file: name,
+    initial_addr: addr,
+    alias_set: alias
+}
 ?get_uaf_flow_full: use_after_free_flow {
     initial_file: name,
     initial_addr: addr,
@@ -34,3 +39,5 @@
 }
 ?link_pad: link_pad {file_name: name, pad_name: pad_name, pad_addr: addr}
 ?live: live {file_name: name, addr: addr}
+?trace: path_alias_trace {initial_file, initial_addr, alias_set, current_file, current_addr, aliased_var, freed, steps}
+?flow: path_alias {initial_file, initial_addr, alias_set, current_file, current_addr, aliased_var, freed}

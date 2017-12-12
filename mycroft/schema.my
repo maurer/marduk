@@ -14,6 +14,9 @@ sym {
     start: BitVector,
     end: BitVector
 }
+all_funcs {
+	names: StringSet^union
+}
 lift {
     file_name: String,
     address: BitVector,
@@ -70,6 +73,7 @@ path_alias_trace {
     initial_file: String,
     initial_addr: BitVector,
     alias_set: usize,
+    chop: Chop,
     stack: Stack,
     current_file: String,
     current_addr: BitVector,
