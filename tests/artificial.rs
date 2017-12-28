@@ -8,8 +8,20 @@ fn run_uaf(names: &[&'static str], flow_bugs: usize, trace_bugs: usize) {
         .collect();
     let mut db = uaf(&names);
     db.run_rules();
-    assert_eq!(db.query_get_uaf_flow().len(), flow_bugs);
-    assert_eq!(db.query_get_uaf().len(), trace_bugs);
+    let found_flow_bugs = db.query_get_uaf_flow().len();
+    if found_flow_bugs != flow_bugs {
+        panic!(
+            "Found {} flow bugs, expected {}",
+            found_flow_bugs, flow_bugs
+        );
+    }
+    let found_trace_bugs = db.query_get_uaf().len();
+    if found_trace_bugs != trace_bugs {
+        panic!(
+            "Found {} trace bugs, expected {}",
+            found_trace_bugs, trace_bugs
+        );
+    }
 }
 
 #[test]
