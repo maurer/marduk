@@ -97,11 +97,9 @@ pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
         .flat_map(|(idx, h): (usize, _)| {
             // RUSTC-R I shouldn't need to tell it to copy a usize into a closure...
             let q = idx;
-            h.into_iter().map(move |var| {
-                FuncsHeapInitOut {
-                    a_s: q + 1,
-                    heap_var: var,
-                }
+            h.into_iter().map(move |var| FuncsHeapInitOut {
+                a_s: q + 1,
+                heap_var: var,
             })
         })
         .collect()
@@ -125,22 +123,18 @@ pub fn trace_use(i: &FuncsTraceUseIn) -> Vec<FuncsTraceUseOut> {
 pub fn call_stack_chop(i: &FuncsCallStackChopIn) -> Vec<FuncsCallStackChopOut> {
     call_stack_chop_inner(i.stack.as_slice(), i.chop, i.addr1, i.file1, i.ret_addr)
         .into_iter()
-        .map(|(chop2, stack2)| {
-            FuncsCallStackChopOut {
-                chop2: chop2,
-                stack2: stack2,
-            }
+        .map(|(chop2, stack2)| FuncsCallStackChopOut {
+            chop2: chop2,
+            stack2: stack2,
         })
         .collect()
 }
 pub fn call_stack_chop_trace(i: &FuncsCallStackChopTraceIn) -> Vec<FuncsCallStackChopTraceOut> {
     call_stack_chop_inner(i.stack.as_slice(), i.chop, i.addr1, i.file1, i.ret_addr)
         .into_iter()
-        .map(|(chop2, stack2)| {
-            FuncsCallStackChopTraceOut {
-                chop2: chop2,
-                stack2: stack2,
-            }
+        .map(|(chop2, stack2)| FuncsCallStackChopTraceOut {
+            chop2: chop2,
+            stack2: stack2,
         })
         .collect()
 }
@@ -301,12 +295,10 @@ pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
         let image = get_image!(bap, i.contents);
         let syms = image.symbols();
         let out = syms.iter()
-            .map(|sym| {
-                FuncsDumpSymsOut {
-                    name: sym.name(),
-                    start: BitVector::from_basic(&sym.memory().min_addr()),
-                    end: BitVector::from_basic(&sym.memory().max_addr()),
-                }
+            .map(|sym| FuncsDumpSymsOut {
+                name: sym.name(),
+                start: BitVector::from_basic(&sym.memory().min_addr()),
+                end: BitVector::from_basic(&sym.memory().max_addr()),
             })
             .collect();
         out

@@ -15,7 +15,7 @@ fn check_uaf(names: &[&'static str], bugs: &[u64], max_fp: usize) {
     for bug in bugs {
         assert!(
             ans.iter()
-                .any(|found| { found.addr == BitVector::from_u64(*bug, 64) })
+                .any(|found| found.addr == BitVector::from_u64(*bug, 64))
         );
     }
 
