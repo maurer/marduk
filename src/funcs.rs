@@ -66,10 +66,30 @@ pub fn inc_path2(i: &FuncsIncPath2In) -> Vec<FuncsIncPath2Out> {
     }
 }
 
-pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
+pub fn path_start_heap(i: &FuncsPathStartHeapIn) -> Vec<FuncsPathStartHeapOut> {
+    // If alias_set is 0, short circuit to do nothing, this was malloc not heap
+    if i.alias_set == 0 {
+        return Vec::new();
+    }
+
+    // TODO factor duplicate code
+    // Do exactly as heap_init, but only return the value that matches alias_set
     let mut hs = Vec::new();
     for stmt in i.sema.iter() {
         tprop::heap_prop(stmt, &mut hs)
+    }
+    hs[i.alias_set - 1]
+        .iter()
+        .map(|var| FuncsPathStartHeapOut {
+            heap_var: var.clone(),
+        })
+        .collect()
+}
+
+pub fn heap_init(i: &FuncsHeapInitIn) -> Vec<FuncsHeapInitOut> {
+    let mut hs = Vec::new();
+    for stmt in i.sema.iter() {
+        tprop::heap_prop(stmt, &mut hs);
     }
 
     hs.into_iter()
@@ -454,10 +474,10 @@ mod tprop {
     pub fn heap_prop(stmt: &Statement, ks: &mut Vec<HashSet<AVar>>) {
         let mut all_tracked = HashSet::new();
         for ass in ks.iter_mut() {
+            all_tracked.extend(ass.iter().cloned());
             *ass = HashSet::from_iter(
                 proc_stmt(ass.iter().cloned().collect::<Vec<_>>(), stmt).into_iter(),
             );
-            all_tracked.extend(ass.iter().cloned());
         }
         match *stmt {
             Statement::Move { ref lhs, ref rhs } if is_reg(lhs) => {
@@ -580,7 +600,6 @@ mod tprop {
             _ => false,
         }
     }
-
 
     fn deref_var_step(stmt: &Statement, var: &AVar) -> bool {
         use bap::high::bil::Statement::Move;

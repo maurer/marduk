@@ -47,7 +47,7 @@ fn ll() {
     // If flow sensitive is made more conservative (e.g. we track two pointer levels deep)
     // one flow sensitive bug will be detected. However, the trace should still clean it up at that
     // point.
-    run_uaf(&["ll"], 0, 0);
+    run_uaf(&["ll"], 1, 0);
 }
 
 #[test]
