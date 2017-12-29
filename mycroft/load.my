@@ -82,4 +82,4 @@ func_walk_over: func {file_name: name, entry: entry, addr: next } <- func {file_
 call_site_internal: call_site { call_file: name, call_addr: src_addr, dst_file: name, dst_addr } <- succ { file_name: name, src_addr: src_addr, dst_addr, is_call: ~true }
 
 // Inter-object call sites
-call_site_dyn: call_site { call_file: src_name, call_addr: src_addr, dst_file: dst_name, dst_addr } <- succ { file_name: name, src_addr: src_addr, dst_addr: pad_addr, is_call: ~true } & link_pad {file_name: src_name, pad_name: func_name, pad_addr: pad} & sym { file_name: dst_name, name: func_name, start: dst_addr }
+call_site_dyn: call_site { call_file: src_name, call_addr: src_addr, dst_file: dst_name, dst_addr } <- succ { file_name: src_name, src_addr: src_addr, dst_addr: pad_addr, is_call: ~true } & link_pad {file_name: src_name, pad_name: func_name, pad_addr} & sym { file_name: dst_name, name: func_name, start: dst_addr }
