@@ -1,14 +1,25 @@
 extern crate marduk;
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn print_state(db: &marduk::datalog::Database) {
+    println!("---\nflow");
+    for f in db.query_flow() {
+        println!("{}", f);
+    }
+    println!("---\nuaf_flow");
+    for q in db.query_get_uaf_flow_full() {
+        println!("{}", q);
+    }
+    println!("---\ntrace");
+    for t in db.query_trace() {
+        println!("{}", t)
+    }
     println!("---\nuaf");
     for q in db.query_get_uaf_full() {
         println!("{}", q);
     }
 }
-
 
 fn main() {
     let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..]);
@@ -16,7 +27,8 @@ fn main() {
     let mut last_round = Vec::new();
     println!("Booting");
     let total = Instant::now();
-    while (!last_round.is_empty() || step == 0) && step < 1000 {
+    let timeout = Duration::new(60 * 60, 0); // 1 hr timeout
+    while (!last_round.is_empty() || step == 0) && step < 1000 && total.elapsed() < timeout {
         let mark = Instant::now();
         last_round = db.run_rules_once();
         step += 1;
