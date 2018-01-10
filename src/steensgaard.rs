@@ -1,28 +1,35 @@
-use bap::high::bitvector::BitVector;
 use bap::high::bil::Statement;
 use bap::high::bil;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use datalog::Loc;
+
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
-    StackSlot { func_addr: BitVector, offset: usize },
-    Register { site: BitVector, register: String },
-    Alloc { site: BitVector },
+    StackSlot {
+        func_addr: Loc,
+        offset: usize,
+    },
+    Register {
+        site: Loc,
+        register: String,
+        tmp: bool,
+    },
+    Alloc {
+        site: Loc,
+    },
 }
 
 // Maps a register at a code address to the list of possible definition sites (for a specific
-// address)
-pub type DefChain = BTreeMap<String, BTreeSet<BitVector>>;
+// location)
+pub type DefChain = BTreeMap<String, BTreeSet<Loc>>;
 
-fn move_walk<
-    A,
-    F: Fn(&bil::Variable, &bil::Expression, &mut DefChain, &BitVector, &BitVector) -> Vec<A>,
->(
+fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &mut DefChain, &Loc, &Loc) -> Vec<A>>(
     stmt: &Statement,
     defs: &mut DefChain,
-    cur_addr: &BitVector,
-    func_addr: &BitVector,
+    cur_addr: &Loc,
+    func_addr: &Loc,
     f: &F,
 ) -> Vec<A> {
     match *stmt {
@@ -79,15 +86,17 @@ enum E {
 fn extract_expr(
     e: &bil::Expression,
     defs: &mut DefChain,
-    cur_addr: &BitVector,
-    func_addr: &BitVector,
+    cur_addr: &Loc,
+    func_addr: &Loc,
 ) -> Vec<E> {
     use bap::high::bil::Expression::*;
     use num_traits::ToPrimitive;
     match *e {
         // TODO: Forward stack frame information in here so we can detect stack slots off %rbp
         Var(ref bv) => {
-            if bv.name == "RSP" {
+            if bv.type_ == bil::Type::Immediate(1) {
+                Vec::new()
+            } else if bv.name == "RSP" {
                 vec![
                     E::AddrOf(self::Var::StackSlot {
                         func_addr: func_addr.clone(),
@@ -103,6 +112,7 @@ fn extract_expr(
                             E::Base(self::Var::Register {
                                 site: site.clone(),
                                 register: bv.name.clone(),
+                                tmp: bv.tmp,
                             })
                         })
                         .collect(),
@@ -182,9 +192,10 @@ fn extract_move(
     lhs: &bil::Variable,
     rhs: &bil::Expression,
     defs: &mut DefChain,
-    cur_addr: &BitVector,
-    func_addr: &BitVector,
+    cur_addr: &Loc,
+    func_addr: &Loc,
 ) -> Vec<Constraint> {
+    println!("Move extract, lhs={:?}, rhs={:?}", lhs, rhs);
     match lhs.type_ {
         bil::Type::Memory { .. } => {
             use self::E::*;
@@ -199,7 +210,9 @@ fn extract_move(
                 panic!("Writing to memory, but the expression isn't a store")
             };
             let lhs_vars = extract_expr(index, defs, cur_addr, func_addr);
+            println!("lhs_vars={:?}", lhs_vars);
             let rhs_vars = extract_expr(rhs, defs, cur_addr, func_addr);
+            println!("rhs_vars={:?}", rhs_vars);
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
                 for rhs_evar in rhs_vars.clone() {
@@ -216,10 +229,13 @@ fn extract_move(
             }
             out
         }
+        // Ignore flags
+        bil::Type::Immediate(1) => Vec::new(),
         bil::Type::Immediate(_) => {
             let lv = Var::Register {
                 site: cur_addr.clone(),
                 register: lhs.name.clone(),
+                tmp: lhs.tmp,
             };
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
@@ -263,16 +279,24 @@ pub enum Constraint {
     Xfer { a: Var, b: Var },
 }
 
+fn not_tmp(v: &Var) -> bool {
+    match *v {
+        Var::Register { ref tmp, .. } => !tmp,
+        _ => true,
+    }
+}
+
 pub fn extract_constraints(
     sema: &[Statement],
     mut defs: DefChain,
-    addr: &BitVector,
-    func_addr: &BitVector,
+    cur: &Loc,
+    func_loc: &Loc,
 ) -> Vec<Constraint> {
     let mut constraints = Vec::new();
     for stmt in sema {
-        constraints.extend(move_walk(stmt, &mut defs, addr, func_addr, &extract_move));
+        constraints.extend(move_walk(stmt, &mut defs, cur, func_loc, &extract_move));
     }
+    println!("Constraints at {}: {}", cur, ::printers::CB(&constraints));
     constraints
 }
 
@@ -402,7 +426,7 @@ impl UF {
                 let ka = self.force_find(a);
                 let kb = self.force_find(b);
                 let pa = self.force_points_to(ka);
-                self.merge(pa, kb)
+                self.merge(pa, kb);
             }
             // *a = *b
             Xfer { a, b } => {
@@ -421,5 +445,10 @@ pub fn constraints_to_may_alias(cs: Vec<Constraint>) -> Vec<Vec<Var>> {
     for c in cs {
         uf.process(c)
     }
+    // We need to track temps during solving, but afterwards we only care about what's at
+    // instruction boundaries.
     uf.dump_sets()
+        .into_iter()
+        .map(|vs| vs.into_iter().filter(not_tmp).collect())
+        .collect()
 }

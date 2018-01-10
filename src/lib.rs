@@ -5,7 +5,6 @@ extern crate mycroft_macros;
 extern crate mycroft_support;
 extern crate num_traits;
 
-pub mod avar;
 pub mod datalog;
 pub mod funcs;
 pub mod steensgaard;

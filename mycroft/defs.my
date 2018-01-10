@@ -1,9 +1,7 @@
-impossible (bool)
 reaching {
-	file: String,
-	def_addr: BitVectorSet^union,
+	defs: LocSet^union,
 	register: String,
-	reached_addr: BitVector
+	reached: Loc
 }
 
 // This predicate currently confuses may_define and must_define.
@@ -13,26 +11,27 @@ reaching {
 // If this turns out to be problematic, I can produce both
 
 defines {
-	file: String,
-	addr: BitVector,
+	loc: Loc,
 	registers: Strings
 }
 
 // Write down what a semantics chunk overwrites
-define_sema: defines {file, addr, registers} <- lift {file_name: file, address: addr, bil} + ::funcs::defines
+define_sema: defines {loc, registers} <- lift {loc, bil} + ::funcs::defines
+// Malloc defines rax
+define_malloc: defines {loc, registers: ~(vec!["RAX".to_string()])} <- malloc_call {loc}
 
 // If we define some registers, then our definition reaches all our immediate successors
-reaching_init: reaching {file, def_addr: def_addr_singleton, register, reached_addr} <- defines {file, addr: def_addr, registers} & succ_over {file_name: file, src: def_addr, dst: reached_addr} + ::funcs::expand_registers
+reaching_init: reaching {defs: def_loc_singleton, register, reached} <- defines {loc: def_loc, registers} & succ_over {src: def_loc, dst: reached} + ::funcs::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one 
-reaching_trans@2: reaching {file, def_addr, register, reached_addr} <- reaching {file, def_addr, register, reached_addr: prev_reached_addr} & succ_over { file_name: file, src: prev_reached_addr, dst: reached_addr } & defines {file, addr: prev_reached_addr, registers: prev_defines} + ::funcs::exclude_registers
+reaching_trans@2: reaching {defs, register, reached} <- reaching {defs, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
 
-?defines: defines {file, addr, registers}
-?reaching: reaching {file, def_addr, register, reached_addr}
+?defines: defines {loc, registers}
+?reaching: reaching {defs, register, reached}
 
 // Merge defchains together when done
-partial_chain(BitVector, DefChain^chain_merge)
-chain(BitVector, DefChain)
+partial_chain(Loc, DefChain^chain_merge)
+chain(Loc, DefChain)
 
-promote_chain@3: partial_chain(addr, dc) <- ~reaching {def_addr, reached_addr: addr, register} + ::funcs::def_chain
+promote_chain@3: partial_chain(reached, dc) <- ~reaching {defs, reached, register} + ::funcs::def_chain
 def_done@4: chain(bv, dc) <- ~partial_chain(bv, dc)

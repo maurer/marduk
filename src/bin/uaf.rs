@@ -3,24 +3,12 @@ extern crate marduk;
 use std::time::{Duration, Instant};
 
 fn print_state(db: &marduk::datalog::Database) {
-    println!("---\nflow");
-    for f in db.query_flow() {
-        println!("{}", f);
-    }
-    println!("---\nuaf_flow");
-    for q in db.query_get_uaf_flow_full() {
-        println!("{}", q);
-    }
-    println!("---\ntrace");
-    for t in db.query_trace() {
-        println!("{}", t)
-    }
-    println!("---\nuaf");
-    for q in db.query_get_uaf_full() {
-        println!("{}", q);
-    }
     println!("Defines generated: {}", db.query_defines().len());
     println!("Reaches generated: {}", db.query_reaching().len());
+    println!("Steens:");
+    for x in db.query_steens() {
+        println!("{}", x);
+    }
 }
 
 fn main() {

@@ -1,80 +1,85 @@
-file {name: String, contents: Bytes}
+// An ELF file provided as system input
+file {
+  name: String,
+  contents: Bytes
+}
+
+// A loadable segment from a provided file
 segment {
-    file_name: String,
-    contents: Bytes,
-    start: BitVector,
-    end: BitVector,
-    read: bool,
-    write: bool,
-    execute: bool
+  file_name: String,
+  contents: Bytes,
+  start: BitVector,
+  end: BitVector,
+  read: bool,
+  write: bool,
+  execute: bool
 }
+
+// Symbols provided by the object. Only relevant for .a/.o/.so for semantics, but used if provided for normal objects to find function entry points
 sym {
-    file_name: String,
-    name: String,
-    start: BitVector,
-    end: BitVector
+  loc: Loc,
+  name: String,
+  end: BitVector
 }
+
+// The set of all known functions. This can be used to e.g. check whether a remote call should be skipped or resolved 
 all_funcs {
-	names: StringSet^union
+  names: StringSet^union
 }
+
+// Semantics of the instruction at the provided location
 lift {
-    file_name: String,
-    address: BitVector,
-    bil: Sema,
-    fallthrough: BitVector,
-    disassembly: String,
-    is_call: bool,
-    is_ret: bool
+  loc: Loc,
+  bil: Sema,
+  fallthrough: Loc,
+  disassembly: String,
+  is_call: bool,
+  is_ret: bool
 }
+
 succ_over {
-    file_name: String,
-    src: BitVector,
-    dst: BitVector
+  src: Loc,
+  dst: Loc
 }
+
 live {
-    file_name: String,
-    addr: BitVector
+  loc: Loc
 }
+
 prog_arch {
-    file_name: String,
-    arch: Arch
+  file_name: String,
+  arch: Arch
 }
+
 link_pad {
-    file_name: String,
-    pad_name: String,
-    pad_addr: BitVector
+  pad_name: String,
+  pad_loc: Loc
 }
+
 succ {
-    file_name: String,
-    src_addr: BitVector,
-    dst_addr: BitVector,
-    is_call: bool
+  src: Loc,
+  dst: Loc,
+  is_call: bool
 }
+
 free_call {
-    file_name: String,
-    addr: BitVector
+  loc: Loc
 }
+
 malloc_call {
-    file_name: String,
-    addr: BitVector
+  loc: Loc
 }
+
 func {
-    file_name: String,
-    entry: BitVector,
-    addr: BitVector
+  base: Loc,
+  contains: Loc
 }
+
 call_site {
-    call_file: String,
-    call_addr: BitVector,
-    dst_file: String,
-    dst_addr: BitVector
+  call_loc: Loc,
+  target_loc: Loc
 }
+
 skip_func {
-    file_name: String,
-    addr: BitVector
-}
-func_uses {
-    file_name: String,
-    addr: BitVector,
-    var: AVar
+    loc: Loc
 }
