@@ -25,6 +25,33 @@ macro_rules! get_image {
     }}
 }
 
+pub fn free_rdi(i: &FuncsFreeRdiIn) -> Vec<FuncsFreeRdiOut> {
+    i.dc["RDI"]
+        .iter()
+        .map(|loc| FuncsFreeRdiOut {
+            rdi: steensgaard::Var::Register {
+                site: loc.clone(),
+                tmp: false,
+                register: "RDI".to_string(),
+            },
+        })
+        .collect()
+}
+
+pub fn expand_vars(i: &FuncsExpandVarsIn) -> Vec<FuncsExpandVarsOut> {
+    i.vs
+        .iter()
+        .map(|v| FuncsExpandVarsOut { v2: v.clone() })
+        .collect()
+}
+
+pub fn reads_vars(i: &FuncsReadsVarsIn) -> Vec<FuncsReadsVarsOut> {
+    steensgaard::extract_var_use(i.bil, i.dc.clone(), i.loc, i.base)
+        .into_iter()
+        .map(|v| FuncsReadsVarsOut { v: v })
+        .collect()
+}
+
 pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersOut> {
     let mut def_loc_singleton = BTreeSet::new();
     def_loc_singleton.insert(i.def_loc.clone());

@@ -20,11 +20,18 @@ define_sema: defines {loc, registers} <- lift {loc, bil} + ::funcs::defines
 // Malloc defines rax
 define_malloc: defines {loc, registers: ~(vec!["RAX".to_string()])} <- malloc_call {loc}
 
+
+succ_any{src: Loc, dst: Loc}
+promote_over: succ_any{src, dst} <- succ_over {src, dst}
+promote_through: succ_any{src, dst} <- succ {src, dst, is_call: ~false}
+promote_ret: succ_any{src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
+promote_call: succ_any{src, dst} <- succ {src, is_call: ~true} & call_site{call_loc: src, target_loc: dst}
+
 // If we define some registers, then our definition reaches all our immediate successors
-reaching_init: reaching {defs: def_loc_singleton, register, reached} <- defines {loc: def_loc, registers} & succ_over {src: def_loc, dst: reached} + ::funcs::expand_registers
+reaching_init: reaching {defs: def_loc_singleton, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::funcs::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one 
-reaching_trans@2: reaching {defs, register, reached} <- reaching {defs, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
+reaching_trans@2: reaching {defs, register, reached} <- reaching {defs, register, reached: prev_loc} & succ_any {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
 
 ?defines: defines {loc, registers}
 ?reaching: reaching {defs, register, reached}

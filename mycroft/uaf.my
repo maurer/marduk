@@ -1,0 +1,14 @@
+freed_var(Var, Loc)
+uaf(Var, Loc, Loc)
+path_exists(Loc, Loc)
+deref_var(Var, Loc)
+
+base_freed: freed_var(rdi, loc) <- free_call {loc} & chain(loc, dc) + ::funcs::free_rdi
+all_freed: freed_var(v2, loc) <- steens_point(v, vs) & freed_var(v, loc) + ::funcs::expand_vars
+
+path_init: path_exists(loc, loc) <- freed_var(_, loc)
+path_step: path_exists(loc, loc3) <- path_exists(loc, loc2) & succ_any {src: loc2, dst: loc3}
+
+read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + ::funcs::reads_vars
+
+uaf: uaf(v, loc, loc2) <- freed_var(v, loc) & path_exists(loc, loc2) & deref_var(v, loc2)

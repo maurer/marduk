@@ -3,10 +3,23 @@ extern crate marduk;
 use std::time::{Duration, Instant};
 
 fn print_state(db: &marduk::datalog::Database) {
-    println!("Defines generated: {}", db.query_defines().len());
-    println!("Reaches generated: {}", db.query_reaching().len());
+    println!("Freed Vars:");
+    for x in db.query_freed_var() {
+        println!("{}", x.var);
+    }
+
+    println!("Deref Vars:");
+    for x in db.query_deref_var() {
+        println!("{}", x);
+    }
+
+    println!("Path Exists:");
+    for x in db.query_path_exists() {
+        println!("{}", x);
+    }
+
     println!("Steens:");
-    for x in db.query_steens() {
+    for x in db.query_uaf() {
         println!("{}", x);
     }
 }

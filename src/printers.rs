@@ -51,6 +51,24 @@ impl Display for Constraint {
     }
 }
 
+impl Display for PathExistsResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}->{}", self.src, self.dst)
+    }
+}
+
+impl Display for DerefVarResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}:*{}", self.loc, self.var)
+    }
+}
+
+impl Display for UafResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}:{}->{}", self.var, self.free, self.use_)
+    }
+}
+
 impl Display for CallSiteResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}->{}", self.call_loc, self.target_loc)

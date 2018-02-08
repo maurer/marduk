@@ -38,6 +38,7 @@ mycroft_files!(
     "mycroft/load.my",
     "mycroft/defs.my",
     "mycroft/steensgaard.my",
+    "mycroft/uaf.my",
     "mycroft/queries.my"
 );
 pub use self::mycroft_program::*;

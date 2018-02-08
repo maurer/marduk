@@ -188,6 +188,58 @@ fn extract_expr(
     }
 }
 
+fn extract_move_var(
+    lhs: &bil::Variable,
+    rhs: &bil::Expression,
+    defs: &mut DefChain,
+    cur_addr: &Loc,
+    func_addr: &Loc,
+) -> Vec<Var> {
+    match lhs.type_ {
+        bil::Type::Memory { .. } => {
+            use self::E::*;
+            let (index, rhs) = if let bil::Expression::Store {
+                ref index,
+                ref value,
+                ..
+            } = *rhs
+            {
+                (index, value)
+            } else {
+                panic!("Writing to memory, but the expression isn't a store")
+            };
+            let lhs_vars = extract_expr(index, defs, cur_addr, func_addr);
+            println!("lhs_vars={:?}", lhs_vars);
+            let rhs_vars = extract_expr(rhs, defs, cur_addr, func_addr);
+            println!("rhs_vars={:?}", rhs_vars);
+            let mut out = Vec::new();
+            for lhs_evar in lhs_vars {
+                match lhs_evar {
+                    Base(l) => out.push(l),
+                    _ => (),
+                }
+            }
+            for rhs_evar in rhs_vars {
+                match rhs_evar {
+                    Deref(v) => out.push(v),
+                    _ => (),
+                }
+            }
+            out
+        }
+        bil::Type::Immediate(_) => {
+            let mut out = Vec::new();
+            for eval in extract_expr(rhs, defs, cur_addr, func_addr) {
+                match eval {
+                    E::Deref(v) => out.push(v),
+                    _ => (),
+                }
+            }
+            out
+        }
+    }
+}
+
 fn extract_move(
     lhs: &bil::Variable,
     rhs: &bil::Expression,
@@ -296,8 +348,20 @@ pub fn extract_constraints(
     for stmt in sema {
         constraints.extend(move_walk(stmt, &mut defs, cur, func_loc, &extract_move));
     }
-    println!("Constraints at {}: {}", cur, ::printers::CB(&constraints));
     constraints
+}
+
+pub fn extract_var_use(
+    sema: &[Statement],
+    mut defs: DefChain,
+    cur: &Loc,
+    func_loc: &Loc,
+) -> Vec<Var> {
+    let mut vars = Vec::new();
+    for stmt in sema {
+        vars.extend(move_walk(stmt, &mut defs, cur, func_loc, &extract_move_var));
+    }
+    vars
 }
 
 #[derive(Default, Debug, Eq, PartialOrd, Ord, PartialEq, Clone, Copy)]
