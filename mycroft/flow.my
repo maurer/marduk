@@ -1,0 +1,7 @@
+flow_in(Loc, PointsTo^pts_merge)
+flow_out(Loc, PointsTo)
+
+pred_init: flow_in(loc, ~(BTreeMap::new())) <- constraint(loc, _)
+pred_flow: flow_in(dst, pts) <- flow_out(src, pts) & succ_any {src, dst}
+
+flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) + ::flow::xfer

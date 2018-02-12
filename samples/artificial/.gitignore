@@ -5,6 +5,7 @@ simple
 safe
 path_sensitive
 remalloc
+reloop
 loop
 ll
 link.o

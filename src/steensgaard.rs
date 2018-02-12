@@ -18,6 +18,10 @@ pub enum Var {
     },
     Alloc {
         site: Loc,
+        stale: bool,
+    },
+    Freed {
+        site: Loc,
     },
 }
 

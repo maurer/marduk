@@ -8,7 +8,8 @@ extern crate num_traits;
 pub mod datalog;
 pub mod funcs;
 pub mod steensgaard;
-mod printers;
+pub mod flow;
+pub mod printers;
 
 pub use datalog::Database;
 

@@ -12,3 +12,6 @@ path_step: path_exists(loc, loc3) <- path_exists(loc, loc2) & succ_any {src: loc
 read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + ::funcs::reads_vars
 
 uaf: uaf(v, loc, loc2) <- freed_var(v, loc) & path_exists(loc, loc2) & deref_var(v, loc2)
+
+uaf_flow(Var, Loc, Loc)
+uaf_flow: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) + ::flow::is_freed

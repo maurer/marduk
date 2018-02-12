@@ -3,7 +3,8 @@ use bap::high::bitvector::BitVector;
 use bap::high::bil::Statement;
 use bap::basic::Arch;
 use steensgaard::{Constraint, DefChain, Var};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
+use std::collections::btree_map;
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
 type StringSet = BTreeSet<String>;
@@ -11,11 +12,27 @@ type Strings = Vec<String>;
 type Constraints = Vec<Constraint>;
 type Vars = Vec<Var>;
 type LocSet = BTreeSet<Loc>;
+pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub file_name: String,
     pub addr: BitVector,
+}
+
+fn pts_merge(pts: &PointsTo, pts2: &PointsTo) -> PointsTo {
+    let mut out = pts.clone();
+    for (k, v) in pts2.iter() {
+        match out.entry(k.clone()) {
+            btree_map::Entry::Occupied(mut o) => {
+                o.get_mut().append(&mut v.clone());
+            }
+            btree_map::Entry::Vacant(e) => {
+                e.insert(v.clone());
+            }
+        };
+    }
+    out
 }
 
 fn chain_merge(dc: &DefChain, dc2: &DefChain) -> DefChain {
@@ -38,6 +55,7 @@ mycroft_files!(
     "mycroft/load.my",
     "mycroft/defs.my",
     "mycroft/steensgaard.my",
+    "mycroft/flow.my",
     "mycroft/uaf.my",
     "mycroft/queries.my"
 );

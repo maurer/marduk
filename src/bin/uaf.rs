@@ -1,26 +1,41 @@
 extern crate marduk;
 
 use std::time::{Duration, Instant};
+use marduk::printers::CB;
 
 fn print_state(db: &marduk::datalog::Database) {
-    println!("Freed Vars:");
-    for x in db.query_freed_var() {
-        println!("{}", x.var);
-    }
+    //println!("Freed Vars:");
+    //for x in db.query_freed_var() {
+    //    println!("{}", x.var);
+    //}
 
-    println!("Deref Vars:");
-    for x in db.query_deref_var() {
-        println!("{}", x);
-    }
+    //println!("Deref Vars:");
+    //for x in db.query_deref_var() {
+    //    println!("{}", x);
+    //}
 
-    println!("Path Exists:");
-    for x in db.query_path_exists() {
-        println!("{}", x);
-    }
+    //println!("Path Exists:");
+    //for x in db.query_path_exists() {
+    //    println!("{}", x);
+    //}
 
     println!("Steens:");
     for x in db.query_uaf() {
         println!("{}", x);
+    }
+
+    println!("Flow:");
+    for x in db.query_uaf_flow() {
+        println!("{}", x);
+    }
+
+    println!("Constraints:");
+    for x in db.query_constraints() {
+        println!("{}: {}", x.loc, CB(&x.c.iter().cloned().collect()));
+    }
+    println!("Flow alias (out):");
+    for x in db.query_flow_out() {
+        println!("{}: {:?}", x.loc, x.pts);
     }
 }
 

@@ -122,10 +122,11 @@ fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<String>) {
 }
 
 pub fn gen_constraints(i: &FuncsGenConstraintsIn) -> Vec<FuncsGenConstraintsOut> {
-    steensgaard::extract_constraints(i.bil, i.dc.clone(), i.loc, i.base)
-        .into_iter()
-        .map(|c| FuncsGenConstraintsOut { c: vec![c] })
-        .collect()
+    vec![
+        FuncsGenConstraintsOut {
+            c: steensgaard::extract_constraints(i.bil, i.dc.clone(), i.loc, i.base),
+        },
+    ]
 }
 
 pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
@@ -147,11 +148,33 @@ pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstrai
                     },
                     b: Var::Alloc {
                         site: i.loc.clone(),
+                        stale: false,
                     },
                 },
             ],
         },
     ]
+}
+
+pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut> {
+    use steensgaard::*;
+    i.dc["RDI"]
+        .iter()
+        .map(|src| FuncsFreeConstraintOut {
+            c: vec![
+                Constraint::Write {
+                    a: Var::Register {
+                        site: src.clone(),
+                        register: "RDI".to_string(),
+                        tmp: false,
+                    },
+                    b: Var::Freed {
+                        site: i.loc.clone(),
+                    },
+                },
+            ],
+        })
+        .collect()
 }
 
 pub fn defines(i: &FuncsDefinesIn) -> Vec<FuncsDefinesOut> {

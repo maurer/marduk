@@ -33,7 +33,11 @@ impl Display for Var {
                 ref register,
                 ..
             } => write!(f, "{}@{}", register, site),
-            Var::Alloc { ref site } => write!(f, "dyn@{}", site),
+            Var::Alloc {
+                ref site,
+                ref stale,
+            } => write!(f, "dyn@{}:{}", site, stale),
+            Var::Freed { ref site } => write!(f, "freed@{}", site),
         }
     }
 }
@@ -64,6 +68,12 @@ impl Display for DerefVarResult {
 }
 
 impl Display for UafResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}:{}->{}", self.var, self.free, self.use_)
+    }
+}
+
+impl Display for UafFlowResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}:{}->{}", self.var, self.free, self.use_)
     }
