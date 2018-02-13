@@ -27,7 +27,7 @@ macro_rules! get_image {
 
 pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
     let args = &["RDI", "RSI", "RDX", "RCX", "R8", "R9"];
-    if args.contains(&i.register.as_str()) {
+    if !args.contains(&i.register.as_str()) {
         Vec::new()
     } else {
         vec![FuncsOnlyArgsOut {}]
