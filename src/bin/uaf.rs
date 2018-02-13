@@ -1,7 +1,6 @@
 extern crate marduk;
 
 use std::time::{Duration, Instant};
-use marduk::printers::CB;
 
 fn print_state(db: &marduk::datalog::Database) {
     println!("Steens:");

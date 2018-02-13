@@ -87,10 +87,6 @@ pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersO
 }
 
 pub fn steens_solve(i: &FuncsSteensSolveIn) -> Vec<FuncsSteensSolveOut> {
-    println!("Problem state");
-    for c in i.cs {
-        println!("{}", c);
-    }
     steensgaard::constraints_to_may_alias(i.cs.clone())
         .into_iter()
         .map(|vs| FuncsSteensSolveOut { vs: vs })
