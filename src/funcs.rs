@@ -25,6 +25,31 @@ macro_rules! get_image {
     }}
 }
 
+pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
+    let args = &["RDI", "RSI", "RDX", "RCX", "R8", "R9"];
+    if args.contains(&i.register.as_str()) {
+        Vec::new()
+    } else {
+        vec![FuncsOnlyArgsOut {}]
+    }
+}
+
+pub fn only_ret(i: &FuncsOnlyRetIn) -> Vec<FuncsOnlyRetOut> {
+    if i.register == "RAX" {
+        vec![FuncsOnlyRetOut {}]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn promote_def(i: &FuncsPromoteDefIn) -> Vec<FuncsPromoteDefOut> {
+    vec![
+        FuncsPromoteDefOut {
+            defs: vec![i.def.clone()],
+        },
+    ]
+}
+
 pub fn free_rdi(i: &FuncsFreeRdiIn) -> Vec<FuncsFreeRdiOut> {
     i.dc["RDI"]
         .iter()
@@ -53,13 +78,10 @@ pub fn reads_vars(i: &FuncsReadsVarsIn) -> Vec<FuncsReadsVarsOut> {
 }
 
 pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersOut> {
-    let mut def_loc_singleton = BTreeSet::new();
-    def_loc_singleton.insert(i.def_loc.clone());
     i.registers
         .iter()
         .map(|s| FuncsExpandRegistersOut {
             register: s.clone(),
-            def_loc_singleton: def_loc_singleton.clone(),
         })
         .collect()
 }
@@ -131,7 +153,7 @@ pub fn gen_constraints(i: &FuncsGenConstraintsIn) -> Vec<FuncsGenConstraintsOut>
 
 pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
     let mut out = BTreeMap::new();
-    out.insert(i.register.clone(), i.defs.clone());
+    out.insert(i.register.clone(), i.defs.iter().cloned().collect());
     vec![FuncsDefChainOut { dc: out }]
 }
 

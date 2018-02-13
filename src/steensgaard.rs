@@ -1,7 +1,7 @@
 use bap::high::bil::Statement;
 use bap::high::bil;
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, HashMap};
 
 use datalog::Loc;
 
@@ -27,7 +27,7 @@ pub enum Var {
 
 // Maps a register at a code address to the list of possible definition sites (for a specific
 // location)
-pub type DefChain = BTreeMap<String, BTreeSet<Loc>>;
+pub type DefChain = BTreeMap<String, Vec<Loc>>;
 
 fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &mut DefChain, &Loc, &Loc) -> Vec<A>>(
     stmt: &Statement,
@@ -68,8 +68,12 @@ fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &mut DefChain, &Loc, &Lo
 
             // Merge back else defs info
             for (k, v) in else_defs {
-                let e = defs.entry(k).or_insert_with(BTreeSet::new);
-                *e = e.union(&v).cloned().collect()
+                let e = defs.entry(k).or_insert_with(Vec::new);
+                for ve in v {
+                    if !e.contains(&ve) {
+                        e.push(ve)
+                    }
+                }
             }
 
             let mut out = then_out;
@@ -312,8 +316,7 @@ fn extract_move(
                 .collect();
             if !lhs.tmp {
                 // We've just overwritten a non-temporary, update the def chain
-                let mut our_addr = BTreeSet::new();
-                our_addr.insert(cur_addr.clone());
+                let our_addr = vec![cur_addr.clone()];
                 defs.insert(lhs.name.clone(), our_addr);
             }
             out

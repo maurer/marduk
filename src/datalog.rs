@@ -11,8 +11,19 @@ type StringSet = BTreeSet<String>;
 type Strings = Vec<String>;
 type Constraints = Vec<Constraint>;
 type Vars = Vec<Var>;
-type LocSet = BTreeSet<Loc>;
+type LocSet = Vec<Loc>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
+
+fn loc_merge(l1: &LocSet, l2: &LocSet) -> LocSet {
+    let mut out = Vec::new();
+    out.reserve(l1.len() + l2.len());
+    for l in l1.iter().chain(l2.iter()) {
+        if !out.contains(l) {
+            out.push(l.clone())
+        }
+    }
+    out
+}
 
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
@@ -35,6 +46,7 @@ fn pts_merge(pts: &PointsTo, pts2: &PointsTo) -> PointsTo {
     out
 }
 
+//TODO chain_merge is buggy, it will drop duplicate entries rather than merging them
 fn chain_merge(dc: &DefChain, dc2: &DefChain) -> DefChain {
     dc.iter()
         .chain(dc2.iter())

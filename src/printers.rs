@@ -112,7 +112,7 @@ impl Display for DefinesResult {
 
 impl Display for ReachingResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:?}:{}->{}", self.defs, self.register, self.reached)
+        write!(f, "{:?}:{}->{}", self.def, self.register, self.reached)
     }
 }
 

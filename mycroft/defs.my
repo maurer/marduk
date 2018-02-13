@@ -1,5 +1,5 @@
 reaching {
-	defs: LocSet^union,
+	def: Loc,
 	register: String,
 	reached: Loc
 }
@@ -21,24 +21,35 @@ define_sema: defines {loc, registers} <- lift {loc, bil} + ::funcs::defines
 define_malloc: defines {loc, registers: ~(vec!["RAX".to_string()])} <- malloc_call {loc}
 
 
+succ_ret{src: Loc, dst: Loc}
+ret_flat: succ_ret {src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
+succ_call{src: Loc, dst: Loc}
+call_flat: succ_call {src, dst} <- succ {src, is_call: ~true} & call_site{call_loc: src, target_loc: dst}
+
 succ_any{src: Loc, dst: Loc}
 promote_over: succ_any{src, dst} <- succ_over {src, dst}
-promote_through: succ_any{src, dst} <- succ {src, dst, is_call: ~false}
-promote_ret: succ_any{src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
-promote_call: succ_any{src, dst} <- succ {src, is_call: ~true} & call_site{call_loc: src, target_loc: dst}
+promote_ret: succ_any{src, dst} <- succ_ret{src, dst}
+promote_call: succ_any{src, dst} <- succ_call{src, dst}
 
 // If we define some registers, then our definition reaches all our immediate successors
-reaching_init: reaching {defs: def_loc_singleton, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::funcs::expand_registers
+reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::funcs::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one 
-reaching_trans@2: reaching {defs, register, reached} <- reaching {defs, register, reached: prev_loc} & succ_any {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
+reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
+
+reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} + ::funcs::only_ret
+
+reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_call{src, dst} + ::funcs::only_args
 
 ?defines: defines {loc, registers}
-?reaching: reaching {defs, register, reached}
+?reaching: reaching {def, register, reached}
 
 // Merge defchains together when done
 partial_chain(Loc, DefChain^chain_merge)
 chain(Loc, DefChain)
 
-promote_chain@3: partial_chain(reached, dc) <- ~reaching {defs, reached, register} + ::funcs::def_chain
-def_done@4: chain(bv, dc) <- ~partial_chain(bv, dc)
+reach_all {defs: LocSet^loc_merge, reached: Loc, register: String}
+promote_reach@3: reach_all {defs, reached, register} <- reaching {def, reached, register} + ::funcs::promote_def
+
+promote_chain@4: partial_chain(reached, dc) <- ~reach_all {defs, reached, register} + ::funcs::def_chain
+def_done@5: chain(bv, dc) <- ~partial_chain(bv, dc)
