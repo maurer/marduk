@@ -4,21 +4,6 @@ use std::time::{Duration, Instant};
 use marduk::printers::CB;
 
 fn print_state(db: &marduk::datalog::Database) {
-    //println!("Freed Vars:");
-    //for x in db.query_freed_var() {
-    //    println!("{}", x.var);
-    //}
-
-    //println!("Deref Vars:");
-    //for x in db.query_deref_var() {
-    //    println!("{}", x);
-    //}
-
-    //println!("Path Exists:");
-    //for x in db.query_path_exists() {
-    //    println!("{}", x);
-    //}
-
     println!("Steens:");
     for x in db.query_uaf() {
         println!("{}", x);
@@ -27,15 +12,6 @@ fn print_state(db: &marduk::datalog::Database) {
     println!("Flow:");
     for x in db.query_uaf_flow() {
         println!("{}", x);
-    }
-
-    println!("Constraints:");
-    for x in db.query_constraints() {
-        println!("{}: {}", x.loc, CB(&x.c.iter().cloned().collect()));
-    }
-    println!("Flow alias (out):");
-    for x in db.query_flow_out() {
-        println!("{}: {:?}", x.loc, x.pts);
     }
 }
 
@@ -46,7 +22,7 @@ fn main() {
     println!("Booting");
     let total = Instant::now();
     let timeout = Duration::new(60 * 60, 0); // 1 hr timeout
-    while (!last_round.is_empty() || step == 0) && step < 1000 && total.elapsed() < timeout {
+    while (!last_round.is_empty() || step == 0) && step < 10000 && total.elapsed() < timeout {
         let mark = Instant::now();
         last_round = db.run_rules_once();
         step += 1;
