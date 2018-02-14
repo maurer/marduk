@@ -447,7 +447,7 @@ impl UF {
             return;
         }
         self.uf_union(ka, kb);
-        match (self.points_to[ka], self.points_to[kb]) {
+        match (self.points_to[ka].map(|p| self.uf_find(p)), self.points_to[kb].map(|p| self.uf_find(p))) {
             (Some(pa), Some(pb)) => self.merge(pa, pb),
             (Some(pa), None) => self.points_to[kb] = Some(pa),
             (None, Some(pb)) => self.points_to[ka] = Some(pb),
