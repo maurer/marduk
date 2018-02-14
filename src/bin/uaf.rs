@@ -1,8 +1,11 @@
+extern crate env_logger;
+#[macro_use]
+extern crate log;
 extern crate marduk;
 
 use std::time::{Duration, Instant};
 
-fn print_state(db: &marduk::datalog::Database) {
+fn print_state(db: &mut marduk::datalog::Database) {
     println!("Steens:");
     for x in db.query_uaf() {
         println!("{}", x);
@@ -15,6 +18,8 @@ fn print_state(db: &marduk::datalog::Database) {
 }
 
 fn main() {
+    env_logger::init();
+    error!("Test");
     let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..], false);
     let mut step = 0;
     let mut last_round = Vec::new();
@@ -32,7 +37,7 @@ fn main() {
             total.elapsed()
         );
     }
-    print_state(&db);
+    print_state(&mut db);
     let derivs: Vec<_> = last_round.into_iter().map(|d| db.derivation(&d)).collect();
     println!("Last round derivs (if empty, program terminated):");
     for deriv in derivs {

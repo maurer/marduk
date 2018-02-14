@@ -14,12 +14,14 @@ type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
-fn loc_merge(l1: &LocSet, l2: &LocSet) -> LocSet {
+fn loc_merge(lss: &[&LocSet]) -> LocSet {
     let mut out = Vec::new();
-    out.reserve(l1.len() + l2.len());
-    for l in l1.iter().chain(l2.iter()) {
-        if !out.contains(l) {
-            out.push(l.clone())
+    out.reserve(lss.iter().map(|ls| ls.len()).sum());
+    for ls in lss {
+        for l in ls.iter() {
+            if !out.contains(l) {
+                out.push(l.clone())
+            }
         }
     }
     out
@@ -31,35 +33,55 @@ pub struct Loc {
     pub addr: BitVector,
 }
 
-fn pts_merge(pts: &PointsTo, pts2: &PointsTo) -> PointsTo {
-    let mut out = pts.clone();
-    for (k, v) in pts2.iter() {
-        match out.entry(k.clone()) {
-            btree_map::Entry::Occupied(mut o) => {
-                o.get_mut().append(&mut v.clone());
-            }
-            btree_map::Entry::Vacant(e) => {
-                e.insert(v.clone());
-            }
-        };
+fn pts_merge(ptss: &[&PointsTo]) -> PointsTo {
+    let mut out = ptss[0].clone();
+    for pts in &ptss[1..] {
+        for (k, v) in pts.iter() {
+            match out.entry(k.clone()) {
+                btree_map::Entry::Occupied(mut o) => {
+                    o.get_mut().append(&mut v.clone());
+                }
+                btree_map::Entry::Vacant(e) => {
+                    e.insert(v.clone());
+                }
+            };
+        }
     }
     out
 }
 
-//TODO chain_merge is buggy, it will drop duplicate entries rather than merging them
-fn chain_merge(dc: &DefChain, dc2: &DefChain) -> DefChain {
-    dc.iter()
-        .chain(dc2.iter())
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect()
+fn chain_merge(dcs: &[&DefChain]) -> DefChain {
+    let mut out = dcs[0].clone();
+    for dc in &dcs[1..] {
+        for (k, v) in dc.iter() {
+            match out.entry(k.clone()) {
+                btree_map::Entry::Occupied(mut o) => {
+                    o.get_mut().append(&mut v.clone());
+                }
+                btree_map::Entry::Vacant(e) => {
+                    e.insert(v.clone());
+                }
+            };
+        }
+    }
+    out
 }
 
-fn union<T: Clone + Eq + Ord>(x: &BTreeSet<T>, y: &BTreeSet<T>) -> BTreeSet<T> {
-    x.union(y).cloned().collect()
+fn union<T: Clone + Eq + Ord>(bts: &[&BTreeSet<T>]) -> BTreeSet<T> {
+    let mut out = BTreeSet::new();
+    for bt in bts {
+        out.extend(bt.iter().cloned());
+    }
+    out
 }
 
-fn concat<T: Clone>(x: &Vec<T>, y: &Vec<T>) -> Vec<T> {
-    x.iter().chain(y.iter()).cloned().collect()
+fn concat<T: Clone>(xss: &[&Vec<T>]) -> Vec<T> {
+    let mut out = Vec::new();
+    out.reserve(xss.iter().map(|xs| xs.len()).sum());
+    for xs in xss {
+        out.extend(xs.iter().cloned());
+    }
+    out
 }
 
 mycroft_files!(
