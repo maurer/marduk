@@ -15,7 +15,7 @@ fn print_state(db: &marduk::datalog::Database) {
 }
 
 fn main() {
-    let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..]);
+    let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..], false);
     let mut step = 0;
     let mut last_round = Vec::new();
     println!("Booting");

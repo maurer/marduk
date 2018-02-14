@@ -5,7 +5,7 @@ use marduk::uaf;
 // extent
 #[test]
 fn simple_alias() {
-    let mut db = uaf(&["samples/artificial/simple".to_string()]);
+    let mut db = uaf(&["samples/artificial/simple".to_string()], false);
     db.run_rules();
     let steens = db.query_steens();
     for pt in steens {
