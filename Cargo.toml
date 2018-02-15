@@ -10,13 +10,13 @@ log = "0.4"
 env_logger = "0.5"
 
 [dependencies.mycroft]
-path = "../mycroft"
+git = "https://github.com/maurer/mycroft.git"
 
 [dependencies.mycroft-support]
-path = "../mycroft/mycroft-support"
+git = "https://github.com/maurer/mycroft.git"
 
 [dependencies.mycroft-macros]
-path = "../mycroft/mycroft-macros"
+git = "https://github.com/maurer/mycroft.git"
 
 [dependencies.bap]
 git = "https://github.com/maurer/bap-rust"
