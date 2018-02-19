@@ -36,7 +36,7 @@ fn link() {
 
 #[test]
 fn simple() {
-    run_uaf(&["simple"], 1, 1);
+    run_uaf(&["simple"], 2, 2);
 }
 
 #[test]

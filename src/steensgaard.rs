@@ -145,7 +145,7 @@ fn extract_expr(
             op,
         } => {
             let mut out = extract_expr(lhs, defs, cur_addr, func_addr);
-            out.extend(extract_expr(lhs, defs, cur_addr, func_addr));
+            out.extend(extract_expr(rhs, defs, cur_addr, func_addr));
             if op == bil::BinOp::Add {
                 if let Var(ref lv) = **lhs {
                     if lv.name == "RSP" {
@@ -192,7 +192,8 @@ fn extract_expr(
             out
         }
         Let { .. } => panic!("let unimpl"),
-        Unknown { .. } | UnOp { .. } | Extract { .. } | Concat { .. } | Cast { .. } => Vec::new(),
+        Cast { ref arg, .. } => extract_expr(arg, defs, cur_addr, func_addr),
+        Unknown { .. } | UnOp { .. } | Extract { .. } | Concat { .. } => Vec::new(),
     }
 }
 
