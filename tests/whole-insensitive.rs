@@ -52,3 +52,8 @@ fn gnome_nettool() {
 fn goaccess() {
     run_uaf(&["goaccess"], &[(0x40b1dc, 0x40b230)], None);
 }
+
+#[test]
+fn libarchive() {
+    run_uaf(&["bsdcpio_test"], &[(0x40e012, 0x40e021)], None);
+}

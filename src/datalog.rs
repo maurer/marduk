@@ -88,6 +88,7 @@ mycroft_files!(
     "mycroft/schema.my",
     "mycroft/load.my",
     "mycroft/defs.my",
+    "mycroft/fmt_str.my",
     "mycroft/steensgaard.my",
     "mycroft/flow.my",
     "mycroft/uaf.my",

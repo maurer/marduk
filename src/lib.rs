@@ -12,6 +12,7 @@ pub mod funcs;
 pub mod steensgaard;
 pub mod flow;
 pub mod printers;
+pub mod fmt_str;
 
 pub use datalog::Database;
 

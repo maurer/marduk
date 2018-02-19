@@ -77,6 +77,19 @@ pub fn reads_vars(i: &FuncsReadsVarsIn) -> Vec<FuncsReadsVarsOut> {
         .collect()
 }
 
+pub fn use_vars(i: &FuncsUseVarsIn) -> Vec<FuncsUseVarsOut> {
+    i.dc[i.r]
+        .iter()
+        .map(|site| FuncsUseVarsOut {
+            v: steensgaard::Var::Register {
+                site: site.clone(),
+                register: i.r.to_string(),
+                tmp: false,
+            },
+        })
+        .collect()
+}
+
 pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersOut> {
     i.registers
         .iter()

@@ -1,0 +1,11 @@
+printf_like {loc: Loc}
+fmt_addr {loc: Loc, addr: BitVector}
+str_const {addr: BitVector, str: String}
+uses(String, Loc)
+
+printf_printf: printf_like {loc} <- sym {loc, name: ~("printf".to_string())}
+failure_printf: printf_like {loc} <- sym {loc, name: ~("failure".to_string())}
+frprintf_printf: printf_like {loc} <- sym {loc, name: ~("fprintf".to_string())}
+fmt_addr_find: fmt_addr {loc, addr} <- lift {loc: def, bil} & reaching {def, register: ~("RDI".to_string()), reached: loc} & printf_like {loc: printf} & call_site {call_loc: loc, target_loc: printf} + ::fmt_str::const_move
+fmt_str_use: uses(arg, loc) <- fmt_addr {loc, addr} & str_const {addr, str} + ::fmt_str::parse_str
+fmt_str_lookup: str_const {addr, str} <- segment {start, end, contents} & fmt_addr {addr} + ::fmt_str::ascii_nullterm
