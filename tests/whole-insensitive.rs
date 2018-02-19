@@ -57,3 +57,12 @@ fn goaccess() {
 fn libarchive() {
     run_uaf(&["bsdcpio_test"], &[(0x40e012, 0x40e021)], None);
 }
+
+#[test]
+fn shadowsocks_libev() {
+    run_uaf(
+        &["ss-server"],
+        &[(0x411336, 0x412b57), (0x411336, 0x412b5d)],
+        None,
+    );
+}
