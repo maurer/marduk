@@ -256,7 +256,7 @@ fn extract_move(
     match lhs.type_ {
         bil::Type::Memory { .. } => {
             use self::E::*;
-            let (index, rhs) = if let bil::Expression::Store {
+            let (index, value) = if let bil::Expression::Store {
                 ref index,
                 ref value,
                 ..
@@ -267,7 +267,7 @@ fn extract_move(
                 panic!("Writing to memory, but the expression isn't a store")
             };
             let lhs_vars = extract_expr(index, defs, cur_addr, func_addr);
-            let rhs_vars = extract_expr(rhs, defs, cur_addr, func_addr);
+            let rhs_vars = extract_expr(value, defs, cur_addr, func_addr);
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
                 for rhs_evar in rhs_vars.clone() {
@@ -276,7 +276,7 @@ fn extract_move(
                         (AddrOf(l), Base(r)) => Constraint::Asgn { a: l, b: r },
                         (AddrOf(l), Deref(r)) => Constraint::Deref { a: l, b: r },
                         (Deref(_), _) => panic!("**a = x ?"),
-                        (Base(_), AddrOf(_)) => panic!("*a = &b?"),
+                        (Base(l), AddrOf(r)) => Constraint::StackLoad { a: l, b: r },
                         (Base(l), Base(r)) => Constraint::Write { a: l, b: r },
                         (Base(l), Deref(r)) => Constraint::Xfer { a: l, b: r },
                     })
@@ -331,6 +331,8 @@ pub enum Constraint {
     Write { a: Var, b: Var },
     // *a = *b
     Xfer { a: Var, b: Var },
+    // *a = &b (can exist when b is a stack variable)
+    StackLoad { a: Var, b: Var },
 }
 
 fn not_tmp(v: &Var) -> bool {
@@ -447,7 +449,10 @@ impl UF {
             return;
         }
         self.uf_union(ka, kb);
-        match (self.points_to[ka].map(|p| self.uf_find(p)), self.points_to[kb].map(|p| self.uf_find(p))) {
+        match (
+            self.points_to[ka].map(|p| self.uf_find(p)),
+            self.points_to[kb].map(|p| self.uf_find(p)),
+        ) {
             (Some(pa), Some(pb)) => self.merge(pa, pb),
             (Some(pa), None) => self.points_to[kb] = Some(pa),
             (None, Some(pb)) => self.points_to[ka] = Some(pb),
@@ -501,6 +506,14 @@ impl UF {
                 let pa = self.force_points_to(ka);
                 let pb = self.force_points_to(kb);
                 self.merge(pa, pb)
+            }
+            // *a = &b
+            StackLoad { a, b } => {
+                let ka = self.force_find(a);
+                let kb = self.force_find(b);
+                let pa = self.force_points_to(ka);
+                let ppa = self.force_points_to(pa);
+                self.merge(ppa, kb);
             }
         }
     }

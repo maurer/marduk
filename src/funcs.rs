@@ -193,7 +193,7 @@ pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut>
         .iter()
         .map(|src| FuncsFreeConstraintOut {
             c: vec![
-                Constraint::Write {
+                Constraint::StackLoad {
                     a: Var::Register {
                         site: src.clone(),
                         register: "RDI".to_string(),

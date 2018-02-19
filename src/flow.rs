@@ -12,6 +12,22 @@ fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
 
 fn apply(pts: &mut PointsTo, c: &Constraint) {
     match *c {
+        // *a = &b
+        Constraint::StackLoad { ref a, ref b } => {
+            let mut bs = BTreeSet::new();
+            bs.insert(b.clone());
+            // TODO DEDUP
+            let pta = pt_get(pts, a);
+            if pta.len() == 1 {
+                let mut bs = BTreeSet::new();
+                bs.insert(b.clone());
+                pts.insert(pta.iter().next().unwrap().clone(), bs);
+            } else {
+                for pt in pta {
+                    pts.get_mut(&pt).unwrap().insert(b.clone());
+                }
+            }
+        }
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
             let mut bs = BTreeSet::new();
@@ -33,13 +49,12 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
         // *a = b;
         Constraint::Write { ref a, ref b } => {
             let pta = pt_get(pts, a);
+            let ptb = pt_get(pts, b);
             if pta.len() == 1 {
-                let mut bs = BTreeSet::new();
-                bs.insert(b.clone());
-                pts.insert(pta.iter().next().unwrap().clone(), bs);
+                pts.insert(pta.iter().next().unwrap().clone(), ptb);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).unwrap().insert(b.clone());
+                    pts.get_mut(&pt).unwrap().extend(ptb.clone());
                 }
             }
         }

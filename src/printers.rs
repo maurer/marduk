@@ -51,6 +51,7 @@ impl Display for Constraint {
             Deref { ref a, ref b } => write!(f, "{} = *{}", a, b),
             Write { ref a, ref b } => write!(f, "*{} = {}", a, b),
             Xfer { ref a, ref b } => write!(f, "*{} = *{}", a, b),
+            StackLoad { ref a, ref b } => write!(f, "*{} = &{}", a, b),
         }
     }
 }
