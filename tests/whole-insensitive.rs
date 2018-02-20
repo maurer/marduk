@@ -71,3 +71,18 @@ fn shadowsocks_libev() {
 fn isisd() {
     run_uaf(&["isisd"], &[(0x40a8c9, 0x40aa7e)], None);
 }
+
+#[test]
+fn ospf6d() {
+    // These are actually two distinct bugs
+    // The first one is id 8, the second two are id 17.
+    run_uaf(
+        &["ospf6d"],
+        &[
+            (0x42de10, 0x436c59),
+            (0x42de10, 0x437cf1),
+            (0x42de10, 0x437d05),
+        ],
+        None,
+    );
+}
