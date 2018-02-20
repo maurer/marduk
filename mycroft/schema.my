@@ -63,7 +63,8 @@ succ {
 }
 
 free_call {
-  loc: Loc
+  loc: Loc,
+  args: Vusize
 }
 
 malloc_call {

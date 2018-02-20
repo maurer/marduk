@@ -6,6 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use steensgaard;
 use datalog::Loc;
 
+const ARGS: &'static [&'static str] = &["RDI", "RSI", "RDX", "RCX", "R8", "R9"];
+
 macro_rules! vec_error {
     ($e:expr) => {{
         let name: ::bap::basic::Result<_> = $e;
@@ -26,8 +28,7 @@ macro_rules! get_image {
 }
 
 pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
-    let args = &["RDI", "RSI", "RDX", "RCX", "R8", "R9"];
-    if !args.contains(&i.register.as_str()) {
+    if !ARGS.contains(&i.register.as_str()) {
         Vec::new()
     } else {
         vec![FuncsOnlyArgsOut {}]
@@ -50,15 +51,18 @@ pub fn promote_def(i: &FuncsPromoteDefIn) -> Vec<FuncsPromoteDefOut> {
     ]
 }
 
-pub fn free_rdi(i: &FuncsFreeRdiIn) -> Vec<FuncsFreeRdiOut> {
-    i.dc["RDI"]
+pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
+    i.args
         .iter()
-        .map(|loc| FuncsFreeRdiOut {
-            rdi: steensgaard::Var::Register {
-                site: loc.clone(),
-                tmp: false,
-                register: "RDI".to_string(),
-            },
+        .cloned()
+        .flat_map(|arg_n| {
+            i.dc[ARGS[arg_n]].iter().map(move |loc| FuncsFreeArgsOut {
+                arg: steensgaard::Var::Register {
+                    site: loc.clone(),
+                    tmp: false,
+                    register: ARGS[arg_n].to_string(),
+                },
+            })
         })
         .collect()
 }
@@ -189,21 +193,26 @@ pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstrai
 
 pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut> {
     use steensgaard::*;
-    i.dc["RDI"]
+    i.args
         .iter()
-        .map(|src| FuncsFreeConstraintOut {
-            c: vec![
-                Constraint::StackLoad {
-                    a: Var::Register {
-                        site: src.clone(),
-                        register: "RDI".to_string(),
-                        tmp: false,
-                    },
-                    b: Var::Freed {
-                        site: i.loc.clone(),
-                    },
-                },
-            ],
+        .cloned()
+        .flat_map(|arg_n| {
+            i.dc[ARGS[arg_n]]
+                .iter()
+                .map(move |src| FuncsFreeConstraintOut {
+                    c: vec![
+                        Constraint::StackLoad {
+                            a: Var::Register {
+                                site: src.clone(),
+                                register: ARGS[arg_n].to_string(),
+                                tmp: false,
+                            },
+                            b: Var::Freed {
+                                site: i.loc.clone(),
+                            },
+                        },
+                    ],
+                })
         })
         .collect()
 }
@@ -445,8 +454,10 @@ pub fn is_malloc_name(i: &FuncsIsMallocNameIn) -> Vec<FuncsIsMallocNameOut> {
 
 pub fn is_free_name(i: &FuncsIsFreeNameIn) -> Vec<FuncsIsFreeNameOut> {
     let s = i.func_name;
-    if (s == "free") || (s == "qfree") || (s == "g_free") {
-        vec![FuncsIsFreeNameOut {}]
+    if (s == "free") || (s == "g_free") {
+        vec![FuncsIsFreeNameOut { args: vec![0] }]
+    } else if s == "qfree" {
+        vec![FuncsIsFreeNameOut { args: vec![1] }]
     } else {
         Vec::new()
     }

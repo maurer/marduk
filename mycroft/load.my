@@ -59,7 +59,7 @@ live_call_live: live { loc: fall } <- lift { fallthrough: fall, is_call: ~true }
 malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_name } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::funcs::is_malloc_name
 
 // Whitelist of freeing functions
-free_call_by_name: free_call {loc} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::funcs::is_free_name
+free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::funcs::is_free_name
 
 // ! Functions 
 // If we have a non-call successor, it's also a step-over successor

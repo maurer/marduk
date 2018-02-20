@@ -12,6 +12,7 @@ type Strings = Vec<String>;
 type Constraints = Vec<Constraint>;
 type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
+type Vusize = Vec<usize>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
