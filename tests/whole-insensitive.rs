@@ -66,3 +66,8 @@ fn shadowsocks_libev() {
         None,
     );
 }
+
+#[test]
+fn isisd() {
+    run_uaf(&["isisd"], &[(0x40a8c9, 0x40aa7e)], None);
+}
