@@ -16,9 +16,8 @@ defines {
 }
 
 // Write down what a semantics chunk overwrites
-define_sema: defines {loc, registers} <- lift {loc, bil} + ::funcs::defines
-// Malloc defines rax
-define_malloc: defines {loc, registers: ~(vec!["RAX".to_string()])} <- malloc_call {loc}
+define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} + ::funcs::defines
+define_funcs: defines {loc, registers: ~(caller_saved())} <- lift {loc, is_call: ~true}
 
 
 succ_ret{src: Loc, dst: Loc}

@@ -15,6 +15,12 @@ type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
+const CALLER_SAVED: &[&'static str] = &["RAX", "RCX", "RDX", "R8", "R9", "R10", "R11"];
+
+fn caller_saved() -> Strings {
+    CALLER_SAVED.iter().map(|s| s.to_string()).collect()
+}
+
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
     let mut out = Vec::new();
     out.reserve(lss.iter().map(|ls| ls.len()).sum());
