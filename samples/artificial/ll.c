@@ -18,6 +18,7 @@ void flow_loop() {
 		cons->pay[0] = '.';
 		cons->pay[1] = 0;
 		cur = cons;
+		i++;
 	};
 	while (cur != NULL) {
 		puts(cur->pay);
