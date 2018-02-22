@@ -29,7 +29,6 @@ fn const_collapse(e: &Expression) -> Option<BitVector> {
 
 pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
     for stmt in i.bil {
-        eprintln!("Examining: {:?}", stmt);
         if let Statement::Move { ref lhs, ref rhs } = *stmt {
             if !(lhs.name == "RDI") {
                 continue;

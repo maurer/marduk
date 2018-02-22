@@ -1,7 +1,7 @@
 extern crate marduk;
 use marduk::uaf;
 
-fn run_uaf(names: &[&'static str], insensitive_bugs: usize, flow_bugs: usize) {
+fn run_uaf(names: &[&'static str], insensitive_bugs: usize, expected_flow_bugs: usize) {
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/artificial/{}", x))
@@ -15,11 +15,15 @@ fn run_uaf(names: &[&'static str], insensitive_bugs: usize, flow_bugs: usize) {
             found_insensitive_bugs, insensitive_bugs
         );
     }
-    let found_flow_bugs = db.query_uaf_flow().len();
-    if found_flow_bugs != flow_bugs {
+    let flow_bugs = db.query_uaf_flow();
+    let found_flow_bugs = flow_bugs.len();
+    if found_flow_bugs != expected_flow_bugs {
+        for bug in flow_bugs {
+            eprintln!("Bug found: {}", bug);
+        }
         panic!(
             "Found {} flow bugs, expected {}",
-            found_flow_bugs, flow_bugs
+            found_flow_bugs, expected_flow_bugs
         );
     }
 }
@@ -46,7 +50,7 @@ fn safe() {
 
 #[test]
 fn path_sensitive() {
-    run_uaf(&["path_sensitive"], 1, 0);
+    run_uaf(&["path_sensitive"], 1, 1);
 }
 
 #[test]
@@ -56,7 +60,8 @@ fn remalloc() {
 
 #[test]
 fn ll() {
-    run_uaf(&["ll"], 3, 0);
+    // If we add field sensitivity to the flow, this should drop a bit, but still not zero
+    run_uaf(&["ll"], 6, 6);
 }
 
 #[test]

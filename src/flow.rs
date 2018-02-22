@@ -10,10 +10,11 @@ fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     }
 }
 
-fn apply(pts: &mut PointsTo, c: &Constraint) {
+fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
     match *c {
         // *a = &b
         Constraint::StackLoad { ref a, ref b } => {
+            // TODO: does this need 'updated' logic?
             let mut bs = BTreeSet::new();
             bs.insert(b.clone());
             // TODO DEDUP
@@ -24,42 +25,59 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
                 pts.insert(pta.iter().next().unwrap().clone(), bs);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).unwrap().insert(b.clone());
+                    pts.get_mut(&pt).map(|ptr| ptr.insert(b.clone()));
                 }
             }
         }
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
-            let mut bs = BTreeSet::new();
-            bs.insert(b.clone());
-            pts.insert(a.clone(), bs);
+            if updated.contains(a) {
+                pts.get_mut(a).unwrap().insert(b.clone());
+            } else {
+                let mut bs = BTreeSet::new();
+                bs.insert(b.clone());
+                pts.insert(a.clone(), bs);
+                updated.push(a.clone());
+            }
         }
         // a = b;
         Constraint::Asgn { ref a, ref b } => {
             let ptb = pt_get(pts, b);
-            pts.insert(a.clone(), ptb);
+            if updated.contains(a) {
+                pts.get_mut(a).unwrap().extend(ptb)
+            } else {
+                pts.insert(a.clone(), ptb);
+                updated.push(a.clone());
+            }
         }
         // a = *b;
         Constraint::Deref { ref a, ref b } => {
             let ptb = pt_get(pts, b)
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
-            pts.insert(a.clone(), ptb);
+            if updated.contains(a) {
+                pts.get_mut(a).unwrap().extend(ptb);
+            } else {
+                pts.insert(a.clone(), ptb);
+                updated.push(a.clone());
+            }
         }
         // *a = b;
         Constraint::Write { ref a, ref b } => {
+            // TODO: does this need 'updated' logic?
             let pta = pt_get(pts, a);
             let ptb = pt_get(pts, b);
             if pta.len() == 1 {
                 pts.insert(pta.iter().next().unwrap().clone(), ptb);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).unwrap().extend(ptb.clone());
+                    pts.get_mut(&pt).map(|ptr| ptr.extend(ptb.clone()));
                 }
             }
         }
         // *a = *b;
         Constraint::Xfer { ref a, ref b } => {
+            // TODO: does this need 'updated' logic?
             let pta = pt_get(pts, a);
             let ptb = pt_get(pts, b)
                 .iter()
@@ -68,7 +86,7 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
                 pts.insert(pta.iter().next().unwrap().clone(), ptb);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).unwrap().append(&mut ptb.clone())
+                    pts.get_mut(&pt).map(|ptr| ptr.append(&mut ptb.clone()));
                 }
             }
         }
@@ -77,8 +95,9 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
 
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     let mut pts = i.pts.clone();
+    let mut updated = Vec::new();
     for c in i.cs.iter() {
-        apply(&mut pts, c)
+        apply(&mut pts, &mut updated, c)
     }
     let tmps: Vec<_> = pts.keys()
         .filter(|v| match **v {
