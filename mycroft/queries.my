@@ -12,5 +12,5 @@
 ?deref_var: deref_var(var, loc)
 ?path_exists: path_exists(src, dst)
 ?uaf_flow: uaf_flow(var, free, use_)
-?flow_out: flow_out(loc, pts)
+?flow: ~flow_in(loc, pts)
 ?constraints: constraint(loc, c)

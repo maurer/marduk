@@ -21,6 +21,18 @@ impl<'a> Display for CB<'a> {
     }
 }
 
+impl Display for FlowResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}: \n", self.loc)?;
+        for (k, v) in self.pts.iter() {
+            write!(f, "\t{} -> ", k)?;
+            fmt_vec(f, &v.iter().collect())?;
+            write!(f, "\n")?;
+        }
+        Ok(())
+    }
+}
+
 impl Display for Var {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match *self {
