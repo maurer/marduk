@@ -15,6 +15,54 @@ type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
+#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
+pub enum KillSpec {
+    Registers(Vec<String>),
+    StackFrame(Loc),
+}
+
+impl KillSpec {
+    pub fn empty() -> Self {
+        KillSpec::Registers(Vec::new())
+    }
+    // As an optimization, realize that registers can never be pointed to, and so we don't need to
+    // purge them from the right hand side of points to tables.
+    fn kills_vals(&self) -> bool {
+        use self::KillSpec::*;
+        match *self {
+            StackFrame(_) => true,
+            Registers(_) => false,
+        }
+    }
+    fn kill(&self, v: &Var) -> bool {
+        use self::KillSpec::*;
+        use steensgaard::Var::*;
+        match (self, v) {
+            (&Registers(ref regs), &Register { ref register, .. }) => regs.contains(register),
+            (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
+            _ => false,
+        }
+    }
+    pub fn purge_pts(&self, pts: &mut PointsTo) {
+        let mut keys = Vec::new();
+        pts.iter_mut()
+            .map(|(k, v)| {
+                if self.kill(k) {
+                    keys.push(k.clone())
+                } else if self.kills_vals() {
+                    let vs: Vec<Var> = v.iter().filter(|v| self.kill(v)).cloned().collect();
+                    for vi in vs {
+                        v.remove(&vi);
+                    }
+                }
+            })
+            .count();
+        for key in keys {
+            pts.remove(&key);
+        }
+    }
+}
+
 const CALLER_SAVED: &[&'static str] = &["RAX", "RCX", "RDX", "R8", "R9", "R10", "R11"];
 
 fn caller_saved() -> Strings {

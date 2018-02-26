@@ -27,6 +27,22 @@ macro_rules! get_image {
     }}
 }
 
+pub fn killspec_regs(i: &FuncsKillspecRegsIn) -> Vec<FuncsKillspecRegsOut> {
+    vec![
+        FuncsKillspecRegsOut {
+            ks: KillSpec::Registers(i.registers.clone()),
+        },
+    ]
+}
+
+pub fn stack_wipe(i: &FuncsStackWipeIn) -> Vec<FuncsStackWipeOut> {
+    vec![
+        FuncsStackWipeOut {
+            ks: KillSpec::StackFrame(i.base.clone()),
+        },
+    ]
+}
+
 pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
     if !ARGS.contains(&i.register.as_str()) {
         Vec::new()

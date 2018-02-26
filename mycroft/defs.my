@@ -19,6 +19,11 @@ defines {
 define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} + ::funcs::defines
 define_funcs: defines {loc, registers: ~(caller_saved())} <- lift {loc, is_call: ~true}
 
+// Killsets
+kill(Loc, KillSpec)
+kill_registers: kill(loc, ks) <- lift {loc, is_call: ~false, is_ret: ~false} & defines {loc, registers} + ::funcs::killspec_regs
+kill_call: kill(loc, ~(KillSpec::empty())) <- lift {loc, is_call: ~true}
+kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} + ::funcs::stack_wipe
 
 succ_ret{src: Loc, dst: Loc}
 ret_flat: succ_ret {src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}

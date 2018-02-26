@@ -10,7 +10,7 @@ fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     }
 }
 
-fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
+fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
     match *c {
         // *a = &b
         Constraint::StackLoad { ref a, ref b } => {
@@ -22,21 +22,21 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
             if pta.len() == 1 {
                 let mut bs = BTreeSet::new();
                 bs.insert(b.clone());
-                pts.insert(pta.iter().next().unwrap().clone(), bs);
+                out_pts.insert(pta.iter().next().unwrap().clone(), bs);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).map(|ptr| ptr.insert(b.clone()));
+                    out_pts.get_mut(&pt).map(|ptr| ptr.insert(b.clone()));
                 }
             }
         }
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
             if updated.contains(a) {
-                pts.get_mut(a).unwrap().insert(b.clone());
+                out_pts.get_mut(a).unwrap().insert(b.clone());
             } else {
                 let mut bs = BTreeSet::new();
                 bs.insert(b.clone());
-                pts.insert(a.clone(), bs);
+                out_pts.insert(a.clone(), bs);
                 updated.push(a.clone());
             }
         }
@@ -44,9 +44,9 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
         Constraint::Asgn { ref a, ref b } => {
             let ptb = pt_get(pts, b);
             if updated.contains(a) {
-                pts.get_mut(a).unwrap().extend(ptb)
+                out_pts.get_mut(a).unwrap().extend(ptb)
             } else {
-                pts.insert(a.clone(), ptb);
+                out_pts.insert(a.clone(), ptb);
                 updated.push(a.clone());
             }
         }
@@ -56,9 +56,9 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
             if updated.contains(a) {
-                pts.get_mut(a).unwrap().extend(ptb);
+                out_pts.get_mut(a).unwrap().extend(ptb);
             } else {
-                pts.insert(a.clone(), ptb);
+                out_pts.insert(a.clone(), ptb);
                 updated.push(a.clone());
             }
         }
@@ -68,10 +68,10 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
             let pta = pt_get(pts, a);
             let ptb = pt_get(pts, b);
             if pta.len() == 1 {
-                pts.insert(pta.iter().next().unwrap().clone(), ptb);
+                out_pts.insert(pta.iter().next().unwrap().clone(), ptb);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).map(|ptr| ptr.extend(ptb.clone()));
+                    out_pts.get_mut(&pt).map(|ptr| ptr.extend(ptb.clone()));
                 }
             }
         }
@@ -83,10 +83,10 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
             if pta.len() == 1 {
-                pts.insert(pta.iter().next().unwrap().clone(), ptb);
+                out_pts.insert(pta.iter().next().unwrap().clone(), ptb);
             } else {
                 for pt in pta {
-                    pts.get_mut(&pt).map(|ptr| ptr.append(&mut ptb.clone()));
+                    out_pts.get_mut(&pt).map(|ptr| ptr.append(&mut ptb.clone()));
                 }
             }
         }
@@ -95,9 +95,10 @@ fn apply(pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
 
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     let mut pts = i.pts.clone();
+    i.ks.purge_pts(&mut pts);
     let mut updated = Vec::new();
     for c in i.cs.iter() {
-        apply(&mut pts, &mut updated, c)
+        apply(&i.pts, &mut pts, &mut updated, c)
     }
     let tmps: Vec<_> = pts.keys()
         .filter(|v| match **v {
