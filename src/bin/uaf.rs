@@ -19,7 +19,6 @@ fn print_state(db: &mut marduk::datalog::Database) {
 
 fn main() {
     env_logger::init();
-    error!("Test");
     let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..], true);
     let mut step = 0;
     let mut last_round = Vec::new();
