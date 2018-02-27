@@ -9,7 +9,7 @@ fn simple_alias() {
     db.run_rules();
     let steens = db.query_steens();
     for pt in steens {
-        if format!("{}", pt) == "sp+8@samples/artificial/simple@0x4006d6:64->[RAX@samples/artificial/simple@0x4006df:64, sp+8@samples/artificial/simple@0x4006d6:64, RAX@samples/artificial/simple@0x4006e9:64, RAX@samples/artificial/simple@0x4006f1:64, RDI@samples/artificial/simple@0x4006f6:64, RAX@samples/artificial/simple@0x4006fe:64, RAX@samples/artificial/simple@0x400706:64]" {
+        if format!("{}", pt) == "sp+8@samples/artificial/simple@0x4006d6->[RAX@samples/artificial/simple@0x4006df, sp+8@samples/artificial/simple@0x4006d6, RAX@samples/artificial/simple@0x4006e9, RAX@samples/artificial/simple@0x4006f1, RDI@samples/artificial/simple@0x4006f6, RAX@samples/artificial/simple@0x4006fe, RAX@samples/artificial/simple@0x400706]" {
             return
         }
     }

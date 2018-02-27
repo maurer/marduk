@@ -3,6 +3,7 @@ use bap::high::bil::{Expression, Statement};
 use bap::high::bitvector::BitVector;
 use bap::basic::Cast;
 use num_traits::ToPrimitive;
+use regs::ARGS;
 
 fn const_collapse(e: &Expression) -> Option<BitVector> {
     match *e {
@@ -34,7 +35,11 @@ pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
                 continue;
             }
             if let Some(bv) = const_collapse(rhs) {
-                return vec![FmtStrConstMoveOut { addr: bv }];
+                return vec![
+                    FmtStrConstMoveOut {
+                        addr: bv.to_u64().unwrap(),
+                    },
+                ];
             }
         }
     }
@@ -42,7 +47,6 @@ pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
 }
 
 pub fn parse_str(i: &FmtStrParseStrIn) -> Vec<FmtStrParseStrOut> {
-    let regs = ["RSI", "RDX", "RCX", "R8", "R9"];
     let mut skip = false;
     let mut arg = 0;
     let mut out = Vec::new();
@@ -56,9 +60,7 @@ pub fn parse_str(i: &FmtStrParseStrIn) -> Vec<FmtStrParseStrOut> {
             if c[1] == '%' {
                 skip = true;
             } else {
-                out.push(FmtStrParseStrOut {
-                    arg: regs[arg].to_string(),
-                });
+                out.push(FmtStrParseStrOut { arg: ARGS[arg] });
                 arg += 1;
             }
         }

@@ -13,6 +13,7 @@ pub mod steensgaard;
 pub mod flow;
 pub mod printers;
 pub mod fmt_str;
+pub mod regs;
 
 pub use datalog::Database;
 

@@ -1,6 +1,6 @@
 reaching {
 	def: Loc,
-	register: String,
+	register: Reg,
 	reached: Loc
 }
 
@@ -12,7 +12,7 @@ reaching {
 
 defines {
 	loc: Loc,
-	registers: Strings
+	registers: Regs
 }
 
 // Write down what a semantics chunk overwrites
@@ -52,7 +52,7 @@ reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, 
 partial_chain(Loc, DefChain^chain_merge)
 chain(Loc, DefChain)
 
-reach_all {defs: LocSet^loc_merge, reached: Loc, register: String}
+reach_all {defs: LocSet^loc_merge, reached: Loc, register: Reg}
 promote_reach@3: reach_all {defs, reached, register} <- reaching {def, reached, register} + ::funcs::promote_def
 
 promote_chain@4: partial_chain(reached, dc) <- ~reach_all {defs, reached, register} + ::funcs::def_chain

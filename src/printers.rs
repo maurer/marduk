@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 use steensgaard::{Constraint, Var};
 use datalog::*;
+use regs::Reg;
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 
@@ -21,6 +22,12 @@ impl<'a> Display for CB<'a> {
     }
 }
 
+impl Display for Reg {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 impl Display for FlowResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}: \n", self.loc)?;
@@ -36,6 +43,7 @@ impl Display for FlowResult {
 impl Display for Var {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match *self {
+            Var::Temp { serial } => write!(f, "v{}", serial),
             Var::StackSlot {
                 ref func_addr,
                 ref offset,
@@ -113,7 +121,7 @@ impl Display for SteensResult {
 
 impl Display for Loc {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}@{}", self.file_name, self.addr)
+        write!(f, "{}@0x{:x}", self.file_name, self.addr)
     }
 }
 

@@ -5,8 +5,7 @@ use bap::high::bil::{Expression, Statement, Type, Variable};
 use std::collections::{BTreeMap, BTreeSet};
 use steensgaard;
 use datalog::Loc;
-
-const ARGS: &'static [&'static str] = &["RDI", "RSI", "RDX", "RCX", "R8", "R9"];
+use regs::{Reg, ARGS, RET_REG};
 
 macro_rules! vec_error {
     ($e:expr) => {{
@@ -44,7 +43,7 @@ pub fn stack_wipe(i: &FuncsStackWipeIn) -> Vec<FuncsStackWipeOut> {
 }
 
 pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
-    if !ARGS.contains(&i.register.as_str()) {
+    if !ARGS.contains(&i.register) {
         Vec::new()
     } else {
         vec![FuncsOnlyArgsOut {}]
@@ -52,7 +51,7 @@ pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
 }
 
 pub fn only_ret(i: &FuncsOnlyRetIn) -> Vec<FuncsOnlyRetOut> {
-    if i.register == "RAX" {
+    if i.register == &RET_REG {
         vec![FuncsOnlyRetOut {}]
     } else {
         Vec::new()
@@ -72,11 +71,10 @@ pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
         .iter()
         .cloned()
         .flat_map(|arg_n| {
-            i.dc[ARGS[arg_n]].iter().map(move |loc| FuncsFreeArgsOut {
+            i.dc[&ARGS[arg_n]].iter().map(move |loc| FuncsFreeArgsOut {
                 arg: steensgaard::Var::Register {
                     site: loc.clone(),
-                    tmp: false,
-                    register: ARGS[arg_n].to_string(),
+                    register: ARGS[arg_n],
                 },
             })
         })
@@ -103,8 +101,7 @@ pub fn use_vars(i: &FuncsUseVarsIn) -> Vec<FuncsUseVarsOut> {
         .map(|site| FuncsUseVarsOut {
             v: steensgaard::Var::Register {
                 site: site.clone(),
-                register: i.r.to_string(),
-                tmp: false,
+                register: *i.r,
             },
         })
         .collect()
@@ -146,11 +143,13 @@ fn is_normal_reg(r: &Variable) -> bool {
     }
 }
 
-fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<String>) {
+fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<Reg>) {
     match *stmt {
         Statement::Move { ref lhs, .. } => {
             if !lhs.tmp && is_normal_reg(lhs) {
-                defs.insert(lhs.name.clone());
+                if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+                    defs.insert(reg);
+                }
             }
         }
         Statement::While { ref body, .. } => for stmt in body {
@@ -194,8 +193,7 @@ pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstrai
                 Constraint::AddrOf {
                     a: Var::Register {
                         site: i.loc.clone(),
-                        register: "RAX".to_string(),
-                        tmp: false,
+                        register: RET_REG,
                     },
                     b: Var::Alloc {
                         site: i.loc.clone(),
@@ -213,15 +211,14 @@ pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut>
         .iter()
         .cloned()
         .flat_map(|arg_n| {
-            i.dc[ARGS[arg_n]]
+            i.dc[&ARGS[arg_n]]
                 .iter()
                 .map(move |src| FuncsFreeConstraintOut {
                     c: vec![
                         Constraint::StackLoad {
                             a: Var::Register {
                                 site: src.clone(),
-                                register: ARGS[arg_n].to_string(),
-                                tmp: false,
+                                register: ARGS[arg_n],
                             },
                             b: Var::Freed {
                                 site: i.loc.clone(),
@@ -256,6 +253,7 @@ pub fn exclude_registers(i: &FuncsExcludeRegistersIn) -> Vec<FuncsExcludeRegiste
 // RUSTC-R see whether the let binding can be removed and this warning avoided
 #[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_segments(i: &FuncsDumpSegmentsIn) -> Vec<FuncsDumpSegmentsOut> {
+    use num_traits::ToPrimitive;
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let segs = image.segments();
@@ -264,8 +262,8 @@ pub fn dump_segments(i: &FuncsDumpSegmentsIn) -> Vec<FuncsDumpSegmentsOut> {
                 let mem = seg.memory();
                 FuncsDumpSegmentsOut {
                     seg_contents: mem.data().to_vec(),
-                    start: BitVector::from_basic(&mem.min_addr()),
-                    end: BitVector::from_basic(&mem.max_addr()),
+                    start: BitVector::from_basic(&mem.min_addr()).to_u64().unwrap(),
+                    end: BitVector::from_basic(&mem.max_addr()).to_u64().unwrap(),
                     read: seg.is_readable(),
                     write: seg.is_writable(),
                     execute: seg.is_executable(),
@@ -301,14 +299,13 @@ pub fn dump_plt(i: &FuncsDumpPltIn) -> Vec<FuncsDumpPltOut> {
         .map(|line| {
             let mut it = line.split(' ');
             let addr64 = u64::from_str_radix(it.next().unwrap(), 16).unwrap();
-            let addr = BitVector::from_u64(addr64, 64);
             let unparsed = it.next().expect(&format!("No name? {}", line));
             let name = unparsed[1..].split('@').next().unwrap();
             FuncsDumpPltOut {
                 pad_name: name.to_string(),
                 pad_loc: Loc {
                     file_name: i.file_name.clone(),
-                    addr: addr,
+                    addr: addr64,
                 },
             }
         })
@@ -318,6 +315,7 @@ pub fn dump_plt(i: &FuncsDumpPltIn) -> Vec<FuncsDumpPltOut> {
 // RUSTC-R see whether the let binding can be removed and this warning avoided
 #[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
+    use num_traits::cast::ToPrimitive;
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let syms = image.symbols();
@@ -325,10 +323,14 @@ pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
             .map(|sym| FuncsDumpSymsOut {
                 name: sym.name(),
                 loc: Loc {
-                    addr: BitVector::from_basic(&sym.memory().min_addr()),
+                    addr: BitVector::from_basic(&sym.memory().min_addr())
+                        .to_u64()
+                        .unwrap(),
                     file_name: i.file_name.clone(),
                 },
-                end: BitVector::from_basic(&sym.memory().max_addr()),
+                end: BitVector::from_basic(&sym.memory().max_addr())
+                    .to_u64()
+                    .unwrap(),
             })
             .collect();
         out
@@ -365,7 +367,7 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
             disasm: disasm,
             fall: Loc {
                 file_name: i.file_name.clone(),
-                addr: BitVector::from_u64(fall, 64),
+                addr: fall,
             },
             call: is_call,
             ret: is_ret,
@@ -376,7 +378,7 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
 pub fn sema_succ(i: &FuncsSemaSuccIn) -> Vec<FuncsSemaSuccOut> {
     let (mut targets, fall) = stmt_succ(i.bil);
     if fall {
-        targets.push(i.fall.addr.clone());
+        targets.push(i.fall.addr);
     }
     targets
         .into_iter()
@@ -389,13 +391,14 @@ pub fn sema_succ(i: &FuncsSemaSuccIn) -> Vec<FuncsSemaSuccOut> {
         .collect()
 }
 
-fn stmt_succ(stmts: &[Statement]) -> (Vec<BitVector>, bool) {
+fn stmt_succ(stmts: &[Statement]) -> (Vec<u64>, bool) {
     use bap::high::bil::Statement::*;
+    use num_traits::ToPrimitive;
     if stmts.is_empty() {
         return (Vec::new(), true);
     }
     match stmts[0] {
-        Jump(Expression::Const(ref v)) => (vec![v.clone()], false),
+        Jump(Expression::Const(ref v)) => (vec![v.to_u64().unwrap()], false),
         Jump(_) => (vec![], false),
         While { ref body, .. } => {
             let (mut tgts, fall) = stmt_succ(body);

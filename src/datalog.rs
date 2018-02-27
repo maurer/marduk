@@ -1,14 +1,14 @@
 use mycroft_macros::mycroft_files;
-use bap::high::bitvector::BitVector;
 use bap::high::bil::Statement;
 use bap::basic::Arch;
 use steensgaard::{Constraint, DefChain, Var};
 use std::collections::{BTreeMap, BTreeSet};
 use std::collections::btree_map;
+use regs::{Reg, ARGS, CALLER_SAVED};
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
 type StringSet = BTreeSet<String>;
-type Strings = Vec<String>;
+type Regs = Vec<Reg>;
 type Constraints = Vec<Constraint>;
 type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
@@ -17,7 +17,7 @@ pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum KillSpec {
-    Registers(Vec<String>),
+    Registers(Vec<Reg>),
     StackFrame(Loc),
 }
 
@@ -63,10 +63,8 @@ impl KillSpec {
     }
 }
 
-const CALLER_SAVED: &[&'static str] = &["RAX", "RCX", "RDX", "R8", "R9", "R10", "R11"];
-
-fn caller_saved() -> Strings {
-    CALLER_SAVED.iter().map(|s| s.to_string()).collect()
+fn caller_saved() -> Regs {
+    CALLER_SAVED.to_vec()
 }
 
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
@@ -85,7 +83,7 @@ fn loc_merge(lss: &[&LocSet]) -> LocSet {
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub file_name: String,
-    pub addr: BitVector,
+    pub addr: u64,
 }
 
 fn pts_merge(ptss: &[&PointsTo]) -> PointsTo {

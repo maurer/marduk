@@ -2,32 +2,32 @@ use bap::high::bil::Statement;
 use bap::high::bil;
 
 use std::collections::{BTreeMap, HashMap};
-
+use regs::Reg;
 use datalog::Loc;
 
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
-    StackSlot {
-        func_addr: Loc,
-        offset: usize,
-    },
-    Register {
-        site: Loc,
-        register: String,
-        tmp: bool,
-    },
-    Alloc {
-        site: Loc,
-        stale: bool,
-    },
-    Freed {
-        site: Loc,
-    },
+    StackSlot { func_addr: Loc, offset: usize },
+    Register { site: Loc, register: Reg },
+    Temp { serial: u32 },
+    Alloc { site: Loc, stale: bool },
+    Freed { site: Loc },
+}
+
+impl Var {
+    fn temp(name: &str) -> Var {
+        let num: String = name.chars().skip_while(|x| !x.is_digit(10)).collect();
+        assert!(num.chars().all(|x| x.is_digit(10)));
+
+        Var::Temp {
+            serial: num.parse().unwrap(),
+        }
+    }
 }
 
 // Maps a register at a code address to the list of possible definition sites (for a specific
 // location)
-pub type DefChain = BTreeMap<String, Vec<Loc>>;
+pub type DefChain = BTreeMap<Reg, Vec<Loc>>;
 
 fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &mut DefChain, &Loc, &Loc) -> Vec<A>>(
     stmt: &Statement,
@@ -112,18 +112,25 @@ fn extract_expr(
                     }),
                 ]
             } else {
-                match defs.get(&bv.name) {
-                    None => Vec::new(),
-                    Some(sites) => sites
-                        .iter()
-                        .map(|site| {
-                            E::Base(self::Var::Register {
-                                site: site.clone(),
-                                register: bv.name.clone(),
-                                tmp: bv.tmp,
+                match Reg::from_str(bv.name.as_str()) {
+                    Some(reg) => match defs.get(&reg) {
+                        None => Vec::new(),
+                        Some(sites) => sites
+                            .iter()
+                            .map(|site| {
+                                E::Base(self::Var::Register {
+                                    site: site.clone(),
+                                    register: reg,
+                                })
                             })
-                        })
-                        .collect(),
+                            .collect(),
+                    },
+                    None => if bv.tmp {
+                        vec![E::Base(self::Var::temp(bv.name.as_str()))]
+                    } else {
+                        error!("Unrecognized variable name: {:?}", bv.name);
+                        Vec::new()
+                    },
                 }
             }
         }
@@ -288,10 +295,18 @@ fn extract_move(
         // Ignore flags
         bil::Type::Immediate(1) => Vec::new(),
         bil::Type::Immediate(_) => {
-            let lv = Var::Register {
-                site: cur_addr.clone(),
-                register: lhs.name.clone(),
-                tmp: lhs.tmp,
+            let lv = if lhs.tmp {
+                Var::temp(lhs.name.as_str())
+            } else {
+                if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+                    Var::Register {
+                        site: cur_addr.clone(),
+                        register: reg,
+                    }
+                } else {
+                    error!("Unrecognized variable name: {:?}", lhs.name);
+                    return Vec::new();
+                }
             };
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
@@ -313,7 +328,7 @@ fn extract_move(
             if !lhs.tmp {
                 // We've just overwritten a non-temporary, update the def chain
                 let our_addr = vec![cur_addr.clone()];
-                defs.insert(lhs.name.clone(), our_addr);
+                defs.insert(Reg::from_str(lhs.name.as_str()).unwrap(), our_addr);
             }
             out
         }
@@ -338,7 +353,7 @@ pub enum Constraint {
 
 fn not_tmp(v: &Var) -> bool {
     match *v {
-        Var::Register { ref tmp, .. } => !tmp,
+        Var::Temp { .. } => false,
         _ => true,
     }
 }

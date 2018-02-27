@@ -102,7 +102,7 @@ pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     }
     let tmps: Vec<_> = pts.keys()
         .filter(|v| match **v {
-            Var::Register { tmp: true, .. } => true,
+            Var::Temp { .. } => true,
             _ => false,
         })
         .cloned()

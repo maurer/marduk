@@ -8,8 +8,8 @@ file {
 segment {
   file_name: String,
   contents: Bytes,
-  start: BitVector,
-  end: BitVector,
+  start: u64,
+  end: u64,
   read: bool,
   write: bool,
   execute: bool
@@ -19,7 +19,7 @@ segment {
 sym {
   loc: Loc,
   name: String,
-  end: BitVector
+  end: u64 
 }
 
 // The set of all known functions. This can be used to e.g. check whether a remote call should be skipped or resolved 
