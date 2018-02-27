@@ -45,9 +45,11 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
             let ptb = pt_get(pts, b);
             if updated.contains(a) {
                 out_pts.get_mut(a).unwrap().extend(ptb)
-            } else {
+            } else if !ptb.is_empty() {
                 out_pts.insert(a.clone(), ptb);
                 updated.push(a.clone());
+            } else {
+                out_pts.remove(a);
             }
         }
         // a = *b;
@@ -57,9 +59,11 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
             if updated.contains(a) {
                 out_pts.get_mut(a).unwrap().extend(ptb);
-            } else {
+            } else if !ptb.is_empty() {
                 out_pts.insert(a.clone(), ptb);
                 updated.push(a.clone());
+            } else {
+                out_pts.remove(a);
             }
         }
         // *a = b;
@@ -68,7 +72,12 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
             let pta = pt_get(pts, a);
             let ptb = pt_get(pts, b);
             if pta.len() == 1 {
-                out_pts.insert(pta.iter().next().unwrap().clone(), ptb);
+                let pt = pta.iter().next().unwrap();
+                if ptb.is_empty() {
+                    out_pts.remove(pt);
+                } else {
+                    out_pts.insert(pt.clone(), ptb);
+                }
             } else {
                 for pt in pta {
                     out_pts.get_mut(&pt).map(|ptr| ptr.extend(ptb.clone()));
@@ -83,7 +92,12 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
             if pta.len() == 1 {
-                out_pts.insert(pta.iter().next().unwrap().clone(), ptb);
+                let pt = pta.iter().next().unwrap();
+                if ptb.is_empty() {
+                    out_pts.remove(pt);
+                } else {
+                    out_pts.insert(pt.clone(), ptb);
+                }
             } else {
                 for pt in pta {
                     out_pts.get_mut(&pt).map(|ptr| ptr.append(&mut ptb.clone()));
