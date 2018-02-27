@@ -4,6 +4,9 @@ use bap::basic::Arch;
 use steensgaard::{Constraint, DefChain, Var};
 use std::collections::{BTreeMap, BTreeSet};
 use std::collections::btree_map;
+use std::sync::Mutex;
+use std::collections::HashMap;
+
 use regs::{Reg, ARGS, CALLER_SAVED};
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
@@ -14,6 +17,39 @@ type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
 pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
+
+lazy_static! {
+    static ref STRING_INTERN: Mutex<(Vec<String>, HashMap<String, Interned>)> = Mutex::new((Vec::new(), HashMap::new()));
+}
+
+#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Copy)]
+pub struct Interned {
+    index: u8,
+}
+
+impl Interned {
+    fn max() -> usize {
+        ::std::u8::MAX as usize
+    }
+    pub fn from_string(s: &String) -> Self {
+        let mut intern = STRING_INTERN.lock().unwrap();
+        if let Some(idx) = intern.1.get(s) {
+            return *idx;
+        }
+        // This would be an if let/else, but rust considers the borrow from the then clause still
+        // active
+        assert!(intern.0.len() < Interned::max());
+        intern.0.push(s.clone());
+        let out = Interned {
+            index: (intern.0.len() - 1) as u8,
+        };
+        intern.1.insert(s.clone(), out);
+        out
+    }
+    pub fn to_string(&self) -> String {
+        STRING_INTERN.lock().unwrap().0[self.index as usize].clone()
+    }
+}
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum KillSpec {
@@ -82,7 +118,7 @@ fn loc_merge(lss: &[&LocSet]) -> LocSet {
 
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
-    pub file_name: String,
+    pub file_name: Interned,
     pub addr: u64,
 }
 

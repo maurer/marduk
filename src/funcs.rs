@@ -4,7 +4,7 @@ use bap::basic::{Bap, BasicDisasm, Image};
 use bap::high::bil::{Expression, Statement, Type, Variable};
 use std::collections::{BTreeMap, BTreeSet};
 use steensgaard;
-use datalog::Loc;
+use datalog::{Interned, Loc};
 use regs::{Reg, ARGS, RET_REG};
 
 macro_rules! vec_error {
@@ -304,7 +304,7 @@ pub fn dump_plt(i: &FuncsDumpPltIn) -> Vec<FuncsDumpPltOut> {
             FuncsDumpPltOut {
                 pad_name: name.to_string(),
                 pad_loc: Loc {
-                    file_name: i.file_name.clone(),
+                    file_name: Interned::from_string(i.file_name),
                     addr: addr64,
                 },
             }
@@ -326,7 +326,7 @@ pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
                     addr: BitVector::from_basic(&sym.memory().min_addr())
                         .to_u64()
                         .unwrap(),
-                    file_name: i.file_name.clone(),
+                    file_name: Interned::from_string(i.file_name),
                 },
                 end: BitVector::from_basic(&sym.memory().max_addr())
                     .to_u64()
@@ -340,7 +340,7 @@ pub fn dump_syms(i: &FuncsDumpSymsIn) -> Vec<FuncsDumpSymsOut> {
 pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
     use num_traits::cast::ToPrimitive;
     // This is super inefficient if we load tons of files in
-    if i.loc.file_name != *i.file_name {
+    if i.loc.file_name != Interned::from_string(i.file_name) {
         return Vec::new();
     }
     let start = i.seg_start.to_u64().unwrap();
@@ -366,7 +366,7 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
             bil: stmts,
             disasm: disasm,
             fall: Loc {
-                file_name: i.file_name.clone(),
+                file_name: i.loc.file_name,
                 addr: fall,
             },
             call: is_call,

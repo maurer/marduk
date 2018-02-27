@@ -119,6 +119,12 @@ impl Display for SteensResult {
     }
 }
 
+impl Display for Interned {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
 impl Display for Loc {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}@0x{:x}", self.file_name, self.addr)
