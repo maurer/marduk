@@ -6,7 +6,7 @@ fn run_uaf(names: &[&'static str], insensitive_bugs: usize, expected_flow_bugs: 
         .iter()
         .map(|x| format!("samples/artificial/{}", x))
         .collect();
-    let mut db = uaf(&names, true);
+    let mut db = uaf(&names, true, 100);
     db.run_rules();
     let found_insensitive_bugs = db.query_uaf().len();
     if found_insensitive_bugs != insensitive_bugs {

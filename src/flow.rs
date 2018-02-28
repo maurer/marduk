@@ -1,7 +1,12 @@
 use datalog::*;
 use steensgaard::{Constraint, Var};
 use datalog::PointsTo;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref GAS: Mutex<HashMap<Loc, u32>> = Mutex::new(HashMap::new());
+}
 
 fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     match pts.get(v) {
@@ -108,6 +113,15 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
 }
 
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
+    {
+        let mut gases = GAS.lock().unwrap();
+        let gas = gases.entry(*i.loc).or_insert(i.gas);
+        if *gas == 0 {
+            return Vec::new();
+        } else {
+            *gas -= 1;
+        }
+    }
     let mut pts = i.pts.clone();
     i.ks.purge_pts(&mut pts);
     let mut updated = Vec::new();

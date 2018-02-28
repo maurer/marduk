@@ -14,7 +14,7 @@ fn run_uaf(
         .iter()
         .map(|x| format!("samples/whole/{}", x))
         .collect();
-    let mut db = uaf(&names, flow);
+    let mut db = uaf(&names, flow, 60);
     db.run_rules();
 
     {
