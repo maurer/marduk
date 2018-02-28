@@ -116,7 +116,7 @@ fn loc_merge(lss: &[&LocSet]) -> LocSet {
     out
 }
 
-#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash, Copy)]
 pub struct Loc {
     pub file_name: Interned,
     pub addr: u64,

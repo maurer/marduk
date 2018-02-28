@@ -124,7 +124,35 @@ pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     for tmp in tmps {
         pts.remove(&tmp);
     }
+    canonicalize(&mut pts);
     vec![FlowXferOut { pts2: pts }]
+}
+
+// Purge any entries which cannot currently be reached. We do this on the way in for register
+// entries via insn killsets, for stack slots via return call special handling killsets.
+// However, this still leaves dormant dyn variables, which will propagate around and bloat things.
+fn canonicalize(pts: &mut PointsTo) {
+    // Gather all pointed-to values
+    let keys_to_purge = {
+        let mut pointed_to: BTreeSet<&Var> = BTreeSet::new();
+        for v in pts.values() {
+            pointed_to.extend(v);
+        }
+        let mut keys_to_purge = Vec::new();
+        for k in pts.keys() {
+            if k.is_dyn() && !pointed_to.contains(k) {
+                keys_to_purge.push(*k);
+            }
+        }
+        if keys_to_purge.is_empty() {
+            return;
+        }
+        keys_to_purge
+    };
+    for k in keys_to_purge {
+        pts.remove(&k);
+    }
+    canonicalize(pts)
 }
 
 pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {

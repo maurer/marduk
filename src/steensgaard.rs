@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use regs::Reg;
 use datalog::Loc;
 
-#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
+#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug, Copy)]
 pub enum Var {
     StackSlot { func_addr: Loc, offset: usize },
     Register { site: Loc, register: Reg },
@@ -21,6 +21,12 @@ impl Var {
 
         Var::Temp {
             serial: num.parse().unwrap(),
+        }
+    }
+    pub fn is_dyn(&self) -> bool {
+        match self {
+            &Var::Alloc { .. } => true,
+            _ => false,
         }
     }
 }
