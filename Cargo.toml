@@ -9,6 +9,7 @@ mktemp = "0.3"
 log = "0.4"
 env_logger = "0.5"
 lazy_static = "1.0"
+bap = "0.1"
 
 [dependencies.mycroft]
 git = "https://github.com/maurer/mycroft.git"
@@ -18,9 +19,6 @@ git = "https://github.com/maurer/mycroft.git"
 
 [dependencies.mycroft-macros]
 git = "https://github.com/maurer/mycroft.git"
-
-[dependencies.bap]
-git = "https://github.com/maurer/bap-rust"
 
 [profile.release]
 debug = true
