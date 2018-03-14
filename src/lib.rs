@@ -1,10 +1,10 @@
-#![feature(proc_macro)]
 extern crate bap;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
 extern crate mktemp;
+#[macro_use]
 extern crate mycroft_macros;
 extern crate mycroft_support;
 extern crate num_traits;

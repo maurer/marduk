@@ -1,12 +1,3 @@
-#![feature(alloc_system, global_allocator, allocator_api)]
-
-extern crate alloc_system;
-
-use alloc_system::System;
-
-#[global_allocator]
-static A: System = System;
-
 extern crate env_logger;
 extern crate marduk;
 
