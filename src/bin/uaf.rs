@@ -17,7 +17,7 @@ fn print_state(db: &mut marduk::datalog::Database) {
 
 fn main() {
     env_logger::init();
-    let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..], true, 30);
+    let mut db = marduk::uaf(&::std::env::args().collect::<Vec<_>>()[1..], true, 0xFFFFFFFF);
     let mut step = 0;
     let mut last_round = Vec::new();
     println!("Booting");
@@ -35,9 +35,7 @@ fn main() {
         );
     }
     print_state(&mut db);
-    let derivs: Vec<_> = last_round.into_iter().map(|d| db.derivation(&d)).collect();
-    println!("Last round derivs (if empty, program terminated):");
-    for deriv in derivs {
-        println!("{}", deriv);
+    if !last_round.is_empty() {
+        println!("Run did not complete.");
     }
 }
