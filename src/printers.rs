@@ -90,13 +90,13 @@ impl Display for DerefVarResult {
 
 impl Display for UafResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}:{}->{}", self.var, self.free, self.use_)
+        write!(f, "{}->{}", self.free, self.use_)
     }
 }
 
 impl Display for UafFlowResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}:{}->{}", self.var, self.free, self.use_)
+        write!(f, "{}->{}", self.free, self.use_)
     }
 }
 

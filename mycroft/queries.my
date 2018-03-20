@@ -7,10 +7,10 @@
 ?get_malloc_call: malloc_call {loc}
 ?link_pad: link_pad {pad_loc, pad_name}
 ?live: live {loc}
-?uaf: uaf(var, free, use_)
+?uaf: uaf(_, free, use_)
 ?freed_var: freed_var(var, _)
 ?deref_var: deref_var(var, loc)
 ?path_exists: path_exists(src, dst)
-?uaf_flow: uaf_flow(var, free, use_)
+?uaf_flow: uaf_flow(_, free, use_)
 ?flow: ~flow_in(loc, pts)
 ?constraints: constraint(loc, c)
