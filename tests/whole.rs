@@ -1,7 +1,18 @@
+#[macro_use]
+extern crate lazy_static;
 extern crate marduk;
 extern crate num_traits;
+
 use marduk::uaf;
 use num_traits::cast::ToPrimitive;
+
+use std::sync::Mutex;
+
+// Whole program analyses use too much memory to run them in parallel, so add a mutex to prevent
+// memory overconsumption.
+lazy_static! {
+    static ref MEMLOCK: Mutex<()> = Mutex::new(());
+}
 
 fn run_uaf(
     names: &[&'static str],
@@ -10,6 +21,7 @@ fn run_uaf(
     flow_false_positives_limit: Option<usize>,
     flow: bool,
 ) {
+    let memlock_ = MEMLOCK.lock().unwrap();
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/whole/{}", x))
