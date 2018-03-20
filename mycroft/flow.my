@@ -2,9 +2,7 @@ flow_enable(bool)
 flow_in(Loc, PointsTo^pts_merge)
 flow_out(Loc, PointsTo)
 
-gas(u32)
-
 pred_init: flow_in(loc, ~(BTreeMap::new())) <- malloc_call { loc } & flow_enable(~true)
 pred_flow: flow_in(dst, pts) <- flow_out(src, pts) & succ_any {src, dst}
 
-flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) & gas(gas) + ::flow::xfer
+flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) + ::flow::xfer
