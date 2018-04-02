@@ -102,7 +102,7 @@ fn gnome_nettool() {
         &["gnome-nettool"],
         &[(0x411ba6, 0x4124d1)],
         None,
-        None,
+        Some(4),
         true,
     );
 }
