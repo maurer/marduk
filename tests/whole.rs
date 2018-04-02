@@ -21,7 +21,7 @@ fn run_uaf(
     flow_false_positives_limit: Option<usize>,
     flow: bool,
 ) {
-    let memlock_ = MEMLOCK.lock().unwrap();
+    let _memlock = MEMLOCK.lock().unwrap();
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/whole/{}", x))
