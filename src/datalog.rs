@@ -6,7 +6,7 @@ use std::collections::btree_map;
 use std::sync::Mutex;
 use std::collections::HashMap;
 
-use regs::{Reg, ARGS, CALLER_SAVED};
+use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
 type StringSet = BTreeSet<String>;
@@ -75,6 +75,7 @@ impl KillSpec {
         match (self, v) {
             (&Registers(ref regs), &Register { ref register, .. }) => regs.contains(register),
             (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
+            (&StackFrame(_), &Register { ref register, .. }) => register != &RET_REG,
             _ => false,
         }
     }
