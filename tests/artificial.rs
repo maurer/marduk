@@ -55,7 +55,7 @@ fn path_sensitive() {
 
 #[test]
 fn remalloc() {
-    run_uaf(&["remalloc"], 1, 0);
+    run_uaf(&["remalloc"], 2, 1);
 }
 
 #[test]
