@@ -136,7 +136,7 @@ fn shadowsocks_libev() {
 
 #[test]
 fn isisd() {
-    run_uaf(&["isisd"], &[(0x40a8c9, 0x40aa7e)], None, None, false);
+    run_uaf(&["isisd"], &[(0x40a84f, 0x40aa1f)], None, None, false);
 }
 
 #[test]
