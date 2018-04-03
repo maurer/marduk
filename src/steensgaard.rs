@@ -304,7 +304,11 @@ fn extract_move(
             let lv = if lhs.tmp {
                 Var::temp(lhs.name.as_str())
             } else {
-                if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+                if lhs.name == "RSP" {
+                    // Suppress generation of RSP constraints - we're handling stack discipline
+                    // separately
+                    return Vec::new();
+                } else if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
                     Var::Register {
                         site: cur_addr.clone(),
                         register: reg,
