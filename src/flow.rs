@@ -2,6 +2,40 @@ use datalog::*;
 use steensgaard::{Constraint, Var};
 use datalog::PointsTo;
 use std::collections::BTreeSet;
+use steensgaard::Var::StackSlot;
+
+pub fn purge_stack(i: &FlowPurgeStackIn) -> Vec<FlowPurgeStackOut> {
+    let mut pts2 = i.pts.clone();
+    do_purge(&mut pts2, i.base);
+    vec![FlowPurgeStackOut { pts2: pts2 }]
+}
+
+fn do_purge(pt: &mut PointsTo, base: &Loc) {
+    let mut updated = true;
+    while updated {
+        updated = false;
+        // Figure out what's pointed to - if a stack variable is pointed to, we need to keep it
+        // Make a list of stuff to delete
+        let mut to_delete: BTreeSet<Var> = BTreeSet::new();
+        {
+            let hold_live = pt_to(pt);
+            for var in pt.keys() {
+                if !(match var {
+                    &StackSlot { ref func_addr, .. } => {
+                        (func_addr == base) || hold_live.contains(var)
+                    }
+                    _ => true,
+                }) {
+                    to_delete.insert(var.clone());
+                    updated = true;
+                }
+            }
+        }
+        for var in to_delete {
+            pt.remove(&var);
+        }
+    }
+}
 
 fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     match pts.get(v) {
@@ -128,16 +162,22 @@ pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     vec![FlowXferOut { pts2: pts }]
 }
 
+fn pt_to(pts: &PointsTo) -> BTreeSet<&Var> {
+    let mut pointed_to: BTreeSet<&Var> = BTreeSet::new();
+    for v in pts.values() {
+        pointed_to.extend(v);
+    }
+    pointed_to
+}
+
 // Purge any entries which cannot currently be reached. We do this on the way in for register
 // entries via insn killsets, for stack slots via return call special handling killsets.
 // However, this still leaves dormant dyn variables, which will propagate around and bloat things.
 fn canonicalize(pts: &mut PointsTo) {
     // Gather all pointed-to values
     let keys_to_purge = {
-        let mut pointed_to: BTreeSet<&Var> = BTreeSet::new();
-        for v in pts.values() {
-            pointed_to.extend(v);
-        }
+        let pointed_to = pt_to(&pts);
+
         let mut keys_to_purge = Vec::new();
         for k in pts.keys() {
             if k.is_dyn() && !pointed_to.contains(k) {
