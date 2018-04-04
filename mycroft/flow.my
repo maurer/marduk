@@ -1,8 +1,10 @@
 flow_enable(bool)
 flow_in(Loc, PointsTo^pts_merge)
 flow_out(Loc, PointsTo)
+succ_infunc {src : Loc, dst : Loc, base : Loc}
 
 pred_init: flow_in(loc, ~(BTreeMap::new())) <- malloc_call { loc } & flow_enable(~true)
-pred_flow: flow_in(dst, pts2) <- flow_out(src, pts) & succ_any {src, dst} & func { base, contains: dst } + ::flow::purge_stack
+fuse_succ: succ_infunc {src, dst, base} <- succ_any {src, dst} & func {base, contains: dst}
+pred_flow: flow_in(dst, pts2) <- flow_out(src, pts) & succ_infunc {src, dst, base} + ::flow::purge_stack
 
 flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) + ::flow::xfer
