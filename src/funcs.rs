@@ -197,7 +197,6 @@ pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstrai
                     },
                     b: Var::Alloc {
                         site: i.loc.clone(),
-                        stale: false,
                     },
                 },
             ],
