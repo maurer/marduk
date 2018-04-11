@@ -29,6 +29,12 @@ impl Var {
             _ => false,
         }
     }
+    pub fn is_freed(&self) -> bool {
+        match self {
+            &Var::Freed { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 // Maps a register at a code address to the list of possible definition sites (for a specific

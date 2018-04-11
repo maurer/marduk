@@ -39,7 +39,7 @@ fn do_purge(pt: &mut PointsTo, base: &Loc) {
 
 fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     match pts.get(v) {
-        Some(k) => k.clone(),
+        Some(k) => k.iter().filter(|x| !x.is_freed()).cloned().collect(),
         None => BTreeSet::new(),
     }
 }
