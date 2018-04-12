@@ -13,6 +13,11 @@ fn print_state(db: &mut marduk::datalog::Database) {
     for x in db.query_uaf_flow() {
         println!("{}", x);
     }
+
+    println!("PTS:");
+    for x in db.query_flow() {
+        println!("{}", x);
+    }
 }
 
 fn main() {

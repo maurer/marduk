@@ -124,7 +124,7 @@ impl Display for Interned {
 
 impl Display for Loc {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}@0x{:x}", self.file_name, self.addr)
+        write!(f, "0x{:x}", self.addr)
     }
 }
 
