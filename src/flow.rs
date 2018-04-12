@@ -2,7 +2,6 @@ use datalog::*;
 use steensgaard::{Constraint, Var};
 use datalog::PointsTo;
 use std::collections::BTreeSet;
-use steensgaard::Var::StackSlot;
 
 fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     match pts.get(v) {
@@ -26,7 +25,10 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 out_pts.insert(pta.iter().next().unwrap().clone(), bs);
             } else {
                 for pt in pta {
-                    out_pts.get_mut(&pt).map(|ptr| ptr.insert(b.clone()));
+                    out_pts
+                        .entry(pt)
+                        .or_insert(BTreeSet::new())
+                        .insert(b.clone());
                 }
             }
         }
@@ -81,7 +83,10 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 }
             } else {
                 for pt in pta {
-                    out_pts.get_mut(&pt).map(|ptr| ptr.extend(ptb.clone()));
+                    out_pts
+                        .entry(pt)
+                        .or_insert(BTreeSet::new())
+                        .extend(ptb.clone());
                 }
             }
         }
@@ -101,7 +106,10 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 }
             } else {
                 for pt in pta {
-                    out_pts.get_mut(&pt).map(|ptr| ptr.append(&mut ptb.clone()));
+                    out_pts
+                        .entry(pt)
+                        .or_insert(BTreeSet::new())
+                        .append(&mut ptb.clone());
                 }
             }
         }
