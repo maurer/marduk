@@ -4,39 +4,6 @@ use datalog::PointsTo;
 use std::collections::BTreeSet;
 use steensgaard::Var::StackSlot;
 
-pub fn purge_stack(i: &FlowPurgeStackIn) -> Vec<FlowPurgeStackOut> {
-    let mut pts2 = i.pts.clone();
-    do_purge(&mut pts2, i.base);
-    vec![FlowPurgeStackOut { pts2: pts2 }]
-}
-
-fn do_purge(pt: &mut PointsTo, base: &Loc) {
-    let mut updated = true;
-    while updated {
-        updated = false;
-        // Figure out what's pointed to - if a stack variable is pointed to, we need to keep it
-        // Make a list of stuff to delete
-        let mut to_delete: BTreeSet<Var> = BTreeSet::new();
-        {
-            let hold_live = pt_to(pt);
-            for var in pt.keys() {
-                if !(match var {
-                    &StackSlot { ref func_addr, .. } => {
-                        (func_addr == base) || hold_live.contains(var)
-                    }
-                    _ => true,
-                }) {
-                    to_delete.insert(var.clone());
-                    updated = true;
-                }
-            }
-        }
-        for var in to_delete {
-            pt.remove(&var);
-        }
-    }
-}
-
 fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
     match pts.get(v) {
         Some(k) => k.iter().filter(|x| !x.is_freed()).cloned().collect(),
