@@ -19,17 +19,11 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
             bs.insert(b.clone());
             // TODO DEDUP
             let pta = pt_get(pts, a);
-            if pta.len() == 1 {
-                let mut bs = BTreeSet::new();
-                bs.insert(b.clone());
-                out_pts.insert(pta.iter().next().unwrap().clone(), bs);
-            } else {
-                for pt in pta {
-                    out_pts
-                        .entry(pt)
-                        .or_insert(BTreeSet::new())
-                        .insert(b.clone());
-                }
+            for pt in pta {
+                out_pts
+                    .entry(pt)
+                    .or_insert(BTreeSet::new())
+                    .insert(b.clone());
             }
         }
         // a = &b;
@@ -74,20 +68,11 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
             // TODO: does this need 'updated' logic?
             let pta = pt_get(pts, a);
             let ptb = pt_get(pts, b);
-            if pta.len() == 1 {
-                let pt = pta.iter().next().unwrap();
-                if ptb.is_empty() {
-                    out_pts.remove(pt);
-                } else {
-                    out_pts.insert(pt.clone(), ptb);
-                }
-            } else {
-                for pt in pta {
-                    out_pts
-                        .entry(pt)
-                        .or_insert(BTreeSet::new())
-                        .extend(ptb.clone());
-                }
+            for pt in pta {
+                out_pts
+                    .entry(pt)
+                    .or_insert(BTreeSet::new())
+                    .extend(ptb.clone());
             }
         }
         // *a = *b;
@@ -97,20 +82,11 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
             let ptb = pt_get(pts, b)
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
-            if pta.len() == 1 {
-                let pt = pta.iter().next().unwrap();
-                if ptb.is_empty() {
-                    out_pts.remove(pt);
-                } else {
-                    out_pts.insert(pt.clone(), ptb);
-                }
-            } else {
-                for pt in pta {
-                    out_pts
-                        .entry(pt)
-                        .or_insert(BTreeSet::new())
-                        .append(&mut ptb.clone());
-                }
+            for pt in pta {
+                out_pts
+                    .entry(pt)
+                    .or_insert(BTreeSet::new())
+                    .append(&mut ptb.clone());
             }
         }
     }
