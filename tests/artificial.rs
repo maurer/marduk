@@ -68,3 +68,23 @@ fn ll() {
 fn loop_() {
     run_uaf(&["loop"], 2, 2);
 }
+
+#[test]
+fn ll_structure() {
+    let mut db = uaf(&["samples/artificial/ll".to_string()], true);
+    db.run_rules();
+    // We're searching for something where a variable can point to itself and a dynamic value,
+    // a signature of a linked list
+    for flow_record in db.query_flow() {
+        for (p, pts) in flow_record.pts {
+            if pts.contains(&p) {
+                for pt in pts {
+                    if pt != p && pt.is_dyn() {
+                        return;
+                    }
+                }
+            }
+        }
+    }
+    panic!("a -> {a, b} not found");
+}
