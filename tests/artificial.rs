@@ -76,7 +76,7 @@ fn ll_structure() {
     // We're searching for something where a variable can point to itself and a dynamic value,
     // a signature of a linked list
     for flow_record in db.query_flow() {
-        for (p, pts) in flow_record.pts {
+        for (p, pts) in flow_record.pts.iter() {
             if pts.contains(&p) {
                 for pt in pts {
                     if pt != p && pt.is_dyn() {

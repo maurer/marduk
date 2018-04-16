@@ -16,6 +16,7 @@ pub mod flow;
 pub mod printers;
 pub mod fmt_str;
 pub mod regs;
+pub mod points_to;
 
 pub use datalog::Database;
 

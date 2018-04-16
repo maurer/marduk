@@ -1,9 +1,9 @@
-use bap::high::bil::Statement;
 use bap::high::bil;
+use bap::high::bil::Statement;
 
-use std::collections::{BTreeMap, HashMap};
-use regs::Reg;
 use datalog::Loc;
+use regs::Reg;
+use std::collections::{BTreeMap, HashMap};
 
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug, Copy)]
 pub enum Var {
@@ -23,12 +23,21 @@ impl Var {
             serial: num.parse().unwrap(),
         }
     }
+
+    pub fn is_temp(&self) -> bool {
+        match self {
+            &Var::Temp { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_dyn(&self) -> bool {
         match self {
             &Var::Alloc { .. } => true,
             _ => false,
         }
     }
+
     pub fn is_freed(&self) -> bool {
         match self {
             &Var::Freed { .. } => true,

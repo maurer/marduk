@@ -5,7 +5,7 @@ use regs::Reg;
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 
-fn fmt_vec<T: Display>(f: &mut Formatter, v: &Vec<T>) -> Result {
+pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &Vec<T>) -> Result {
     write!(f, "[")?;
     for i in 0..v.len() {
         if i != 0 {
@@ -25,18 +25,6 @@ impl<'a> Display for CB<'a> {
 impl Display for Reg {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{:?}", self)
-    }
-}
-
-impl Display for FlowResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}: \n", self.loc)?;
-        for (k, v) in self.pts.iter() {
-            write!(f, "\t{} -> ", k)?;
-            fmt_vec(f, &v.iter().collect())?;
-            write!(f, "\n")?;
-        }
-        Ok(())
     }
 }
 
@@ -167,6 +155,12 @@ impl Display for GetMallocCallResult {
 impl Display for LiveResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}", self.loc)
+    }
+}
+
+impl Display for FlowResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}:\n{}", self.loc, self.pts)
     }
 }
 

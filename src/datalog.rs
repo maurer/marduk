@@ -1,7 +1,7 @@
 use bap::high::bil::Statement;
 use bap::basic::Arch;
 use steensgaard::{Constraint, DefChain, Var};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::collections::btree_map;
 use std::sync::Mutex;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ type Constraints = Vec<Constraint>;
 type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
-pub type PointsTo = BTreeMap<Var, BTreeSet<Var>>;
+use points_to::PointsTo;
 
 lazy_static! {
     static ref STRING_INTERN: Mutex<(Vec<String>, HashMap<String, Interned>)> = Mutex::new((Vec::new(), HashMap::new()));
@@ -60,15 +60,6 @@ impl KillSpec {
     pub fn empty() -> Self {
         KillSpec::Registers(Vec::new())
     }
-    // As an optimization, realize that registers can never be pointed to, and so we don't need to
-    // purge them from the right hand side of points to tables.
-    fn kills_vals(&self) -> bool {
-        use self::KillSpec::*;
-        match *self {
-            StackFrame(_) => true,
-            Registers(_) => false,
-        }
-    }
     fn kill(&self, v: &Var) -> bool {
         use self::KillSpec::*;
         use steensgaard::Var::*;
@@ -80,22 +71,7 @@ impl KillSpec {
         }
     }
     pub fn purge_pts(&self, pts: &mut PointsTo) {
-        let mut keys = Vec::new();
-        pts.iter_mut()
-            .map(|(k, v)| {
-                if self.kill(k) {
-                    keys.push(k.clone())
-                } else if self.kills_vals() {
-                    let vs: Vec<Var> = v.iter().filter(|v| self.kill(v)).cloned().collect();
-                    for vi in vs {
-                        v.remove(&vi);
-                    }
-                }
-            })
-            .count();
-        for key in keys {
-            pts.remove(&key);
-        }
+        pts.remove_predicate(|v| self.kill(v));
     }
 }
 
@@ -123,18 +99,9 @@ pub struct Loc {
 }
 
 fn pts_merge(ptss: &[&PointsTo]) -> PointsTo {
-    let mut out = ptss[0].clone();
+    let mut out: PointsTo = ptss[0].clone();
     for pts in &ptss[1..] {
-        for (k, v) in pts.iter() {
-            match out.entry(k.clone()) {
-                btree_map::Entry::Occupied(mut o) => {
-                    o.get_mut().append(&mut v.clone());
-                }
-                btree_map::Entry::Vacant(e) => {
-                    e.insert(v.clone());
-                }
-            };
-        }
+        out.merge(pts);
     }
     out
 }

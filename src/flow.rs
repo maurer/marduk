@@ -1,92 +1,61 @@
 use datalog::*;
 use steensgaard::{Constraint, Var};
-use datalog::PointsTo;
+use points_to::PointsTo;
 use std::collections::BTreeSet;
-
-fn pt_get(pts: &PointsTo, v: &Var) -> BTreeSet<Var> {
-    match pts.get(v) {
-        Some(k) => k.iter().filter(|x| !x.is_freed()).cloned().collect(),
-        None => BTreeSet::new(),
-    }
-}
 
 fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
     match *c {
         // *a = &b
-        Constraint::StackLoad { ref a, ref b } => {
-            // TODO: does this need 'updated' logic?
-            let mut bs = BTreeSet::new();
-            bs.insert(b.clone());
-            // TODO DEDUP
-            let pta = pt_get(pts, a);
-            for pt in pta {
-                out_pts
-                    .entry(pt)
-                    .or_insert(BTreeSet::new())
-                    .insert(b.clone());
-            }
-        }
+        Constraint::StackLoad { ref a, ref b } => for pt in pts.get(a) {
+            out_pts.add_alias(pt, *b);
+        },
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
             if updated.contains(a) {
-                out_pts.get_mut(a).unwrap().insert(b.clone());
+                out_pts.add_alias(*a, *b);
             } else {
-                let mut bs = BTreeSet::new();
-                bs.insert(b.clone());
-                out_pts.insert(a.clone(), bs);
-                updated.push(a.clone());
+                out_pts.replace_alias(*a, *b);
+                updated.push(*a);
             }
         }
         // a = b;
         Constraint::Asgn { ref a, ref b } => {
-            let ptb = pt_get(pts, b);
+            let ptb = pts.get(b);
             if updated.contains(a) {
-                out_pts.get_mut(a).unwrap().extend(ptb)
-            } else if !ptb.is_empty() {
-                out_pts.insert(a.clone(), ptb);
-                updated.push(a.clone());
+                out_pts.extend_alias(*a, ptb);
             } else {
-                out_pts.remove(a);
+                out_pts.set_alias(*a, ptb);
+                updated.push(*a);
             }
         }
         // a = *b;
         Constraint::Deref { ref a, ref b } => {
-            let ptb = pt_get(pts, b)
+            let ptb = pts.get(b)
                 .iter()
-                .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
+                .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
             if updated.contains(a) {
-                out_pts.get_mut(a).unwrap().extend(ptb);
-            } else if !ptb.is_empty() {
-                out_pts.insert(a.clone(), ptb);
-                updated.push(a.clone());
+                out_pts.extend_alias(*a, ptb);
             } else {
-                out_pts.remove(a);
+                out_pts.set_alias(*a, ptb);
+                updated.push(a.clone());
             }
         }
         // *a = b;
         Constraint::Write { ref a, ref b } => {
-            // TODO: does this need 'updated' logic?
-            let pta = pt_get(pts, a);
-            let ptb = pt_get(pts, b);
+            let pta = pts.get(a);
+            let ptb = pts.get(b);
             for pt in pta {
-                out_pts
-                    .entry(pt)
-                    .or_insert(BTreeSet::new())
-                    .extend(ptb.clone());
+                out_pts.extend_alias(pt, ptb.clone());
             }
         }
         // *a = *b;
         Constraint::Xfer { ref a, ref b } => {
-            // TODO: does this need 'updated' logic?
-            let pta = pt_get(pts, a);
-            let ptb = pt_get(pts, b)
+            let pta = pts.get(a);
+            let ptb = pts.get(b)
                 .iter()
-                .fold(BTreeSet::new(), |bs, ptb| &bs | &pt_get(pts, ptb));
+                .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
             for pt in pta {
-                out_pts
-                    .entry(pt)
-                    .or_insert(BTreeSet::new())
-                    .append(&mut ptb.clone());
+                out_pts.extend_alias(pt, ptb.clone());
             }
         }
     }
@@ -99,66 +68,15 @@ pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     for c in i.cs.iter() {
         apply(&i.pts, &mut pts, &mut updated, c)
     }
-    let tmps: Vec<_> = pts.keys()
-        .filter(|v| match **v {
-            Var::Temp { .. } => true,
-            _ => false,
-        })
-        .cloned()
-        .collect();
-    for tmp in tmps {
-        pts.remove(&tmp);
-    }
-    canonicalize(&mut pts);
+    pts.remove_temps();
+    pts.canonicalize();
     vec![FlowXferOut { pts2: pts }]
 }
 
-fn pt_to(pts: &PointsTo) -> BTreeSet<&Var> {
-    let mut pointed_to: BTreeSet<&Var> = BTreeSet::new();
-    for v in pts.values() {
-        pointed_to.extend(v);
-    }
-    pointed_to
-}
-
-// Purge any entries which cannot currently be reached. We do this on the way in for register
-// entries via insn killsets, for stack slots via return call special handling killsets.
-// However, this still leaves dormant dyn variables, which will propagate around and bloat things.
-fn canonicalize(pts: &mut PointsTo) {
-    // Gather all pointed-to values
-    let keys_to_purge = {
-        let pointed_to = pt_to(&pts);
-
-        let mut keys_to_purge = Vec::new();
-        for k in pts.keys() {
-            if k.is_dyn() && !pointed_to.contains(k) {
-                keys_to_purge.push(*k);
-            }
-        }
-        if keys_to_purge.is_empty() {
-            return;
-        }
-        keys_to_purge
-    };
-    for k in keys_to_purge {
-        pts.remove(&k);
-    }
-    canonicalize(pts)
-}
-
 pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {
-    match i.pts.get(i.v) {
-        Some(pts) => pts.iter()
-            .flat_map(|heap| match i.pts.get(heap) {
-                Some(vars) => vars.iter()
-                    .filter_map(|var| match *var {
-                        Var::Freed { ref site } => Some(FlowIsFreedOut { loc: site.clone() }),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>(), // This allocation shouldn't be needed, doing it to make typechecking none arm easier
-                None => Vec::new(),
-            })
-            .collect(),
-        None => Vec::new(),
-    }
+    i.pts
+        .free_sites(i.v)
+        .into_iter()
+        .map(|site| FlowIsFreedOut { loc: site })
+        .collect()
 }
