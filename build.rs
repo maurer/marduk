@@ -1,14 +1,12 @@
+use std::fs;
+
 fn main() {
-    for myc_file in &[
-        "defs",
-        "flow",
-        "fmt_str",
-        "load",
-        "queries",
-        "schema",
-        "uaf",
-        "steensgaard",
-    ] {
-        println!("cargo:rerun-if-changed=mycroft/{}.my", myc_file)
+    for entry_r in fs::read_dir("mycroft").unwrap() {
+        let entry = entry_r.unwrap();
+        if let Some(ext) = entry.path().extension() {
+            if ext == "my" {
+                println!("cargo:rerun-if-changed={}", entry.path().display())
+            }
+        }
     }
 }
