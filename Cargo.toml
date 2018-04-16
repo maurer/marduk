@@ -1,7 +1,17 @@
 [package]
 name = "marduk"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Matthew Maurer <matthew.r.maurer@gmail.com>"]
+include = [
+  "mycroft/*",
+  "build.rs",
+  "src/*.rs",
+  "src/**/*.rs",
+  "Cargo.toml"
+]
+description = "A use-after-free detector for compiled code built on mycroft"
+repository = "https://github.com/maurer/marduk"
+license = "MIT"
 
 [dependencies]
 num-traits = "0.1"
