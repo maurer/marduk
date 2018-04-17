@@ -1,7 +1,7 @@
 use datalog::*;
-use steensgaard::{Constraint, Var};
 use points_to::PointsTo;
 use std::collections::BTreeSet;
+use steensgaard::{Constraint, Var};
 
 fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
     match *c {

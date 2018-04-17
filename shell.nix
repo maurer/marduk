@@ -31,4 +31,4 @@ stdenv.mkDerivation rec {
   buildInputs = [ rust libbap vim clang ];
   LIBCLANG_PATH = "${llvmPackages.clang-unwrapped.lib}/lib";
 }
-) {rust = nixpkgs.rustChannels.stable.rust; }
+) {rust = nixpkgs.rustChannels.nightly.rust; }

@@ -10,21 +10,21 @@ extern crate mycroft_support;
 extern crate num_traits;
 
 pub mod datalog;
-pub mod funcs;
-pub mod steensgaard;
 pub mod flow;
-pub mod printers;
 pub mod fmt_str;
-pub mod regs;
+pub mod funcs;
 pub mod points_to;
+pub mod printers;
+pub mod regs;
+pub mod steensgaard;
 
 pub use datalog::Database;
 
 pub fn uaf(files: &[String], flow_enable: bool) -> Database {
     let mut db = Database::new();
     for file_name in files {
-        use std::io::Read;
         use std::fs::File;
+        use std::io::Read;
         let mut in_raw = Vec::new();
         let mut in_file = File::open(file_name).unwrap();
         in_file.read_to_end(&mut in_raw).unwrap();

@@ -1,7 +1,7 @@
-use datalog::*;
+use bap::basic::Cast;
 use bap::high::bil::{Expression, Statement};
 use bap::high::bitvector::BitVector;
-use bap::basic::Cast;
+use datalog::*;
 use num_traits::ToPrimitive;
 use regs::ARGS;
 
@@ -35,11 +35,9 @@ pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
                 continue;
             }
             if let Some(bv) = const_collapse(rhs) {
-                return vec![
-                    FmtStrConstMoveOut {
-                        addr: bv.to_u64().unwrap(),
-                    },
-                ];
+                return vec![FmtStrConstMoveOut {
+                    addr: bv.to_u64().unwrap(),
+                }];
             }
         }
     }

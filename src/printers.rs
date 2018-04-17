@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter, Result};
-use steensgaard::{Constraint, Var};
 use datalog::*;
 use regs::Reg;
+use std::fmt::{Display, Formatter, Result};
+use steensgaard::{Constraint, Var};
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 

@@ -1,45 +1,41 @@
-use datalog::*;
-use bap::high::bitvector::BitVector;
 use bap::basic::{Bap, BasicDisasm, Image};
 use bap::high::bil::{Expression, Statement, Type, Variable};
-use std::collections::{BTreeMap, BTreeSet};
-use steensgaard;
+use bap::high::bitvector::BitVector;
+use datalog::*;
 use datalog::{Interned, Loc};
 use regs::{Reg, ARGS, RET_REG};
+use std::collections::{BTreeMap, BTreeSet};
+use steensgaard;
 
 macro_rules! vec_error {
     ($e:expr) => {{
         let name: ::bap::basic::Result<_> = $e;
         match name {
             Ok(i) => vec![i],
-            Err(_) => return Vec::new()
+            Err(_) => return Vec::new(),
         }
-    }}
+    }};
 }
 
 macro_rules! get_image {
     ($bap:expr, $contents:expr) => {{
         match Image::from_data(&$bap, &$contents) {
             Ok(i) => i,
-            Err(_) => return Vec::new()
+            Err(_) => return Vec::new(),
         }
-    }}
+    }};
 }
 
 pub fn killspec_regs(i: &FuncsKillspecRegsIn) -> Vec<FuncsKillspecRegsOut> {
-    vec![
-        FuncsKillspecRegsOut {
-            ks: KillSpec::Registers(i.registers.clone()),
-        },
-    ]
+    vec![FuncsKillspecRegsOut {
+        ks: KillSpec::Registers(i.registers.clone()),
+    }]
 }
 
 pub fn stack_wipe(i: &FuncsStackWipeIn) -> Vec<FuncsStackWipeOut> {
-    vec![
-        FuncsStackWipeOut {
-            ks: KillSpec::StackFrame(i.base.clone()),
-        },
-    ]
+    vec![FuncsStackWipeOut {
+        ks: KillSpec::StackFrame(i.base.clone()),
+    }]
 }
 
 pub fn only_args(i: &FuncsOnlyArgsIn) -> Vec<FuncsOnlyArgsOut> {
@@ -59,11 +55,9 @@ pub fn only_ret(i: &FuncsOnlyRetIn) -> Vec<FuncsOnlyRetOut> {
 }
 
 pub fn promote_def(i: &FuncsPromoteDefIn) -> Vec<FuncsPromoteDefOut> {
-    vec![
-        FuncsPromoteDefOut {
-            defs: vec![i.def.clone()],
-        },
-    ]
+    vec![FuncsPromoteDefOut {
+        defs: vec![i.def.clone()],
+    }]
 }
 
 pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
@@ -172,11 +166,9 @@ fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<Reg>) {
 }
 
 pub fn gen_constraints(i: &FuncsGenConstraintsIn) -> Vec<FuncsGenConstraintsOut> {
-    vec![
-        FuncsGenConstraintsOut {
-            c: steensgaard::extract_constraints(i.bil, i.dc.clone(), i.loc, i.base),
-        },
-    ]
+    vec![FuncsGenConstraintsOut {
+        c: steensgaard::extract_constraints(i.bil, i.dc.clone(), i.loc, i.base),
+    }]
 }
 
 pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
@@ -187,21 +179,17 @@ pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
 
 pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstraintOut> {
     use steensgaard::*;
-    vec![
-        FuncsMallocConstraintOut {
-            c: vec![
-                Constraint::AddrOf {
-                    a: Var::Register {
-                        site: i.loc.clone(),
-                        register: RET_REG,
-                    },
-                    b: Var::Alloc {
-                        site: i.loc.clone(),
-                    },
-                },
-            ],
-        },
-    ]
+    vec![FuncsMallocConstraintOut {
+        c: vec![Constraint::AddrOf {
+            a: Var::Register {
+                site: i.loc.clone(),
+                register: RET_REG,
+            },
+            b: Var::Alloc {
+                site: i.loc.clone(),
+            },
+        }],
+    }]
 }
 
 pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut> {
@@ -213,17 +201,15 @@ pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut>
             i.dc[&ARGS[arg_n]]
                 .iter()
                 .map(move |src| FuncsFreeConstraintOut {
-                    c: vec![
-                        Constraint::StackLoad {
-                            a: Var::Register {
-                                site: src.clone(),
-                                register: ARGS[arg_n],
-                            },
-                            b: Var::Freed {
-                                site: i.loc.clone(),
-                            },
+                    c: vec![Constraint::StackLoad {
+                        a: Var::Register {
+                            site: src.clone(),
+                            register: ARGS[arg_n],
                         },
-                    ],
+                        b: Var::Freed {
+                            site: i.loc.clone(),
+                        },
+                    }],
                 })
         })
         .collect()
@@ -234,11 +220,9 @@ pub fn defines(i: &FuncsDefinesIn) -> Vec<FuncsDefinesOut> {
     for stmt in i.bil {
         defines_stmt(stmt, &mut defs);
     }
-    vec![
-        FuncsDefinesOut {
-            registers: defs.into_iter().collect(),
-        },
-    ]
+    vec![FuncsDefinesOut {
+        registers: defs.into_iter().collect(),
+    }]
 }
 
 pub fn exclude_registers(i: &FuncsExcludeRegistersIn) -> Vec<FuncsExcludeRegistersOut> {
@@ -454,11 +438,9 @@ pub fn is_computed_jump(i: &FuncsIsComputedJumpIn) -> Vec<FuncsIsComputedJumpOut
 pub fn get_arch(i: &FuncsGetArchIn) -> Vec<FuncsGetArchOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
-        vec![
-            FuncsGetArchOut {
-                arch: image.arch().unwrap(),
-            },
-        ]
+        vec![FuncsGetArchOut {
+            arch: image.arch().unwrap(),
+        }]
     })
 }
 

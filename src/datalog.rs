@@ -1,10 +1,10 @@
-use bap::high::bil::Statement;
 use bap::basic::Arch;
-use steensgaard::{Constraint, DefChain, Var};
-use std::collections::BTreeSet;
+use bap::high::bil::Statement;
 use std::collections::btree_map;
-use std::sync::Mutex;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::sync::Mutex;
+use steensgaard::{Constraint, DefChain, Var};
 
 use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
 type Bytes = Vec<u8>;
@@ -18,7 +18,8 @@ type Vusize = Vec<usize>;
 use points_to::PointsTo;
 
 lazy_static! {
-    static ref STRING_INTERN: Mutex<(Vec<String>, HashMap<String, Interned>)> = Mutex::new((Vec::new(), HashMap::new()));
+    static ref STRING_INTERN: Mutex<(Vec<String>, HashMap<String, Interned>)> =
+        Mutex::new((Vec::new(), HashMap::new()));
 }
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Copy)]

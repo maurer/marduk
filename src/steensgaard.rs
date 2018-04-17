@@ -126,12 +126,10 @@ fn extract_expr(
             if bv.type_ == bil::Type::Immediate(1) {
                 Vec::new()
             } else if bv.name == "RSP" {
-                vec![
-                    E::AddrOf(self::Var::StackSlot {
-                        func_addr: func_addr.clone(),
-                        offset: 0,
-                    }),
-                ]
+                vec![E::AddrOf(self::Var::StackSlot {
+                    func_addr: func_addr.clone(),
+                    offset: 0,
+                })]
             } else {
                 match Reg::from_str(bv.name.as_str()) {
                     Some(reg) => match defs.get(&reg) {
@@ -178,12 +176,10 @@ fn extract_expr(
                 if let Var(ref lv) = **lhs {
                     if lv.name == "RSP" {
                         match **rhs {
-                            Const(ref bv) => vec![
-                                E::AddrOf(self::Var::StackSlot {
-                                    func_addr: func_addr.clone(),
-                                    offset: bv.to_u64().unwrap() as usize,
-                                }),
-                            ],
+                            Const(ref bv) => vec![E::AddrOf(self::Var::StackSlot {
+                                func_addr: func_addr.clone(),
+                                offset: bv.to_u64().unwrap() as usize,
+                            })],
                             _ => out,
                         }
                     } else {
@@ -192,12 +188,10 @@ fn extract_expr(
                 } else if let Var(ref rv) = **rhs {
                     if rv.name == "RSP" {
                         match **lhs {
-                            Const(ref bv) => vec![
-                                E::AddrOf(self::Var::StackSlot {
-                                    func_addr: func_addr.clone(),
-                                    offset: bv.to_u64().unwrap() as usize,
-                                }),
-                            ],
+                            Const(ref bv) => vec![E::AddrOf(self::Var::StackSlot {
+                                func_addr: func_addr.clone(),
+                                offset: bv.to_u64().unwrap() as usize,
+                            })],
                             _ => out,
                         }
                     } else {
@@ -318,20 +312,18 @@ fn extract_move(
         bil::Type::Immediate(_) => {
             let lv = if lhs.tmp {
                 Var::temp(lhs.name.as_str())
-            } else {
-                if lhs.name == "RSP" {
-                    // Suppress generation of RSP constraints - we're handling stack discipline
-                    // separately
-                    return Vec::new();
-                } else if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
-                    Var::Register {
-                        site: cur_addr.clone(),
-                        register: reg,
-                    }
-                } else {
-                    error!("Unrecognized variable name: {:?}", lhs.name);
-                    return Vec::new();
+            } else if lhs.name == "RSP" {
+                // Suppress generation of RSP constraints - we're handling stack discipline
+                // separately
+                return Vec::new();
+            } else if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+                Var::Register {
+                    site: cur_addr.clone(),
+                    register: reg,
                 }
+            } else {
+                warn!("Unrecognized variable name: {:?}", lhs.name);
+                return Vec::new();
             };
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
