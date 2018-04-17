@@ -5,13 +5,13 @@ use steensgaard::{Constraint, Var};
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 
-pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &Vec<T>) -> Result {
+pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
     write!(f, "[")?;
-    for i in 0..v.len() {
-        if i != 0 {
-            write!(f, ", ")?
-        }
-        write!(f, "{}", v[i])?
+    for i in v.iter().take(1) {
+        write!(f, "{}", i)?;
+    }
+    for i in v.iter().skip(1) {
+        write!(f, ", {}", i)?;
     }
     write!(f, "]")
 }

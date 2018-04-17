@@ -4,6 +4,7 @@ use bap::high::bil::Statement;
 use datalog::Loc;
 use regs::Reg;
 use std::collections::{BTreeMap, HashMap};
+use std::str::FromStr;
 
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug, Copy)]
 pub enum Var {
@@ -25,22 +26,22 @@ impl Var {
     }
 
     pub fn is_temp(&self) -> bool {
-        match self {
-            &Var::Temp { .. } => true,
+        match *self {
+            Var::Temp { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_dyn(&self) -> bool {
-        match self {
-            &Var::Alloc { .. } => true,
+        match *self {
+            Var::Alloc { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_freed(&self) -> bool {
-        match self {
-            &Var::Freed { .. } => true,
+        match *self {
+            Var::Freed { .. } => true,
             _ => false,
         }
     }
@@ -127,24 +128,24 @@ fn extract_expr(
                 Vec::new()
             } else if bv.name == "RSP" {
                 vec![E::AddrOf(self::Var::StackSlot {
-                    func_addr: func_addr.clone(),
+                    func_addr: *func_addr,
                     offset: 0,
                 })]
             } else {
                 match Reg::from_str(bv.name.as_str()) {
-                    Some(reg) => match defs.get(&reg) {
+                    Ok(reg) => match defs.get(&reg) {
                         None => Vec::new(),
                         Some(sites) => sites
                             .iter()
                             .map(|site| {
                                 E::Base(self::Var::Register {
-                                    site: site.clone(),
+                                    site: *site,
                                     register: reg,
                                 })
                             })
                             .collect(),
                     },
-                    None => if bv.tmp {
+                    Err(_) => if bv.tmp {
                         vec![E::Base(self::Var::temp(bv.name.as_str()))]
                     } else {
                         error!("Unrecognized variable name: {:?}", bv.name);
@@ -177,7 +178,7 @@ fn extract_expr(
                     if lv.name == "RSP" {
                         match **rhs {
                             Const(ref bv) => vec![E::AddrOf(self::Var::StackSlot {
-                                func_addr: func_addr.clone(),
+                                func_addr: *func_addr,
                                 offset: bv.to_u64().unwrap() as usize,
                             })],
                             _ => out,
@@ -189,7 +190,7 @@ fn extract_expr(
                     if rv.name == "RSP" {
                         match **lhs {
                             Const(ref bv) => vec![E::AddrOf(self::Var::StackSlot {
-                                func_addr: func_addr.clone(),
+                                func_addr: *func_addr,
                                 offset: bv.to_u64().unwrap() as usize,
                             })],
                             _ => out,
@@ -243,15 +244,13 @@ fn extract_move_var(
             let rhs_vars = extract_expr(rhs, defs, cur_addr, func_addr);
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
-                match lhs_evar {
-                    Base(l) => out.push(l),
-                    _ => (),
+                if let Base(l) = lhs_evar {
+                    out.push(l)
                 }
             }
             for rhs_evar in rhs_vars {
-                match rhs_evar {
-                    Deref(v) => out.push(v),
-                    _ => (),
+                if let Deref(v) = rhs_evar {
+                    out.push(v)
                 }
             }
             out
@@ -259,9 +258,8 @@ fn extract_move_var(
         bil::Type::Immediate(_) => {
             let mut out = Vec::new();
             for eval in extract_expr(rhs, defs, cur_addr, func_addr) {
-                match eval {
-                    E::Deref(v) => out.push(v),
-                    _ => (),
+                if let E::Deref(v) = eval {
+                    out.push(v)
                 }
             }
             out
@@ -316,9 +314,9 @@ fn extract_move(
                 // Suppress generation of RSP constraints - we're handling stack discipline
                 // separately
                 return Vec::new();
-            } else if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+            } else if let Ok(reg) = Reg::from_str(lhs.name.as_str()) {
                 Var::Register {
-                    site: cur_addr.clone(),
+                    site: *cur_addr,
                     register: reg,
                 }
             } else {
@@ -328,23 +326,14 @@ fn extract_move(
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
                 .map(|eval| match eval {
-                    E::AddrOf(var) => Constraint::AddrOf {
-                        a: lv.clone(),
-                        b: var,
-                    },
-                    E::Base(var) => Constraint::Asgn {
-                        a: lv.clone(),
-                        b: var,
-                    },
-                    E::Deref(var) => Constraint::Deref {
-                        a: lv.clone(),
-                        b: var,
-                    },
+                    E::AddrOf(var) => Constraint::AddrOf { a: lv, b: var },
+                    E::Base(var) => Constraint::Asgn { a: lv, b: var },
+                    E::Deref(var) => Constraint::Deref { a: lv, b: var },
                 })
                 .collect();
             if !lhs.tmp {
                 // We've just overwritten a non-temporary, update the def chain
-                let our_addr = vec![cur_addr.clone()];
+                let our_addr = vec![*cur_addr];
                 defs.insert(Reg::from_str(lhs.name.as_str()).unwrap(), our_addr);
             }
             out
@@ -436,7 +425,7 @@ impl UF {
             let pays = &mut self.pays;
             let points_to = &mut self.points_to;
 
-            *self.inv.entry(v.clone()).or_insert_with(|| {
+            *self.inv.entry(v).or_insert_with(|| {
                 backing.push(Default::default());
                 pays.push(Some(v));
                 points_to.push(None);
@@ -496,22 +485,21 @@ impl UF {
     fn dump_sets(&self) -> Vec<Vec<Var>> {
         let mut merger: HashMap<usize, Vec<Var>> = HashMap::new();
         for (key, mvar) in self.pays.iter().enumerate() {
-            match *mvar {
-                Some(ref var) => merger
+            if let Some(ref var) = *mvar {
+                merger
                     .entry(self.uf_find(key))
-                    .or_insert(Vec::new())
-                    .push(var.clone()),
-                None => (),
+                    .or_insert_with(Vec::new)
+                    .push(var.clone())
             }
         }
         merger.into_iter().map(|x| x.1).collect()
     }
 
-    fn process(&mut self, c: Constraint) {
+    fn process(&mut self, c: &Constraint) {
         use self::Constraint::*;
-        match c {
+        match *c {
             // a = &b
-            AddrOf { a, b } => self.process(Write { a, b }),
+            AddrOf { a, b } => self.process(&Write { a, b }),
             // a = b
             Asgn { a, b } => {
                 let ka = self.force_find(a);
@@ -555,7 +543,7 @@ impl UF {
 pub fn constraints_to_may_alias(cs: Vec<Constraint>) -> Vec<Vec<Var>> {
     let mut uf = UF::new();
     for c in cs {
-        uf.process(c)
+        uf.process(&c)
     }
     // We need to track temps during solving, but afterwards we only care about what's at
     // instruction boundaries.

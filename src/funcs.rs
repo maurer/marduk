@@ -5,6 +5,7 @@ use datalog::*;
 use datalog::{Interned, Loc};
 use regs::{Reg, ARGS, RET_REG};
 use std::collections::{BTreeMap, BTreeSet};
+use std::str::FromStr;
 use steensgaard;
 
 macro_rules! vec_error {
@@ -34,7 +35,7 @@ pub fn killspec_regs(i: &FuncsKillspecRegsIn) -> Vec<FuncsKillspecRegsOut> {
 
 pub fn stack_wipe(i: &FuncsStackWipeIn) -> Vec<FuncsStackWipeOut> {
     vec![FuncsStackWipeOut {
-        ks: KillSpec::StackFrame(i.base.clone()),
+        ks: KillSpec::StackFrame(*i.base),
     }]
 }
 
@@ -55,9 +56,7 @@ pub fn only_ret(i: &FuncsOnlyRetIn) -> Vec<FuncsOnlyRetOut> {
 }
 
 pub fn promote_def(i: &FuncsPromoteDefIn) -> Vec<FuncsPromoteDefOut> {
-    vec![FuncsPromoteDefOut {
-        defs: vec![i.def.clone()],
-    }]
+    vec![FuncsPromoteDefOut { defs: vec![*i.def] }]
 }
 
 pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
@@ -67,7 +66,7 @@ pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
         .flat_map(|arg_n| {
             i.dc[&ARGS[arg_n]].iter().map(move |loc| FuncsFreeArgsOut {
                 arg: steensgaard::Var::Register {
-                    site: loc.clone(),
+                    site: *loc,
                     register: ARGS[arg_n],
                 },
             })
@@ -76,16 +75,13 @@ pub fn free_args(i: &FuncsFreeArgsIn) -> Vec<FuncsFreeArgsOut> {
 }
 
 pub fn expand_vars(i: &FuncsExpandVarsIn) -> Vec<FuncsExpandVarsOut> {
-    i.vs
-        .iter()
-        .map(|v| FuncsExpandVarsOut { v2: v.clone() })
-        .collect()
+    i.vs.iter().map(|v| FuncsExpandVarsOut { v2: *v }).collect()
 }
 
 pub fn reads_vars(i: &FuncsReadsVarsIn) -> Vec<FuncsReadsVarsOut> {
     steensgaard::extract_var_use(i.bil, i.dc.clone(), i.loc, i.base)
         .into_iter()
-        .map(|v| FuncsReadsVarsOut { v: v })
+        .map(|v| FuncsReadsVarsOut { v })
         .collect()
 }
 
@@ -94,7 +90,7 @@ pub fn use_vars(i: &FuncsUseVarsIn) -> Vec<FuncsUseVarsOut> {
         .iter()
         .map(|site| FuncsUseVarsOut {
             v: steensgaard::Var::Register {
-                site: site.clone(),
+                site: *site,
                 register: *i.r,
             },
         })
@@ -104,8 +100,8 @@ pub fn use_vars(i: &FuncsUseVarsIn) -> Vec<FuncsUseVarsOut> {
 pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersOut> {
     i.registers
         .iter()
-        .map(|s| FuncsExpandRegistersOut {
-            register: s.clone(),
+        .map(|register| FuncsExpandRegistersOut {
+            register: *register,
         })
         .collect()
 }
@@ -113,7 +109,7 @@ pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersO
 pub fn steens_solve(i: &FuncsSteensSolveIn) -> Vec<FuncsSteensSolveOut> {
     steensgaard::constraints_to_may_alias(i.cs.clone())
         .into_iter()
-        .map(|vs| FuncsSteensSolveOut { vs: vs })
+        .map(|vs| FuncsSteensSolveOut { vs })
         .collect()
 }
 
@@ -126,7 +122,7 @@ pub fn singleton_string(i: &FuncsSingletonStringIn) -> Vec<FuncsSingletonStringO
 pub fn steens_expando(i: &FuncsSteensExpandoIn) -> Vec<FuncsSteensExpandoOut> {
     i.vs
         .iter()
-        .map(|v| FuncsSteensExpandoOut { v: v.clone() })
+        .map(|v| FuncsSteensExpandoOut { v: *v })
         .collect()
 }
 
@@ -141,7 +137,7 @@ fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<Reg>) {
     match *stmt {
         Statement::Move { ref lhs, .. } => {
             if !lhs.tmp && is_normal_reg(lhs) {
-                if let Some(reg) = Reg::from_str(lhs.name.as_str()) {
+                if let Ok(reg) = Reg::from_str(lhs.name.as_str()) {
                     defs.insert(reg);
                 }
             }
@@ -173,7 +169,7 @@ pub fn gen_constraints(i: &FuncsGenConstraintsIn) -> Vec<FuncsGenConstraintsOut>
 
 pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
     let mut out = BTreeMap::new();
-    out.insert(i.register.clone(), i.defs.iter().cloned().collect());
+    out.insert(i.register.clone(), i.defs.to_vec());
     vec![FuncsDefChainOut { dc: out }]
 }
 
@@ -182,12 +178,10 @@ pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstrai
     vec![FuncsMallocConstraintOut {
         c: vec![Constraint::AddrOf {
             a: Var::Register {
-                site: i.loc.clone(),
+                site: *i.loc,
                 register: RET_REG,
             },
-            b: Var::Alloc {
-                site: i.loc.clone(),
-            },
+            b: Var::Alloc { site: *i.loc },
         }],
     }]
 }
@@ -203,12 +197,10 @@ pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut>
                 .map(move |src| FuncsFreeConstraintOut {
                     c: vec![Constraint::StackLoad {
                         a: Var::Register {
-                            site: src.clone(),
+                            site: *src,
                             register: ARGS[arg_n],
                         },
-                        b: Var::Freed {
-                            site: i.loc.clone(),
-                        },
+                        b: Var::Freed { site: *i.loc },
                     }],
                 })
         })
@@ -347,7 +339,7 @@ pub fn lift(i: &FuncsLiftIn) -> Vec<FuncsLiftOut> {
 
         Ok(FuncsLiftOut {
             bil: stmts,
-            disasm: disasm,
+            disasm,
             fall: Loc {
                 file_name: i.loc.file_name,
                 addr: fall,
@@ -367,7 +359,7 @@ pub fn sema_succ(i: &FuncsSemaSuccIn) -> Vec<FuncsSemaSuccOut> {
         .into_iter()
         .map(|x| FuncsSemaSuccOut {
             dst: Loc {
-                file_name: i.fall.file_name.clone(),
+                file_name: i.fall.file_name,
                 addr: x,
             },
         })

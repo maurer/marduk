@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use steensgaard::Var;
 
 /// PointsTo manages information about what a given variable may point to
-#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, Default)]
 pub struct PointsTo {
     inner: BTreeMap<Var, BTreeSet<Var>>,
 }
@@ -15,9 +15,7 @@ pub struct PointsTo {
 impl PointsTo {
     /// Makes a new empty PointsTo
     pub fn new() -> Self {
-        PointsTo {
-            inner: BTreeMap::new(),
-        }
+        Self::default()
     }
 
     /// Iterates over the underlying map.
@@ -43,7 +41,7 @@ impl PointsTo {
     /// Updates a points-to set with information from another, assuming both represent valid
     /// possibilities.
     pub fn merge(&mut self, other: &Self) {
-        for (k, v) in other.inner.iter() {
+        for (k, v) in &other.inner {
             match self.inner.entry(k.clone()) {
                 btree_map::Entry::Occupied(mut o) => {
                     o.get_mut().append(&mut v.clone());
@@ -80,7 +78,7 @@ impl PointsTo {
     // Helper function which gets us a mutable reference to what's pointed to by the provided
     // variable, creating the entry if needed.
     fn force_mut(&mut self, src: Var) -> &mut BTreeSet<Var> {
-        self.inner.entry(src).or_insert(BTreeSet::new())
+        self.inner.entry(src).or_insert_with(BTreeSet::new)
     }
 
     /// src->tgt is a possibility in addition to whatever may have been before.
@@ -163,25 +161,24 @@ impl PointsTo {
 
     /// Finds all locations where v may have been freed.
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
-        let out = self.get(v)
+        self.get(v)
             .iter()
             .flat_map(|d| self.get(d))
             .filter_map(|pt| match pt {
                 Var::Freed { ref site } => Some(*site),
                 _ => None,
             })
-            .collect();
-        out
+            .collect()
     }
 }
 
 impl ::std::fmt::Display for PointsTo {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         use printers;
-        for (k, v) in self.inner.iter() {
+        for (k, v) in &self.inner {
             write!(f, "\t{} -> ", k)?;
-            printers::fmt_vec(f, &v.iter().collect())?;
-            write!(f, "\n")?;
+            printers::fmt_vec(f, &v.iter().collect::<Vec<_>>())?;
+            writeln!(f)?;
         }
         Ok(())
     }

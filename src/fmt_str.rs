@@ -31,7 +31,7 @@ fn const_collapse(e: &Expression) -> Option<BitVector> {
 pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
     for stmt in i.bil {
         if let Statement::Move { ref lhs, ref rhs } = *stmt {
-            if !(lhs.name == "RDI") {
+            if lhs.name != "RDI" {
                 continue;
             }
             if let Some(bv) = const_collapse(rhs) {
@@ -73,7 +73,7 @@ fn ascii_range(c: u8) -> bool {
     if c >= 0x07 && c <= 0x0D {
         return true;
     }
-    return false;
+    false
 }
 
 pub fn ascii_nullterm(i: &FmtStrAsciiNulltermIn) -> Vec<FmtStrAsciiNulltermOut> {

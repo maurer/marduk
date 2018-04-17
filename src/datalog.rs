@@ -31,7 +31,7 @@ impl Interned {
     fn max() -> usize {
         ::std::u8::MAX as usize
     }
-    pub fn from_string(s: &String) -> Self {
+    pub fn from_string(s: &str) -> Self {
         let mut intern = STRING_INTERN.lock().unwrap();
         if let Some(idx) = intern.1.get(s) {
             return *idx;
@@ -39,11 +39,11 @@ impl Interned {
         // This would be an if let/else, but rust considers the borrow from the then clause still
         // active
         assert!(intern.0.len() < Interned::max());
-        intern.0.push(s.clone());
+        intern.0.push(s.to_string());
         let out = Interned {
             index: (intern.0.len() - 1) as u8,
         };
-        intern.1.insert(s.clone(), out);
+        intern.1.insert(s.to_string(), out);
         out
     }
     pub fn to_string(&self) -> String {
