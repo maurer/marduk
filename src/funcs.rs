@@ -107,7 +107,7 @@ pub fn expand_registers(i: &FuncsExpandRegistersIn) -> Vec<FuncsExpandRegistersO
 }
 
 pub fn steens_solve(i: &FuncsSteensSolveIn) -> Vec<FuncsSteensSolveOut> {
-    steensgaard::constraints_to_may_alias(i.cs.clone())
+    steensgaard::constraints_to_may_alias(i.cs.concat())
         .into_iter()
         .map(|vs| FuncsSteensSolveOut { vs })
         .collect()
@@ -176,13 +176,13 @@ pub fn def_chain(i: &FuncsDefChainIn) -> Vec<FuncsDefChainOut> {
 pub fn malloc_constraint(i: &FuncsMallocConstraintIn) -> Vec<FuncsMallocConstraintOut> {
     use steensgaard::*;
     vec![FuncsMallocConstraintOut {
-        c: vec![Constraint::AddrOf {
+        c: vec![vec![Constraint::AddrOf {
             a: Var::Register {
                 site: *i.loc,
                 register: RET_REG,
             },
             b: Var::Alloc { site: *i.loc },
-        }],
+        }]],
     }]
 }
 
@@ -195,13 +195,13 @@ pub fn free_constraint(i: &FuncsFreeConstraintIn) -> Vec<FuncsFreeConstraintOut>
             i.dc[&ARGS[arg_n]]
                 .iter()
                 .map(move |src| FuncsFreeConstraintOut {
-                    c: vec![Constraint::StackLoad {
+                    c: vec![vec![Constraint::StackLoad {
                         a: Var::Register {
                             site: *src,
                             register: ARGS[arg_n],
                         },
                         b: Var::Freed { site: *i.loc },
-                    }],
+                    }]],
                 })
         })
         .collect()

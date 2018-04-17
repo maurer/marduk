@@ -63,10 +63,14 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
 
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     let mut pts = i.pts.clone();
+    let mut pts_0 = pts.clone();
     i.ks.purge_pts(&mut pts);
     let mut updated = Vec::new();
-    for c in i.cs.iter() {
-        apply(&i.pts, &mut pts, &mut updated, c)
+    for cs in i.cs.iter() {
+        for c in cs {
+            apply(&pts_0, &mut pts, &mut updated, c)
+        }
+        pts_0 = pts.clone();
     }
     pts.remove_temps();
     pts.canonicalize();

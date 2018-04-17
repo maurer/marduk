@@ -369,10 +369,13 @@ pub fn extract_constraints(
     mut defs: DefChain,
     cur: &Loc,
     func_loc: &Loc,
-) -> Vec<Constraint> {
+) -> Vec<Vec<Constraint>> {
     let mut constraints = Vec::new();
     for stmt in sema {
-        constraints.extend(move_walk(stmt, &mut defs, cur, func_loc, &extract_move));
+        let stmt_constrs = move_walk(stmt, &mut defs, cur, func_loc, &extract_move);
+        if !stmt_constrs.is_empty() {
+            constraints.push(stmt_constrs)
+        }
     }
     constraints
 }
