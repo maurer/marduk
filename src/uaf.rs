@@ -23,7 +23,7 @@ pub fn expand_vars(i: &UafExpandVarsIn) -> Vec<UafExpandVarsOut> {
 
 pub fn reads_vars(i: &UafReadsVarsIn) -> Vec<UafReadsVarsOut> {
     //TODO this is not well modularized
-    ::constraints::extract_var_use(i.bil, i.dc.clone(), i.loc, i.base)
+    ::constraints::generation::extract_var_use(i.bil, i.dc.clone(), i.loc, i.base)
         .into_iter()
         .map(|v| UafReadsVarsOut { v })
         .collect()

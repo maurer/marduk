@@ -1,8 +1,8 @@
 constraint(Loc, Constraints^concat)
 
-malloc_constraint: constraint(loc, c) <- malloc_call{loc} + ::constraints::malloc_constraint
-free_constraint: constraint(loc, c) <- free_call{loc, args} & chain(loc, dc) + ::constraints::free_constraint
-gen_constraints: constraint(loc, c) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + ::constraints::gen_constraints
+malloc_constraint: constraint(loc, c) <- malloc_call{loc} + constraints::malloc_constraint
+free_constraint: constraint(loc, c) <- free_call{loc, args} & chain(loc, dc) + constraints::free_constraint
+gen_constraints: constraint(loc, c) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + constraints::gen_constraints
 
 all_constraints(Constraints^concat)
 promote_constraint: all_constraints(cs) <- constraint(_, cs)

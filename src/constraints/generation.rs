@@ -1,8 +1,8 @@
+use super::Constraint;
 use bap::high::bil;
 use bap::high::bil::Statement;
-use datalog::*;
 use load::Loc;
-use regs::{Reg, ARGS, RET_REG};
+use regs::Reg;
 use std::str::FromStr;
 use use_def::DefChain;
 use var::Var;
@@ -297,22 +297,6 @@ fn extract_move(
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub enum Constraint {
-    // a = &b;
-    AddrOf { a: Var, b: Var },
-    // a = b
-    Asgn { a: Var, b: Var },
-    // a = *b
-    Deref { a: Var, b: Var },
-    // *a = b
-    Write { a: Var, b: Var },
-    // *a = *b
-    Xfer { a: Var, b: Var },
-    // *a = &b (can exist when b is a stack variable)
-    StackLoad { a: Var, b: Var },
-}
-
 pub fn extract_constraints(
     sema: &[Statement],
     mut defs: DefChain,
@@ -340,42 +324,4 @@ pub fn extract_var_use(
         vars.extend(move_walk(stmt, &mut defs, cur, func_loc, &extract_move_var));
     }
     vars
-}
-
-pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
-    vec![ConstraintsGenConstraintsOut {
-        c: extract_constraints(i.bil, i.dc.clone(), i.loc, i.base),
-    }]
-}
-
-pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMallocConstraintOut> {
-    vec![ConstraintsMallocConstraintOut {
-        c: vec![vec![Constraint::AddrOf {
-            a: Var::Register {
-                site: *i.loc,
-                register: RET_REG,
-            },
-            b: Var::Alloc { site: *i.loc },
-        }]],
-    }]
-}
-
-pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeConstraintOut> {
-    i.args
-        .iter()
-        .cloned()
-        .flat_map(|arg_n| {
-            i.dc[&ARGS[arg_n]]
-                .iter()
-                .map(move |src| ConstraintsFreeConstraintOut {
-                    c: vec![vec![Constraint::StackLoad {
-                        a: Var::Register {
-                            site: *src,
-                            register: ARGS[arg_n],
-                        },
-                        b: Var::Freed { site: *i.loc },
-                    }]],
-                })
-        })
-        .collect()
 }

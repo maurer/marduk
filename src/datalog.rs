@@ -19,6 +19,8 @@ use load::Loc;
 use points_to::PointsTo;
 use use_def::KillSpec;
 
+use constraints::datalog as constraints;
+
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
     let mut out = Vec::new();
     out.reserve(lss.iter().map(|ls| ls.len()).sum());
