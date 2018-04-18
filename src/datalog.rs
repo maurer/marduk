@@ -1,12 +1,12 @@
 use bap::basic::Arch;
 use bap::high::bil::Statement;
+use constraints::Constraint;
 use std::collections::btree_map;
 use std::collections::BTreeSet;
-use std::collections::HashMap;
-use std::sync::Mutex;
-use steensgaard::{Constraint, DefChain, Var};
+use use_def::DefChain;
+use var::Var;
 
-use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
+use regs::{Reg, ARGS};
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
 type StringSet = BTreeSet<String>;
@@ -15,70 +15,9 @@ type Constraints = Vec<Vec<Constraint>>;
 type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
+use load::Loc;
 use points_to::PointsTo;
-
-lazy_static! {
-    static ref STRING_INTERN: Mutex<(Vec<String>, HashMap<String, Interned>)> =
-        Mutex::new((Vec::new(), HashMap::new()));
-}
-
-#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Copy)]
-pub struct Interned {
-    index: u8,
-}
-
-impl Interned {
-    fn max() -> usize {
-        ::std::u8::MAX as usize
-    }
-    pub fn from_string(s: &str) -> Self {
-        let mut intern = STRING_INTERN.lock().unwrap();
-        if let Some(idx) = intern.1.get(s) {
-            return *idx;
-        }
-        // This would be an if let/else, but rust considers the borrow from the then clause still
-        // active
-        assert!(intern.0.len() < Interned::max());
-        intern.0.push(s.to_string());
-        let out = Interned {
-            index: (intern.0.len() - 1) as u8,
-        };
-        intern.1.insert(s.to_string(), out);
-        out
-    }
-    pub fn to_string(&self) -> String {
-        STRING_INTERN.lock().unwrap().0[self.index as usize].clone()
-    }
-}
-
-#[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub enum KillSpec {
-    Registers(Vec<Reg>),
-    StackFrame(Loc),
-}
-
-impl KillSpec {
-    pub fn empty() -> Self {
-        KillSpec::Registers(Vec::new())
-    }
-    fn kill(&self, v: &Var) -> bool {
-        use self::KillSpec::*;
-        use steensgaard::Var::*;
-        match (self, v) {
-            (&Registers(ref regs), &Register { ref register, .. }) => regs.contains(register),
-            (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
-            (&StackFrame(_), &Register { ref register, .. }) => register != &RET_REG,
-            _ => false,
-        }
-    }
-    pub fn purge_pts(&self, pts: &mut PointsTo) {
-        pts.remove_predicate(|v| self.kill(v));
-    }
-}
-
-fn caller_saved() -> Regs {
-    CALLER_SAVED.to_vec()
-}
+use use_def::KillSpec;
 
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
     let mut out = Vec::new();
@@ -91,12 +30,6 @@ fn loc_merge(lss: &[&LocSet]) -> LocSet {
         }
     }
     out
-}
-
-#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash, Copy)]
-pub struct Loc {
-    pub file_name: Interned,
-    pub addr: u64,
 }
 
 fn pts_merge(ptss: &[&PointsTo]) -> PointsTo {

@@ -1,10 +1,10 @@
 //! points_to contains the PointsTo type and relevant implementation details.
 //! It is used in flow/context sensitive analysis where we don't have a single solution but many,
 //! and need to update and propagate data between them.
-use datalog::Loc;
+use load::Loc;
 use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
-use steensgaard::Var;
+use var::Var;
 
 /// PointsTo manages information about what a given variable may point to
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, Default)]

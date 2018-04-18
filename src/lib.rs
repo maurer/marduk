@@ -9,14 +9,19 @@ extern crate mycroft_macros;
 extern crate mycroft_support;
 extern crate num_traits;
 
+mod constraints;
 pub mod datalog;
 pub mod flow;
 pub mod fmt_str;
-pub mod funcs;
+pub mod interned_string;
+pub mod load;
 pub mod points_to;
 pub mod printers;
 pub mod regs;
 pub mod steensgaard;
+mod uaf;
+pub mod use_def;
+pub mod var;
 
 pub use datalog::Database;
 

@@ -1,7 +1,10 @@
+use constraints::Constraint;
 use datalog::*;
+use interned_string::InternedString;
+use load::Loc;
 use regs::Reg;
 use std::fmt::{Display, Formatter, Result};
-use steensgaard::{Constraint, Var};
+use var::Var;
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 
@@ -49,7 +52,7 @@ impl Display for Var {
 
 impl Display for Constraint {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        use steensgaard::Constraint::*;
+        use constraints::Constraint::*;
         match *self {
             AddrOf { ref a, ref b } => write!(f, "{} = &{}", a, b),
             Asgn { ref a, ref b } => write!(f, "{} = {}", a, b),
@@ -104,7 +107,7 @@ impl Display for SteensResult {
     }
 }
 
-impl Display for Interned {
+impl Display for InternedString {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}", self.to_string())
     }

@@ -8,25 +8,25 @@ bap_dump_segments: segment {
     read,
     write,
     execute
-} <- file {name: file_name, contents} + ::funcs::dump_segments
+} <- file {name: file_name, contents} + ::load::dump_segments
 
 // Use objdump's disassembler to locate PLT entries via string munging
 objdump_dump_plt: link_pad {
     pad_loc,
     pad_name
-} <- file {name: file_name, contents} + ::funcs::dump_plt
+} <- file {name: file_name, contents} + ::load::dump_plt
 
 // Use BAP to extract symbols from the object file
 bap_dump_syms: sym {
     loc,
     name,
     end
-} <- file {name: file_name, contents} + ::funcs::dump_syms
+} <- file {name: file_name, contents} + ::load::dump_syms
 
-allsyms: all_funcs {names} <- sym {name} + ::funcs::singleton_string
+allsyms: all_funcs {names} <- sym {name} + ::load::singleton_string
 
 // Use BAP to detect the architecture of the file
-bap_arch: prog_arch { file_name, arch } <- file {name: file_name, contents: contents} + ::funcs::get_arch
+bap_arch: prog_arch { file_name, arch } <- file {name: file_name, contents: contents} + ::load::get_arch
 
 // ! Lifting
 // Mark all symbols as live
@@ -40,13 +40,13 @@ bap_sema: lift {
     fallthrough: fall,
     is_call: call,
     is_ret: ret
-} <- live {loc} & segment {file_name: file_name, contents: seg_contents, start: seg_start, end: seg_end} & prog_arch {file_name: file_name, arch: arch} + ::funcs::lift
+} <- live {loc} & segment {file_name: file_name, contents: seg_contents, start: seg_start, end: seg_end} & prog_arch {file_name: file_name, arch: arch} + ::load::lift
 
 // Compute potential successors to a block based on the lifted semantics
-sema_succ: succ {src, dst, is_call} <- lift {loc: src, bil: bil, fallthrough: fall, is_call} + ::funcs::sema_succ
+sema_succ: succ {src, dst, is_call} <- lift {loc: src, bil: bil, fallthrough: fall, is_call} + ::load::sema_succ
 
 // If an block performs a computed call, assume it returns doing nothing and skip it (a bit of a hack)
-skip_computed_call: succ {src, dst: fall, is_call: ~false} <- lift {loc: src, fallthrough: fall, is_call: ~true, bil: bil} + ::funcs::is_computed_jump
+skip_computed_call: succ {src, dst: fall, is_call: ~false} <- lift {loc: src, fallthrough: fall, is_call: ~true, bil: bil} + ::load::is_computed_jump
 
 // Successors of live blocks are live
 live_succ_live: live { loc: dst } <- succ {src, dst} & live { loc: src }
@@ -56,10 +56,10 @@ live_call_live: live { loc: fall } <- lift { fallthrough: fall, is_call: ~true }
 
 // ! Annotations
 // Assume any function in the PLT with "malloc" in the name is an allocator
-malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_name } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::funcs::is_malloc_name
+malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_name } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_malloc_name
 
 // Whitelist of freeing functions
-free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::funcs::is_free_name
+free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_free_name
 
 // ! Functions 
 // If we have a non-call successor, it's also a step-over successor

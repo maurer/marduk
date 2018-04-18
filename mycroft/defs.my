@@ -7,7 +7,7 @@ reaching {
 // This predicate currently confuses may_define and must_define.
 // When used in reaching_init, it's used as may_define
 // When used in reaching_trans, it's used as must_define
-// ::funcs::defines creates may_define
+// ::use_def::defines creates may_define
 // If this turns out to be problematic, I can produce both
 
 defines {
@@ -16,14 +16,14 @@ defines {
 }
 
 // Write down what a semantics chunk overwrites
-define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} + ::funcs::defines
-define_funcs: defines {loc, registers: ~(caller_saved())} <- lift {loc, is_call: ~true}
+define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} + ::use_def::defines
+define_funcs: defines {loc, registers: ~(::regs::caller_saved())} <- lift {loc, is_call: ~true}
 
 // Killsets
 kill(Loc, KillSpec)
-kill_registers: kill(loc, ks) <- lift {loc, is_call: ~false, is_ret: ~false} & defines {loc, registers} + ::funcs::killspec_regs
+kill_registers: kill(loc, ks) <- lift {loc, is_call: ~false, is_ret: ~false} & defines {loc, registers} + ::use_def::killspec_regs
 kill_call: kill(loc, ~(KillSpec::empty())) <- lift {loc, is_call: ~true}
-kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} + ::funcs::stack_wipe
+kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} + ::use_def::stack_wipe
 
 succ_ret{src: Loc, dst: Loc}
 ret_flat: succ_ret {src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
@@ -36,14 +36,14 @@ promote_ret: succ_any{src, dst} <- succ_ret{src, dst}
 promote_call: succ_any{src, dst} <- succ_call{src, dst}
 
 // If we define some registers, then our definition reaches all our immediate successors
-reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::funcs::expand_registers
+reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::use_def::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one 
-reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::funcs::exclude_registers
+reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::use_def::exclude_registers
 
-reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} + ::funcs::only_ret
+reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} + ::use_def::only_ret
 
-reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_call{src, dst} + ::funcs::only_args
+reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_call{src, dst} + ::use_def::only_args
 
 ?defines: defines {loc, registers}
 ?reaching: reaching {def, register, reached}
@@ -53,7 +53,7 @@ partial_chain(Loc, DefChain^chain_merge)
 chain(Loc, DefChain)
 
 reach_all {defs: LocSet^loc_merge, reached: Loc, register: Reg}
-promote_reach@3: reach_all {defs, reached, register} <- reaching {def, reached, register} + ::funcs::promote_def
+promote_reach@3: reach_all {defs, reached, register} <- reaching {def, reached, register} + ::use_def::promote_def
 
-promote_chain@4: partial_chain(reached, dc) <- ~reach_all {defs, reached, register} + ::funcs::def_chain
+promote_chain@4: partial_chain(reached, dc) <- ~reach_all {defs, reached, register} + ::use_def::def_chain
 def_done@5: chain(bv, dc) <- ~partial_chain(bv, dc)
