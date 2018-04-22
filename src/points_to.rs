@@ -29,11 +29,20 @@ impl PointsTo {
         self.inner.iter()
     }
 
-    /// Gets the set of what a variable may point to, returning an empty set if unmapped
+    /// Gets the set of what a variable may point to, returning an empty set if unmapped, including
+    /// potential free references
     // I want it to return the empty set when it finds no element, so it can't return a reference.
-    pub fn get(&self, v: &Var) -> BTreeSet<Var> {
+    pub fn get_all(&self, v: &Var) -> BTreeSet<Var> {
         match self.inner.get(v) {
             Some(k) => k.clone(),
+            None => BTreeSet::new(),
+        }
+    }
+
+    /// Gets the set of what a variable may point to, not including any free references
+    pub fn get(&self, v: &Var) -> BTreeSet<Var> {
+        match self.inner.get(v) {
+            Some(k) => k.iter().filter(|x| !x.is_freed()).cloned().collect(),
             None => BTreeSet::new(),
         }
     }
@@ -165,7 +174,7 @@ impl PointsTo {
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
         self.get(v)
             .iter()
-            .flat_map(|d| self.get(d))
+            .flat_map(|d| self.get_all(d))
             .filter_map(|pt| match pt {
                 Var::Freed { ref site } => Some(*site),
                 _ => None,
