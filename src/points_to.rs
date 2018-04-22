@@ -89,7 +89,9 @@ impl PointsTo {
     /// For each element in the tgts set, src may point there in addition to whatever it could
     /// before.
     pub fn extend_alias(&mut self, src: Var, tgts: BTreeSet<Var>) {
-        self.force_mut(src).extend(tgts);
+        if !tgts.is_empty() {
+            self.force_mut(src).extend(tgts);
+        }
     }
 
     /// src points only to tgt
