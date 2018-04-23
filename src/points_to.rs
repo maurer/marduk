@@ -77,6 +77,9 @@ impl PointsTo {
                     for vi in vs {
                         v.remove(&vi);
                     }
+                    if v.is_empty() {
+                        keys.push(k.clone())
+                    }
                 }
             })
             .count();
