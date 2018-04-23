@@ -85,3 +85,17 @@ pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {
         .map(|site| FlowIsFreedOut { loc: site })
         .collect()
 }
+
+pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
+    let mut pts = i.pts.clone();
+    let new_live: Vec<_> = i.pts.pt_to().into_iter().filter(|v| v.is_dyn()).collect();
+    pts.add_live(new_live);
+    pts.drop_stack();
+    vec![FlowStackPurgeOut { pts2: pts }]
+}
+
+pub fn dyn_clear(i: &FlowDynClearIn) -> Vec<FlowDynClearOut> {
+    let mut pts = i.pts.clone();
+    pts.clear_live();
+    vec![FlowDynClearOut { pts2: pts }]
+}

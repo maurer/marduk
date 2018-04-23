@@ -3,6 +3,8 @@ flow_in(Loc, PointsTo^pts_merge)
 flow_out(Loc, PointsTo)
 
 pred_init: flow_in(loc, ~(PointsTo::new())) <- malloc_call { loc } & flow_enable(~true)
-pred_flow: flow_in(dst, pts) <- flow_out(src, pts) & succ_any {src, dst}
+pred_flow: flow_in(dst, pts) <- flow_out(src, pts) & succ_over {src, dst}
+pred_call: flow_in(dst, pts2) <- flow_out(src, pts) & succ_call {src, dst} + ::flow::stack_purge
+pred_ret: flow_in(dst, pts2) <- flow_out(src, pts) & succ_ret {src, dst} + ::flow::dyn_clear
 
 flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) + ::flow::xfer

@@ -10,6 +10,7 @@ use var::Var;
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, Default)]
 pub struct PointsTo {
     inner: BTreeMap<Var, BTreeSet<Var>>,
+    super_live: BTreeSet<Var>,
 }
 
 impl PointsTo {
@@ -32,7 +33,7 @@ impl PointsTo {
     /// Gets the set of what a variable may point to, returning an empty set if unmapped, including
     /// potential free references
     // I want it to return the empty set when it finds no element, so it can't return a reference.
-    pub fn get_all(&self, v: &Var) -> BTreeSet<Var> {
+    fn get_all(&self, v: &Var) -> BTreeSet<Var> {
         match self.inner.get(v) {
             Some(k) => k.clone(),
             None => BTreeSet::new(),
@@ -131,12 +132,45 @@ impl PointsTo {
     }
 
     // Helper function to find all values currently pointed to in the points-to set
-    fn pt_to(&self) -> BTreeSet<&Var> {
-        let mut pointed_to: BTreeSet<&Var> = BTreeSet::new();
+    pub fn pt_to(&self) -> BTreeSet<Var> {
+        let mut pointed_to: BTreeSet<Var> = self.super_live.clone();
         for v in self.inner.values() {
             pointed_to.extend(v);
         }
         pointed_to
+    }
+
+    pub fn add_live<T>(&mut self, live: T)
+    where
+        T: IntoIterator<Item = Var>,
+    {
+        for v in live {
+            self.super_live.insert(v);
+        }
+    }
+
+    pub fn clear_live(&mut self) {
+        self.super_live = BTreeSet::new();
+    }
+
+    pub fn drop_stack(&mut self) {
+        let mut updated = true;
+        while updated {
+            updated = false;
+            let stack_keys: Vec<_> = self.inner
+                .keys()
+                .filter(|v| v.is_stack())
+                .cloned()
+                .collect();
+            let referenced = self.pt_to();
+            for stack_key in stack_keys {
+                if !referenced.contains(&stack_key) {
+                    updated = true;
+                    self.inner.remove(&stack_key);
+                }
+            }
+        }
+        self.canonicalize();
     }
 
     /// Performs a reachability test for dynamic variables and removes them if they are

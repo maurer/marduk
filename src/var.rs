@@ -42,4 +42,11 @@ impl Var {
             _ => false,
         }
     }
+
+    pub fn is_stack(&self) -> bool {
+        match *self {
+            Var::StackSlot { .. } => true,
+            _ => false,
+        }
+    }
 }
