@@ -21,18 +21,24 @@ impl KillSpec {
     pub fn empty() -> Self {
         KillSpec::Registers(Vec::new())
     }
-    fn kill(&self, v: &Var) -> bool {
+    fn kill(&self, v: &Var, loc: &Loc) -> bool {
         use self::KillSpec::*;
         use var::Var::*;
         match (self, v) {
-            (&Registers(ref regs), &Register { ref register, .. }) => regs.contains(register),
+            (
+                &Registers(ref regs),
+                &Register {
+                    ref register,
+                    ref site,
+                },
+            ) => regs.contains(register) && site != loc,
             (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
             (&StackFrame(_), &Register { ref register, .. }) => register != &RET_REG,
             _ => false,
         }
     }
-    pub fn purge_pts(&self, pts: &mut PointsTo) {
-        pts.remove_predicate(|v| self.kill(v));
+    pub fn purge_pts(&self, pts: &mut PointsTo, loc: &Loc) {
+        pts.remove_predicate(|v| self.kill(v, loc));
     }
 }
 
