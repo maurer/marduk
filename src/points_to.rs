@@ -11,12 +11,15 @@ use var::Var;
 pub struct PointsTo {
     inner: BTreeMap<Var, BTreeSet<Var>>,
     super_live: BTreeSet<Var>,
+    frames: BTreeSet<Loc>,
 }
 
 impl PointsTo {
     /// Makes a new empty PointsTo
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(frame: Loc) -> Self {
+        let mut base = Self::default();
+        base.add_frame(frame);
+        base
     }
 
     /// Iterates over the underlying map.
@@ -61,6 +64,8 @@ impl PointsTo {
                 }
             };
         }
+        self.super_live.extend(other.super_live.iter().cloned());
+        self.frames.extend(other.frames.iter().cloned());
     }
 
     /// Removes all references to a variable by predicate.
@@ -143,6 +148,35 @@ impl PointsTo {
         pointed_to
     }
 
+    /// Mark and sweep gc for points-to relationship using roots as a a predicate to identify root
+    /// keys
+    fn gc<F>(&mut self, roots: F)
+    where
+        F: Fn(Var) -> bool,
+    {
+        // mark
+        let mut old_size: isize = -1;
+        let mut live: BTreeSet<Var> = BTreeSet::new();
+        while live.len() as isize != old_size {
+            old_size = live.len() as isize;
+            for (k, v) in &self.inner {
+                if roots(*k) || live.contains(k) {
+                    live.insert(*k);
+                    live.extend(v.iter().cloned());
+                }
+            }
+        }
+        // sweep
+        let dead: Vec<_> = self.inner
+            .keys()
+            .filter(|x| !live.contains(x))
+            .cloned()
+            .collect();
+        for dead_var in dead {
+            self.inner.remove(&dead_var);
+        }
+    }
+
     pub fn add_live<T>(&mut self, live: T)
     where
         T: IntoIterator<Item = Var>,
@@ -153,58 +187,26 @@ impl PointsTo {
     }
 
     pub fn clear_live(&mut self) {
-        self.super_live = BTreeSet::new();
+        self.super_live.clear();
+    }
+
+    pub fn add_frame(&mut self, frame: Loc) {
+        self.frames.insert(frame);
+    }
+    pub fn clear_frames(&mut self) {
+        self.frames.clear()
     }
 
     pub fn drop_stack(&mut self) {
-        let mut updated = true;
-        while updated {
-            updated = false;
-            let stack_keys: Vec<_> = self.inner
-                .keys()
-                .filter(|v| v.is_stack())
-                .cloned()
-                .collect();
-            let referenced = self.pt_to();
-            for stack_key in stack_keys {
-                if !referenced.contains(&stack_key) {
-                    updated = true;
-                    self.inner.remove(&stack_key);
-                }
-            }
-        }
-        self.canonicalize();
+        self.gc(|v| !v.is_stack() && !v.is_dyn());
     }
 
     /// Performs a reachability test for dynamic variables and removes them if they are
     /// unreachable.
     pub fn canonicalize(&mut self) {
-        let mut updated = true;
-        while updated {
-            updated = false;
-            // Gather all pointed-to values
-            let keys_to_purge = {
-                let pointed_to = self.pt_to();
-
-                let mut keys_to_purge = Vec::new();
-                for k in self.inner.keys() {
-                    if k.is_dyn() && !pointed_to.contains(k) {
-                        keys_to_purge.push(*k);
-                    }
-                }
-                if keys_to_purge.is_empty() {
-                    return;
-                }
-                keys_to_purge
-            };
-            if !keys_to_purge.is_empty() {
-                updated = true;
-            }
-
-            for k in keys_to_purge {
-                self.inner.remove(&k);
-            }
-        }
+        let super_live = self.super_live.clone();
+        let frames: Vec<_> = self.frames.iter().cloned().collect();
+        self.gc(|v| !v.is_dyn() && !v.other_func(&frames) && !super_live.contains(&v));
     }
 
     /// Finds all locations where v may have been freed.
@@ -223,6 +225,11 @@ impl PointsTo {
 impl ::std::fmt::Display for PointsTo {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         use printers;
+        write!(f, "frames: ")?;
+        for frame in &self.frames {
+            write!(f, "{}, ", frame)?;
+        }
+        writeln!(f)?;
         for (k, v) in &self.inner {
             write!(f, "\t{} -> ", k)?;
             printers::fmt_vec(f, &v.iter().collect::<Vec<_>>())?;

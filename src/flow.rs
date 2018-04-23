@@ -88,14 +88,31 @@ pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {
 
 pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     let mut pts = i.pts.clone();
+    pts.clear_live();
+    pts.clear_frames();
+    //TODO: Now that I have clear_frames, can drop_stack here be replaced by a call to
+    //canonicalize()?
     pts.drop_stack();
-    let new_live: Vec<_> = i.pts.pt_to().into_iter().filter(|v| v.is_dyn()).collect();
+    let new_live: Vec<_> = i.pts
+        .pt_to()
+        .into_iter()
+        .filter(|v| v.is_dyn() || v.is_stack())
+        .collect();
     pts.add_live(new_live);
+    pts.add_frame(*i.dst);
     vec![FlowStackPurgeOut { pts2: pts }]
 }
 
 pub fn dyn_clear(i: &FlowDynClearIn) -> Vec<FlowDynClearOut> {
     let mut pts = i.pts.clone();
     pts.clear_live();
+    pts.clear_frames();
+    pts.add_frame(*i.base);
     vec![FlowDynClearOut { pts2: pts }]
+}
+
+pub fn base_pts(i: &FlowBasePtsIn) -> Vec<FlowBasePtsOut> {
+    vec![FlowBasePtsOut {
+        pts: PointsTo::new(*i.base),
+    }]
 }

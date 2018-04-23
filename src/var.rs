@@ -49,4 +49,11 @@ impl Var {
             _ => false,
         }
     }
+
+    pub fn other_func(&self, frames: &[Loc]) -> bool {
+        match *self {
+            Var::StackSlot { ref func_addr, .. } => !frames.contains(func_addr),
+            _ => false,
+        }
+    }
 }
