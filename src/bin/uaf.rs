@@ -28,7 +28,7 @@ fn main() {
     println!("Booting");
     let total = Instant::now();
     let timeout = Duration::new(60 * 60, 0); // 1 hr timeout
-    while (!last_round.is_empty() || step == 0) && step < 10000 && total.elapsed() < timeout {
+    while (!last_round.is_empty() || step == 0) && step < 100000 && total.elapsed() < timeout {
         let mark = Instant::now();
         last_round = db.run_rules_once();
         step += 1;
