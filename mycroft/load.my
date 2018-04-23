@@ -62,10 +62,17 @@ malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_nam
 free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_free_name
 
 // ! Functions 
+// If this location is present, the function could return, e.g. you can step over it
+returning_call { loc: Loc }
+// If it's a remote function, pass it through a name based classifier (e.g. abort is noreturn)
+returning_call_by_name: returning_call { loc: pad_loc } <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_returning_name
+// If we can find a return that was considered reachable inside this function, then it could return
+returning_call_by_ret: returning_call { loc } <- func {base: loc, contains: ret_addr} & lift {loc: ret_addr, is_ret: ~true}
+
 // If we have a non-call successor, it's also a step-over successor
 succ_over_normal: succ_over { src, dst } <- succ { src, dst, is_call: ~false }
 // If we have a calling successor, the step-over successor is the fallthrough, not the call target
-succ_over_skip_call: succ_over { src: loc, dst: fall } <- lift { loc, fallthrough: fall, is_call: ~true }
+succ_over_skip_call: succ_over { src: loc, dst: fall } <- lift { loc, fallthrough: fall } & returning_call { loc: func_loc } & succ { src: loc, dst: func_loc, is_call: ~true }
 
 // Assume symbols give us function starts
 func_start: func{base: loc, contains: loc} <- sym { loc }

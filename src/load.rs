@@ -265,3 +265,12 @@ pub fn is_free_name(i: &LoadIsFreeNameIn) -> Vec<LoadIsFreeNameOut> {
         Vec::new()
     }
 }
+
+pub fn is_returning_name(i: &LoadIsReturningNameIn) -> Vec<LoadIsReturningNameOut> {
+    let s = i.func_name;
+    if s == "abort" {
+        Vec::new()
+    } else {
+        vec![LoadIsReturningNameOut {}]
+    }
+}
