@@ -88,9 +88,9 @@ pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {
 
 pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     let mut pts = i.pts.clone();
+    pts.drop_stack();
     let new_live: Vec<_> = i.pts.pt_to().into_iter().filter(|v| v.is_dyn()).collect();
     pts.add_live(new_live);
-    pts.drop_stack();
     vec![FlowStackPurgeOut { pts2: pts }]
 }
 
