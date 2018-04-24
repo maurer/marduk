@@ -109,7 +109,7 @@ fn gnome_nettool() {
 
 #[test]
 fn goaccess() {
-    run_uaf(&["goaccess"], &[(0x40b1dc, 0x40b230)], None, None, false);
+    run_uaf(&["goaccess"], &[(0x40b1dc, 0x40b230)], None, None, true);
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn shadowsocks_libev() {
 
 #[test]
 fn isisd() {
-    run_uaf(&["isisd"], &[(0x40a84f, 0x40aa1f)], None, None, false);
+    run_uaf(&["isisd"], &[(0x40a84f, 0x40aa1f)], None, None, true);
 }
 
 #[test]
