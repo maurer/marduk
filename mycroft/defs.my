@@ -39,7 +39,9 @@ promote_call: succ_any{src, dst} <- succ_call{src, dst}
 reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::use_def::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one 
-reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ_over {src: prev_loc, dst: reached } & defines {loc: prev_loc, registers: prev_defines} + ::use_def::exclude_registers
+reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, dst: reached, is_call: ~false} & defines {loc: prev_loc, registers: prev_defines} + ::use_def::exclude_registers
+
+reaching_trans_call_over@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, is_call: ~true} & succ_over {src: prev_loc, dst: reached} + ::use_def::exclude_call_registers
 
 reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} + ::use_def::only_ret
 

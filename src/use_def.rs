@@ -2,7 +2,7 @@ use bap::high::bil::{Statement, Type, Variable};
 use datalog::*;
 use load::Loc;
 use points_to::PointsTo;
-use regs::{Reg, ARGS, RET_REG};
+use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 use var::Var;
@@ -141,5 +141,15 @@ pub fn exclude_registers(i: &UseDefExcludeRegistersIn) -> Vec<UseDefExcludeRegis
         Vec::new()
     } else {
         vec![UseDefExcludeRegistersOut {}]
+    }
+}
+
+pub fn exclude_call_registers(
+    i: &UseDefExcludeCallRegistersIn,
+) -> Vec<UseDefExcludeCallRegistersOut> {
+    if CALLER_SAVED.contains(i.register) {
+        Vec::new()
+    } else {
+        vec![UseDefExcludeCallRegistersOut {}]
     }
 }

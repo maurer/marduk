@@ -124,7 +124,7 @@ fn shadowsocks_libev() {
         &[(0x411336, 0x412b57), (0x411336, 0x412b5d)],
         None,
         None,
-        true,
+        false,
     );
 }
 
@@ -146,6 +146,6 @@ fn ospf6d() {
         ],
         None,
         None,
-        true,
+        false,
     );
 }
