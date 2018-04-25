@@ -2,10 +2,18 @@ flow_enable(bool)
 flow_in(Loc, PointsTo^pts_merge)
 flow_out(Loc, PointsTo)
 
-pred_init: flow_in(loc, pts) <- malloc_call { loc } & func {base, contains: loc} & flow_enable(~true) + ::flow::base_pts
-pred_flow: flow_in(dst, pts) <- flow_out(src, pts) & succ_over {src, dst}
+fan_in(Loc, usize)
+pred(Loc, LocSet^loc_merge)
+succ_swap: pred(dst, src_promoted) <- succ_over{src, dst} + ::flow::promote_loc
+fan_in_count@6: fan_in(loc, count) <- ~pred(loc, preds) + ::flow::count
+succ_one {src: Loc, dst: Loc}
+succ_one_by_fanin: succ_one {src, dst} <- succ_over {src, dst} & fan_in(dst, ~(1))
+
+pred_init@7: flow_in(loc, pts) <- malloc_call { loc } & func {base, contains: loc} & flow_enable(~true) + ::flow::base_pts
+pred_flow_skip@8: flow_in(dst, pts) <- flow_out(src, pts) & succ_one {src, dst}
+pred_flow@9: flow_in(dst, pts) <- flow_out(src, pts) & succ_over {src, dst}
 // Delay pred_call due to relatively high fan-in of callsites
 pred_call@10: flow_in(dst, pts2) <- flow_out(src, pts) & succ_call {src, dst} + ::flow::stack_purge
-pred_ret: flow_in(dst, pts2) <- flow_out(src, pts) & succ_ret {src, dst} & func {base, contains: dst} + ::flow::dyn_clear
+pred_ret@9: flow_in(dst, pts2) <- flow_out(src, pts) & succ_ret {src, dst} & func {base, contains: dst} + ::flow::dyn_clear
 
 flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) + ::flow::xfer

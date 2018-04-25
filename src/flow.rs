@@ -116,3 +116,15 @@ pub fn base_pts(i: &FlowBasePtsIn) -> Vec<FlowBasePtsOut> {
         pts: PointsTo::new(*i.base),
     }]
 }
+
+pub fn promote_loc(i: &FlowPromoteLocIn) -> Vec<FlowPromoteLocOut> {
+    vec![FlowPromoteLocOut {
+        src_promoted: vec![*i.src],
+    }]
+}
+
+pub fn count(i: &FlowCountIn) -> Vec<FlowCountOut> {
+    vec![FlowCountOut {
+        count: i.preds.len(),
+    }]
+}
