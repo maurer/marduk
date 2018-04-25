@@ -119,7 +119,7 @@ fn libarchive() {
         &[(0x40e012, 0x40e021)],
         None,
         None,
-        false,
+        true,
     );
 }
 

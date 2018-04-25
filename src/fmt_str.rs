@@ -46,7 +46,7 @@ pub fn const_move(i: &FmtStrConstMoveIn) -> Vec<FmtStrConstMoveOut> {
 
 pub fn parse_str(i: &FmtStrParseStrIn) -> Vec<FmtStrParseStrOut> {
     let mut skip = false;
-    let mut arg = 0;
+    let mut arg = 1;
     let mut out = Vec::new();
     let cs: Vec<_> = i.str.chars().collect();
     for c in (&cs).windows(2) {
