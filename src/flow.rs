@@ -63,6 +63,7 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
 }
 
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
+    trace!("addr {}:\n{}", i.loc, i.pts);
     let mut pts = i.pts.clone();
     let mut pts_0 = pts.clone();
     let mut updated = Vec::new();

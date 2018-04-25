@@ -114,13 +114,7 @@ fn goaccess() {
 
 #[test]
 fn libarchive() {
-    run_uaf(
-        &["bsdcpio_test"],
-        &[(0x40e012, 0x40e021)],
-        None,
-        None,
-        true,
-    );
+    run_uaf(&["bsdcpio_test"], &[(0x40e012, 0x40e021)], None, None, true);
 }
 
 #[test]
@@ -130,7 +124,7 @@ fn shadowsocks_libev() {
         &[(0x411336, 0x412b57), (0x411336, 0x412b5d)],
         None,
         None,
-        false,
+        true,
     );
 }
 
@@ -152,6 +146,6 @@ fn ospf6d() {
         ],
         None,
         None,
-        false,
+        true,
     );
 }

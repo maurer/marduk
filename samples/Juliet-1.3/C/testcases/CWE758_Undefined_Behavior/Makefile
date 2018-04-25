@@ -1,5 +1,5 @@
-CC=/usr/bin/gcc
-CPP=/usr/bin/g++
+CC=clang
+CPP=clang++
 DEBUG=-g
 CFLAGS=-c
 LFLAGS=-lpthread -lm

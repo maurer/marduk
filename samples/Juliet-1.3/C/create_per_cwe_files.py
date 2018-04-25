@@ -16,8 +16,8 @@ import update_main_cpp_and_testcases_h
 
 def create_makefile(cwe, is_dir_split):
 	contents = ""
-	contents += "CC=/usr/bin/gcc\n"
-	contents += "CPP=/usr/bin/g++\n"
+	contents += "CC=clang\n"
+	contents += "CPP=clang++\n"
 	contents += "DEBUG=-g\n"
 	contents += "CFLAGS=-c\n"
 	contents += "LFLAGS=-lpthread -lm\n"
