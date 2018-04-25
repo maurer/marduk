@@ -69,7 +69,7 @@ $(C_SUPPORT_OBJECTS) : $(C_SUPPORT_FILES)
 	$(CC) $(CFLAGS) $(INCLUDES) $(C_SUPPORT_PATH)$(@:.o=.c) -o $@
 
 $(MAIN_OBJECT) : $(MAIN)
-	$(CC) $(CFLAGS) $(INCLUDES) $(MAIN) -o $@
+	$(CPP) $(CFLAGS) $(INCLUDES) $(MAIN) -o $@
 
 clean:
 	rm -rf *.o *.out $(TARGET)

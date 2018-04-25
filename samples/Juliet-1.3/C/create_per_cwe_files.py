@@ -93,7 +93,7 @@ def create_makefile(cwe, is_dir_split):
 	contents += "	$(CC) $(CFLAGS) $(INCLUDES) $(C_SUPPORT_PATH)$(@:.o=.c) -o $@\n"
 
 	contents += "\n$(MAIN_OBJECT) : $(MAIN)\n"
-	contents += "	$(CC) $(CFLAGS) $(INCLUDES) $(MAIN) -o $@\n"
+	contents += "	$(CPP) $(CFLAGS) $(INCLUDES) $(MAIN) -o $@\n"
 
 	contents += "\nclean:\n"
 	contents += "	rm -rf *.o *.out $(TARGET)\n"
