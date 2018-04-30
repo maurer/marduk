@@ -1,4 +1,5 @@
 extern crate marduk;
+use marduk::points_to::PointsTo;
 use marduk::uaf;
 
 fn run_uaf(names: &[&'static str], insensitive_bugs: usize, expected_flow_bugs: usize) {
@@ -87,4 +88,61 @@ fn ll_structure() {
         }
     }
     panic!("a -> {a, b} not found");
+}
+
+#[test]
+fn seq_call() {
+    let mut db = uaf(&["samples/artificial/seq_call".to_string()], true);
+    db.run_rules();
+    let mut main_exit = 0;
+    let mut g_entry = 0;
+    for sym in db.query_sym() {
+        if sym.name == "main" {
+            main_exit = sym.end;
+        }
+        if sym.name == "g" {
+            g_entry = sym.loc.addr;
+        }
+    }
+    if main_exit == 0 {
+        panic!("main function not found");
+    }
+    if g_entry == 0 {
+        panic!("g not found");
+    }
+    let mut main_checked = false;
+    let mut g_checked = false;
+    for flow in db.query_flow() {
+        if flow.loc.addr == main_exit {
+            check_rax(&flow.pts, 1, "main_exit");
+            main_checked = true;
+        }
+        if flow.loc.addr == g_entry {
+            check_rax(&flow.pts, 0, "g_entry");
+            g_checked = true;
+        }
+    }
+    if !main_checked {
+        panic!("Points to set for main exit (0x{:x}) not found", main_exit);
+    }
+    if !g_checked {
+        panic!("Points to set for g entry (0x{:x}) not found", g_entry);
+    }
+}
+
+fn check_rax(pts: &PointsTo, target: usize, msg: &str) {
+    use marduk::regs::Reg::RAX;
+    use marduk::var::Var;
+    let raxes = pts.iter()
+        .filter(|(v, _)| match **v {
+            Var::Register { register: RAX, .. } => true,
+            _ => false,
+        })
+        .count();
+    if raxes != target {
+        panic!(
+            "{}\nRAX defined {} times rather than {}",
+            msg, raxes, target
+        );
+    }
 }

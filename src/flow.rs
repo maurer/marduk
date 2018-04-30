@@ -1,6 +1,7 @@
 use constraints::Constraint;
 use datalog::*;
 use points_to::PointsTo;
+use regs::ARGS;
 use std::collections::BTreeSet;
 use var::Var;
 
@@ -91,6 +92,7 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     let mut pts = i.pts.clone();
     pts.clear_live();
     pts.clear_frames();
+    pts.only_regs(ARGS);
     //TODO: Now that I have clear_frames, can drop_stack here be replaced by a call to
     //canonicalize()?
     pts.drop_stack();

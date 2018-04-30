@@ -2,6 +2,7 @@
 ?steens: steens_point(v, vs)
 ?call_site: call_site { call_loc, target_loc }
 ?succ: succ { src, dst, is_call }
+?sym: sym { loc, name, end }
 ?get_disasms: lift {loc, disassembly: disasm}
 ?get_free_call: free_call {loc}
 ?get_malloc_call: malloc_call {loc}

@@ -2,6 +2,7 @@
 //! It is used in flow/context sensitive analysis where we don't have a single solution but many,
 //! and need to update and propagate data between them.
 use load::Loc;
+use regs::Reg;
 use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
 use var::Var;
@@ -31,6 +32,21 @@ impl PointsTo {
     /// unless it is really fundamentally iteration.
     pub fn iter(&self) -> btree_map::Iter<Var, BTreeSet<Var>> {
         self.inner.iter()
+    }
+
+    /// Filters register definition based on a whitelist
+    pub fn only_regs(&mut self, whitelist: &[Reg]) {
+        let to_kill: Vec<_> = self.inner
+            .keys()
+            .filter(|v| match *v {
+                Var::Register { register, .. } => !whitelist.contains(register),
+                _ => false,
+            })
+            .cloned()
+            .collect();
+        for key in to_kill {
+            self.inner.remove(&key);
+        }
     }
 
     /// Gets the set of what a variable may point to, returning an empty set if unmapped, including
