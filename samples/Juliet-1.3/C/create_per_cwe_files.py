@@ -19,7 +19,7 @@ def create_makefile(cwe, is_dir_split):
 	contents += "CC=clang\n"
 	contents += "CPP=clang++\n"
 	contents += "DEBUG=-g\n"
-	contents += "CFLAGS=-c\n"
+	contents += "CFLAGS=-c -fomit-frame-pointer -fno-optimize-sibling-calls\n"
 	contents += "LFLAGS=-lpthread -lm\n"
 	contents += "LD=ld\n"
 	contents += "INCLUDE_MAIN=-DINCLUDEMAIN\n"

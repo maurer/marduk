@@ -1,7 +1,7 @@
 CC=clang
 CPP=clang++
 DEBUG=-g
-CFLAGS=-c
+CFLAGS=-c -fomit-frame-pointer -fno-optimize-sibling-calls
 LFLAGS=-lpthread -lm
 LD=ld
 INCLUDE_MAIN=-DINCLUDEMAIN
