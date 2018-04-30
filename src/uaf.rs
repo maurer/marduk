@@ -3,18 +3,20 @@ use regs::ARGS;
 use var::Var;
 
 pub fn free_args(i: &UafFreeArgsIn) -> Vec<UafFreeArgsOut> {
-    i.args
-        .iter()
-        .cloned()
-        .flat_map(|arg_n| {
-            i.dc[&ARGS[arg_n]].iter().map(move |loc| UafFreeArgsOut {
-                arg: Var::Register {
-                    site: *loc,
-                    register: ARGS[arg_n],
-                },
-            })
-        })
-        .collect()
+    let mut out = Vec::new();
+    for arg_n in i.args {
+        if let Some(defs) = i.dc.get(&ARGS[*arg_n]) {
+            for def in defs {
+                out.push(UafFreeArgsOut {
+                    arg: Var::Register {
+                        site: *def,
+                        register: ARGS[*arg_n],
+                    },
+                });
+            }
+        }
+    }
+    out
 }
 
 pub fn expand_vars(i: &UafExpandVarsIn) -> Vec<UafExpandVarsOut> {

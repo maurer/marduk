@@ -26,21 +26,21 @@ pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMa
 }
 
 pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeConstraintOut> {
-    i.args
-        .iter()
-        .cloned()
-        .flat_map(|arg_n| {
-            i.dc[&ARGS[arg_n]]
-                .iter()
-                .map(move |src| ConstraintsFreeConstraintOut {
+    let mut out = Vec::new();
+    for arg_n in i.args {
+        if let Some(defs) = i.dc.get(&ARGS[*arg_n]) {
+            for def in defs {
+                out.push(ConstraintsFreeConstraintOut {
                     c: vec![vec![Constraint::StackLoad {
                         a: Var::Register {
-                            site: *src,
-                            register: ARGS[arg_n],
+                            site: *def,
+                            register: ARGS[*arg_n],
                         },
                         b: Var::Freed { site: *i.loc },
                     }]],
-                })
-        })
-        .collect()
+                });
+            }
+        }
+    }
+    out
 }
