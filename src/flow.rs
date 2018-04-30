@@ -13,6 +13,9 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
         },
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
+            if let Var::Alloc { ref site, .. } = *b {
+                out_pts.make_stale(site);
+            }
             if updated.contains(a) {
                 out_pts.add_alias(*a, *b);
             } else {

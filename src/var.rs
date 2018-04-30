@@ -6,7 +6,7 @@ pub enum Var {
     StackSlot { func_addr: Loc, offset: usize },
     Register { site: Loc, register: Reg },
     Temp { serial: u32 },
-    Alloc { site: Loc },
+    Alloc { site: Loc, stale: bool },
     Freed { site: Loc },
 }
 

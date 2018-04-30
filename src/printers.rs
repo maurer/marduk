@@ -44,7 +44,16 @@ impl Display for Var {
                 ref register,
                 ..
             } => write!(f, "{}@{}", register, site),
-            Var::Alloc { ref site } => write!(f, "dyn@{}", site),
+            Var::Alloc {
+                ref site,
+                ref stale,
+            } => {
+                write!(f, "dyn@{}", site)?;
+                if *stale {
+                    write!(f, "+stale")?;
+                }
+                Ok(())
+            }
             Var::Freed { ref site } => write!(f, "freed@{}", site),
         }
     }

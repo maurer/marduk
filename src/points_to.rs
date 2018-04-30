@@ -49,6 +49,32 @@ impl PointsTo {
         }
     }
 
+    pub fn make_stale(&mut self, alloc_site: &Loc) {
+        if let Some(pt) = self.inner.remove(&Var::Alloc {
+            site: *alloc_site,
+            stale: false,
+        }) {
+            self.inner.insert(
+                Var::Alloc {
+                    site: *alloc_site,
+                    stale: true,
+                },
+                pt,
+            );
+        }
+        for pt in self.inner.values_mut() {
+            *pt = pt.iter()
+                .map(|v| match v {
+                    Var::Alloc { ref site, .. } if alloc_site == site => Var::Alloc {
+                        site: *alloc_site,
+                        stale: true,
+                    },
+                    _ => *v,
+                })
+                .collect();
+        }
+    }
+
     /// Gets the set of what a variable may point to, returning an empty set if unmapped, including
     /// potential free references
     // I want it to return the empty set when it finds no element, so it can't return a reference.

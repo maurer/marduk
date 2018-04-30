@@ -17,7 +17,10 @@ pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMa
                 site: *i.loc,
                 register: RET_REG,
             },
-            b: Var::Alloc { site: *i.loc },
+            b: Var::Alloc {
+                site: *i.loc,
+                stale: false,
+            },
         }]],
     }]
 }

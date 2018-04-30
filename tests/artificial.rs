@@ -71,6 +71,11 @@ fn loop_() {
 }
 
 #[test]
+fn reloop() {
+    run_uaf(&["reloop"], 1, 0);
+}
+
+#[test]
 fn ll_structure() {
     let mut db = uaf(&["samples/artificial/ll".to_string()], true);
     db.run_rules();
