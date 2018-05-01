@@ -1,7 +1,8 @@
 CC=gcc
 CPP=g++
 DEBUG=-g
-CFLAGS=-c -fomit-frame-pointer -fno-optimize-sibling-calls
+FLAGS=-fomit-frame-pointer -fno-optimize-sibling-calls
+CFLAGS=-c $(FLAGS)
 LFLAGS=-lpthread -lm
 LD=ld
 INCLUDE_MAIN=-DINCLUDEMAIN
@@ -51,10 +52,10 @@ partial.o: $(C_OBJECTS) $(CPP_OBJECTS)
 individuals: $(INDIVIDUALS_C) $(INDIVIDUALS_CPP)
 
 $(INDIVIDUALS_C): $(C_SUPPORT_OBJECTS)
-	$(CC) $(INCLUDES) $(INCLUDE_MAIN) -o $@ $(wildcard $(subst .out,,$@)*.c) $(C_SUPPORT_OBJECTS) $(LFLAGS)
+	$(CC) $(INCLUDES) $(INCLUDE_MAIN) $(FLAGS) -o $@ $(wildcard $(subst .out,,$@)*.c) $(C_SUPPORT_OBJECTS) $(LFLAGS)
 
 $(INDIVIDUALS_CPP): $(C_SUPPORT_OBJECTS)
-	$(CPP) $(INCLUDES) $(INCLUDE_MAIN) -o $@ $(wildcard $(subst .out,,$@)*.cpp) $(C_SUPPORT_OBJECTS) $(LFLAGS)
+	$(CPP) $(INCLUDES) $(INCLUDE_MAIN) $(FLAGS) -o $@ $(wildcard $(subst .out,,$@)*.cpp) $(C_SUPPORT_OBJECTS) $(LFLAGS)
 
 $(TARGET) : $(OBJECTS)
 	$(CPP) $(LFLAGS) $(OBJECTS) -o $(TARGET)
