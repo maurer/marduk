@@ -12,3 +12,5 @@ fmt_str_use: uses(arg, loc) <- fmt_addr {loc, addr} & str_const {addr, str} + ::
 fmt_str_lookup: str_const {addr, str} <- segment {start, end, contents} & fmt_addr {addr} + ::fmt_str::ascii_nullterm
 
 puts_uses: uses(~(ARGS[0]), loc) <- link_pad {pad_loc: puts, pad_name: ~("puts".to_string())} & call_site {call_loc: loc, target_loc: puts}
+strcpy_uses: uses(~(ARGS[0]), loc) <- link_pad {pad_loc: puts, pad_name: ~("strcpy".to_string())} & call_site {call_loc: loc, target_loc: puts}
+strcpy_uses2: uses(~(ARGS[1]), loc) <- link_pad {pad_loc: puts, pad_name: ~("strcpy".to_string())} & call_site {call_loc: loc, target_loc: puts}
