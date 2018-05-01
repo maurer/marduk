@@ -1,5 +1,5 @@
-CC=clang
-CPP=clang++
+CC=gcc
+CPP=g++
 DEBUG=-g
 CFLAGS=-c -fomit-frame-pointer -fno-optimize-sibling-calls
 LFLAGS=-lpthread -lm
