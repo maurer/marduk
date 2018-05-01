@@ -248,7 +248,7 @@ impl PointsTo {
     pub fn canonicalize(&mut self) {
         let super_live = self.super_live.clone();
         let frames: Vec<_> = self.frames.iter().cloned().collect();
-        self.gc(|v| !v.is_dyn() && !v.other_func(&frames) && !super_live.contains(&v));
+        self.gc(|v| !v.is_dyn() && !v.other_func(&frames) || super_live.contains(&v));
     }
 
     /// Finds all locations where v may have been freed.
