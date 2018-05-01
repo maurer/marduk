@@ -248,7 +248,9 @@ pub fn get_arch(i: &LoadGetArchIn) -> Vec<LoadGetArchOut> {
 }
 
 pub fn is_malloc_name(i: &LoadIsMallocNameIn) -> Vec<LoadIsMallocNameOut> {
-    if i.func_name.contains("malloc") || i.func_name.contains("calloc") {
+    if i.func_name.contains("malloc") || i.func_name.contains("calloc") || i.func_name == "_Znam"
+        || i.func_name == "_Znwm"
+    {
         vec![LoadIsMallocNameOut {}]
     } else {
         Vec::new()
@@ -257,7 +259,7 @@ pub fn is_malloc_name(i: &LoadIsMallocNameIn) -> Vec<LoadIsMallocNameOut> {
 
 pub fn is_free_name(i: &LoadIsFreeNameIn) -> Vec<LoadIsFreeNameOut> {
     let s = i.func_name;
-    if (s == "free") || (s == "g_free") {
+    if (s == "free") || (s == "g_free") || (s == "_ZdaPv") || (s == "_ZdlPvm") {
         vec![LoadIsFreeNameOut { args: vec![0] }]
     } else if s == "qfree" {
         vec![LoadIsFreeNameOut { args: vec![1] }]
