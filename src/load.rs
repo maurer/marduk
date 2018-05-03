@@ -247,10 +247,13 @@ pub fn get_arch(i: &LoadGetArchIn) -> Vec<LoadGetArchOut> {
     })
 }
 
+pub fn malloc_name(func_name: &str) -> bool {
+    func_name.contains("malloc") || func_name.contains("calloc") || func_name == "_Znam"
+        || func_name == "_Znwm"
+}
+
 pub fn is_malloc_name(i: &LoadIsMallocNameIn) -> Vec<LoadIsMallocNameOut> {
-    if i.func_name.contains("malloc") || i.func_name.contains("calloc") || i.func_name == "_Znam"
-        || i.func_name == "_Znwm"
-    {
+    if malloc_name(i.func_name) {
         vec![LoadIsMallocNameOut {}]
     } else {
         Vec::new()

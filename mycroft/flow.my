@@ -7,11 +7,14 @@ pred(Loc, LocSet^loc_merge)
 succ_swap: pred(dst, src_promoted) <- succ_over{src, dst} + ::flow::promote_loc
 fan_in_count@6: fan_in(loc, count) <- ~pred(loc, preds) + ::flow::count
 succ_one {src: Loc, dst: Loc}
-succ_one_by_fanin: succ_one {src, dst} <- succ_over {src, dst} & fan_in(dst, ~(1))
+succ_one_by_fanin: succ_one {src, dst} <- succ {src, dst, is_call: ~false} & fan_in(dst, ~(1))
+call_over {src: Loc, func: Loc, dst: Loc}
+call_over: call_over {src, func, dst} <- succ {src, dst: func, is_call: ~true} & succ_over {src, dst}
 
 pred_init@7: flow_in(loc, pts) <- malloc_call { loc } & func {base, contains: loc} & flow_enable(~true) + ::flow::base_pts
 pred_flow_skip@8: flow_in(dst, pts) <- flow_out(src, pts) & succ_one {src, dst}
-pred_flow@9: flow_in(dst, pts) <- flow_out(src, pts) & succ_over {src, dst}
+pred_flow@9: flow_in(dst, pts) <- flow_out(src, pts) & succ {src, dst, is_call: ~false}
+pred_call_over@9: flow_in(dst, pts2) <- flow_out(src, pts) & call_over {src, func, dst} & ~func_effect(func, effect) + ::effect::update_pts
 // Delay pred_call due to relatively high fan-in of callsites
 // It's important that we use flow_in rather than flow_out here, so that the killset for calls can actually kill caller saved registers
 pred_call@10: flow_in(dst, pts2) <- flow_in(src, pts) & succ_call {src, dst} + ::flow::stack_purge

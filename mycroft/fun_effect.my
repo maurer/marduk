@@ -1,0 +1,13 @@
+local_effect {base: Loc, local: Loc, effect: Effect^effect_merge}
+func_effect(Loc, Effect^effect_merge)
+
+//TODO check all_funcs and don't run this rule if the link pad is in there
+unlinked_effect: func_effect(base, ~(Effect::nop())) <- link_pad { pad_loc: base }
+
+local_init: local_effect {base, local: base, effect: ~(Effect::nop())} <- sym {loc: base}
+local_ret: func_effect(base, effect) <- local_effect {base, local, effect} & succ_ret {src: local}
+local_xfer: local_effect {base, local: local2, effect} <- local_effect {base, local, effect} & succ {src: local, dst: local2, is_call: ~false}
+// BUG! local_call needs to somehow ignore malloc or this doesn't work
+local_call: local_effect {base, local: local2, effect: effect2} <- succ {src: local, dst: remote, is_call: ~true} & succ_over {src: local, dst: local2} & func_effect(remote, effect_call) & local_effect {base, local, effect} & func {base: remote} + ::effect::apply_effect
+remote_call: local_effect {base, local: local2, effect: effect2} <- succ {src: local, dst: remote, is_call: ~true} & succ_over {src: local, dst: local2} & func_effect(remote, effect_call) & local_effect {base, local, effect} & link_pad {pad_loc: remote, pad_name: name} + ::effect::remote_apply_effect
+local_malloc: local_effect {base, local: local2, effect: effect2} <- succ_over {src: local, dst: local2} & local_effect {base, local, effect} & malloc_call {loc: local} + ::effect::malloc

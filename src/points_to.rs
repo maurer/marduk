@@ -49,28 +49,53 @@ impl PointsTo {
         }
     }
 
-    pub fn make_stale(&mut self, alloc_site: &Loc) {
-        if let Some(pt) = self.inner.remove(&Var::Alloc {
+    pub fn make_dup(&mut self, alloc_site: &Loc) {
+        let stale = Var::Alloc {
+            site: *alloc_site,
+            stale: true,
+        };
+        let fresh = Var::Alloc {
             site: *alloc_site,
             stale: false,
-        }) {
-            self.inner.insert(
-                Var::Alloc {
-                    site: *alloc_site,
-                    stale: true,
-                },
-                pt,
-            );
+        };
+        if self.super_live.contains(&fresh) {
+            self.super_live.insert(stale);
+        }
+        if let Some(pt) = self.inner.remove(&fresh) {
+            self.inner.insert(stale, pt.clone());
+            self.inner.insert(fresh, pt);
         }
         for pt in self.inner.values_mut() {
             *pt = pt.iter()
-                .map(|v| match v {
-                    Var::Alloc { ref site, .. } if alloc_site == site => Var::Alloc {
-                        site: *alloc_site,
-                        stale: true,
-                    },
-                    _ => *v,
+                .flat_map(|v| {
+                    if v == &fresh {
+                        vec![stale, fresh]
+                    } else {
+                        vec![*v]
+                    }
                 })
+                .collect();
+        }
+    }
+
+    pub fn make_stale(&mut self, alloc_site: &Loc) {
+        let stale = Var::Alloc {
+            site: *alloc_site,
+            stale: true,
+        };
+        let fresh = Var::Alloc {
+            site: *alloc_site,
+            stale: false,
+        };
+        if self.super_live.remove(&fresh) {
+            self.super_live.insert(stale);
+        }
+        if let Some(pt) = self.inner.remove(&fresh) {
+            self.inner.insert(stale, pt);
+        }
+        for pt in self.inner.values_mut() {
+            *pt = pt.iter()
+                .map(|v| if v == &fresh { stale } else { *v })
                 .collect();
         }
     }

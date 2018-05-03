@@ -15,11 +15,20 @@ type Constraints = Vec<Vec<Constraint>>;
 type Vars = Vec<Var>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
+use effect::Effect;
 use load::Loc;
 use points_to::PointsTo;
 use use_def::KillSpec;
 
 use constraints::datalog as constraints;
+
+fn effect_merge(efs: &[&Effect]) -> Effect {
+    let mut out = efs[0].clone();
+    for eff in &efs[1..] {
+        out = out.merge(eff);
+    }
+    out
+}
 
 fn loc_merge(lss: &[&LocSet]) -> LocSet {
     let mut out = Vec::new();
@@ -84,6 +93,7 @@ mycroft_files!(
     "mycroft/steensgaard.my",
     "mycroft/flow.my",
     "mycroft/uaf.my",
+    "mycroft/fun_effect.my",
     "mycroft/queries.my"
 );
 pub use self::mycroft_program::*;

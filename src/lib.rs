@@ -22,7 +22,7 @@ pub mod steensgaard;
 mod uaf;
 pub mod use_def;
 pub mod var;
-
+mod effect;
 pub use datalog::Database;
 
 pub fn uaf(files: &[String], flow_enable: bool) -> Database {
