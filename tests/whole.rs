@@ -26,7 +26,14 @@ fn run_uaf(
         .iter()
         .map(|x| format!("samples/whole/{}", x))
         .collect();
-    let mut db = uaf(&names, flow);
+    let mut db = uaf(
+        &names,
+        if flow {
+            marduk::AliasMode::All
+        } else {
+            marduk::AliasMode::SteensOnly
+        },
+    );
     db.run_rules();
 
     {

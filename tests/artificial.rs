@@ -7,7 +7,7 @@ fn run_uaf(names: &[&'static str], insensitive_bugs: usize, expected_flow_bugs: 
         .iter()
         .map(|x| format!("samples/artificial/{}", x))
         .collect();
-    let mut db = uaf(&names, true);
+    let mut db = uaf(&names, marduk::AliasMode::All);
     db.run_rules();
     let found_insensitive_bugs = db.query_uaf().len();
     if found_insensitive_bugs != insensitive_bugs {
@@ -82,7 +82,10 @@ fn restale() {
 
 #[test]
 fn ll_structure() {
-    let mut db = uaf(&["samples/artificial/ll".to_string()], true);
+    let mut db = uaf(
+        &["samples/artificial/ll".to_string()],
+        marduk::AliasMode::All,
+    );
     db.run_rules();
     // We're searching for something where a variable can point to itself and a dynamic value,
     // a signature of a linked list
@@ -102,7 +105,10 @@ fn ll_structure() {
 
 #[test]
 fn seq_call() {
-    let mut db = uaf(&["samples/artificial/seq_call".to_string()], true);
+    let mut db = uaf(
+        &["samples/artificial/seq_call".to_string()],
+        marduk::AliasMode::All,
+    );
     db.run_rules();
     let mut main_exit = 0;
     let mut g_entry = 0;

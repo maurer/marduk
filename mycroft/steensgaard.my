@@ -1,3 +1,4 @@
+steens_enable(bool)
 constraint(Loc, Constraints^concat)
 
 malloc_constraint: constraint(loc, c) <- malloc_call{loc} + constraints::malloc_constraint
@@ -5,7 +6,7 @@ free_constraint: constraint(loc, c) <- free_call{loc, args} & chain(loc, dc) + c
 gen_constraints: constraint(loc, c) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + constraints::gen_constraints
 
 all_constraints(Constraints^concat)
-promote_constraint: all_constraints(cs) <- constraint(_, cs)
+promote_constraint: all_constraints(cs) <- constraint(_, cs) & steens_enable(~true)
 
 steens_may_sets(Vars)
 solve_constraints: steens_may_sets(vs) <- ~all_constraints(cs) + ::steensgaard::steens_solve
