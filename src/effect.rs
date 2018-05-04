@@ -28,8 +28,8 @@ impl Effect {
         );
 
         Self {
-            does_malloc: does_malloc,
-            maybe_malloc: maybe_malloc,
+            does_malloc,
+            maybe_malloc,
         }
     }
     pub fn apply(&mut self, other: &Self) {

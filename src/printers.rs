@@ -5,6 +5,7 @@ use load::Loc;
 use regs::Reg;
 use std::fmt::{Display, Formatter, Result};
 use var::Var;
+use AliasMode;
 
 pub struct CB<'a>(pub &'a Vec<Constraint>);
 
@@ -17,6 +18,20 @@ pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
         write!(f, ", {}", i)?;
     }
     write!(f, "]")
+}
+
+impl Display for AliasMode {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(
+            f,
+            "{}",
+            match *self {
+                AliasMode::SteensOnly => "Insensitive",
+                AliasMode::FlowOnly => "Flow sensitive",
+                AliasMode::All => "Both",
+            }
+        )
+    }
 }
 
 impl<'a> Display for CB<'a> {

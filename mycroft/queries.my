@@ -15,3 +15,4 @@
 ?uaf_flow: uaf_flow(_, free, use_)
 ?flow: ~flow_in(loc, pts)
 ?constraints: constraint(loc, c)
+?all_uaf: all_uaf(_, free, use_)

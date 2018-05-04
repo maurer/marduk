@@ -23,6 +23,7 @@ bap = "0.1"
 mycroft = "0.0.1"
 mycroft-support = "0.0.1"
 mycroft-macros = "0.0.1"
+jemalloc-ctl = "0.1"
 
 [profile.release]
 debug = true

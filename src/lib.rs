@@ -25,6 +25,7 @@ pub mod use_def;
 pub mod var;
 pub use datalog::Database;
 
+#[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd)]
 pub enum AliasMode {
     SteensOnly,
     FlowOnly,
