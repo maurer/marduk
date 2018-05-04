@@ -71,7 +71,7 @@ pub fn remote_apply_effect(i: &EffectRemoteApplyEffectIn) -> Vec<EffectRemoteApp
 pub fn malloc(i: &EffectMallocIn) -> Vec<EffectMallocOut> {
     let mut effect2 = i.effect.clone();
     effect2.malloc(i.local);
-    vec![EffectMallocOut { effect2: effect2 }]
+    vec![EffectMallocOut { effect2 }]
 }
 
 pub fn update_pts(i: &EffectUpdatePtsIn) -> Vec<EffectUpdatePtsOut> {
@@ -85,5 +85,5 @@ pub fn update_pts(i: &EffectUpdatePtsIn) -> Vec<EffectUpdatePtsOut> {
         pts2.make_dup(site);
     }
     trace!("Post: {}", pts2);
-    vec![EffectUpdatePtsOut { pts2: pts2 }]
+    vec![EffectUpdatePtsOut { pts2 }]
 }
