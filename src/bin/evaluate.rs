@@ -4,16 +4,17 @@ extern crate num_traits;
 
 use jemalloc_ctl::stats::Allocated;
 use jemalloc_ctl::Epoch;
-use marduk::{uaf, AliasMode};
+use marduk::{uaf, AliasMode, Database};
 use num_traits::cast::ToPrimitive;
+use std::collections::{BTreeMap, BTreeSet};
 use std::time::{Duration, Instant};
 
 #[derive(Clone, Eq, Debug, PartialOrd, PartialEq)]
 struct Measurement {
     mode: AliasMode,
     artifact: Vec<String>,
-    true_positives: u64,
-    false_positives: u64,
+    true_positives: usize,
+    false_positives: usize,
     // Which bugs were missed
     true_negatives: Vec<(u64, u64)>,
     time: Duration,
@@ -57,6 +58,78 @@ mod printers {
     }
 }
 
+fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measurement> {
+    let mut out = Vec::new();
+    for (name, tps) in juliet_tp {
+        let path = format!("samples/Juliet-1.3/CWE416/individuals/{}", name);
+        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly);
+        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly);
+
+        // Check that Steens contains all of Flow. Since Flow has all the TPs, this means Steens
+        // does too. Additionally, it's a bug if Steens doesn't contain something Flow does.
+
+        let steens_set: BTreeSet<_> = steens_run
+            .db
+            .query_all_uaf()
+            .iter()
+            .map(uaf_tuple)
+            .collect();
+        let flow_set: BTreeSet<_> = flow_run.db.query_all_uaf().iter().map(uaf_tuple).collect();
+        assert_eq!(flow_set.difference(&steens_set).count(), 0);
+
+        out.push(Measurement {
+            mode: AliasMode::SteensOnly,
+            artifact: vec![path.to_string()],
+            true_positives: *tps,
+            false_positives: steens_set.len() - tps,
+            true_negatives: Vec::new(),
+            time: steens_run.time,
+            space: steens_run.space,
+        });
+        out.push(Measurement {
+            mode: AliasMode::FlowOnly,
+            artifact: vec![path.to_string()],
+            true_positives: *tps,
+            false_positives: flow_set.len() - tps,
+            true_negatives: Vec::new(),
+            time: flow_run.time,
+            space: flow_run.space,
+        });
+    }
+    out
+}
+
+fn measure_bad_juliet() -> Vec<Measurement> {
+    use std::fs;
+    let mut out = Vec::new();
+    // I checked over these manually, and it took forever, but they were all real, and I'm unlikely
+    // to generate spurious reports on flow mode for small snippets of only bad code on an update.
+    //
+    // That said, if the flow algorithm changes nontrivially before publication, I have to check
+    // these manually. Again.
+    for entry in fs::read_dir("samples/Juliet-1.3/CWE416/omit_good_individuals").unwrap() {
+        let path = entry
+            .unwrap()
+            .path()
+            .as_os_str()
+            .to_str()
+            .unwrap()
+            .to_string();
+        let mode = AliasMode::FlowOnly;
+        let mut run = marduk(&[path.clone()], mode);
+        out.push(Measurement {
+            mode,
+            artifact: vec![path.to_string()],
+            true_positives: run.db.query_all_uaf().len(),
+            false_positives: 0,
+            true_negatives: Vec::new(),
+            time: run.time,
+            space: run.space,
+        })
+    }
+    out
+}
+
 fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measurement> {
     let names: Vec<_> = names
         .iter()
@@ -68,7 +141,13 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
         .collect()
 }
 
-fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> Measurement {
+struct Run {
+    db: Database,
+    time: Duration,
+    space: usize,
+}
+
+fn marduk(names: &[String], mode: AliasMode) -> Run {
     let mut db = uaf(names, mode);
     let pre = Instant::now();
     db.run_rules();
@@ -79,13 +158,35 @@ fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> M
         epoch.advance().unwrap(); // Refresh the allocated statistic.
         allocated.get().unwrap()
     };
+    Run { db, time, space }
+}
+
+fn uaf_tuple(uaf: &marduk::datalog::AllUafResult) -> (u64, u64) {
+    (
+        uaf.free.addr.to_u64().unwrap(),
+        uaf.use_.addr.to_u64().unwrap(),
+    )
+}
+
+fn measure_whole_juliet(mode: AliasMode, tps: usize) -> Measurement {
+    let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], mode);
+    Measurement {
+        mode,
+        artifact: vec!["CWE416".to_string()],
+        true_positives: tps,
+        false_positives: run.db.query_all_uaf().len() - tps,
+        true_negatives: Vec::new(),
+        time: run.time,
+        space: run.space,
+    }
+}
+
+fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> Measurement {
+    let mut run = marduk(names, mode);
     let mut false_positives = 0;
     let mut expected_not_found = expected.to_vec();
-    for uaf in db.query_all_uaf() {
-        let expect = (
-            uaf.free.addr.to_u64().unwrap(),
-            uaf.use_.addr.to_u64().unwrap(),
-        );
+    for uaf in run.db.query_all_uaf() {
+        let expect = uaf_tuple(&uaf);
         if let Some(pos) = expected_not_found.iter().position(|e| e == &expect) {
             expected_not_found.remove(pos);
         } else {
@@ -95,11 +196,11 @@ fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> M
     Measurement {
         mode,
         artifact: names.to_vec(),
-        true_positives: (expected.len() - expected_not_found.len()) as u64,
+        true_positives: expected.len() - expected_not_found.len(),
         false_positives,
         true_negatives: expected_not_found,
-        time,
-        space,
+        time: run.time,
+        space: run.space,
     }
 }
 
@@ -115,7 +216,41 @@ fn main() {
         .iter()
         .flat_map(|case| measure_uaf(case.names, case.expected))
         .collect();
+    println!("Known bugs:");
     for measure in known_measures {
         println!("{}", measure)
     }
+
+    let juliet_tp = {
+        use std::path::PathBuf;
+        let mut juliet_tp = BTreeMap::new();
+        for m in measure_bad_juliet() {
+            juliet_tp.insert(
+                PathBuf::from(&m.artifact[0])
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+                m.true_positives,
+            );
+        }
+        juliet_tp
+    };
+
+    println!("Juliet Individuals:");
+    for measure in measure_individual_juliet(&juliet_tp) {
+        println!("{}", measure)
+    }
+
+    println!("Juliet Whole:");
+    let juliet_tp_sum = juliet_tp.values().sum();
+    println!(
+        "{}",
+        measure_whole_juliet(AliasMode::FlowOnly, juliet_tp_sum)
+    );
+    println!(
+        "{}",
+        measure_whole_juliet(AliasMode::SteensOnly, juliet_tp_sum)
+    );
 }
