@@ -1,19 +1,18 @@
-.extern malloc
-.global f, g, main
+.global main
 .intel_syntax noprefix
 f:
 	mov rdi, 1
-	call malloc
+	call malloc@PLT
 	mov rdi, rax
 	mov rbx, rax 
-	call free
+	call free@PLT
 	mov rax, rbx
 	ret
 	.size f, .-f
 	.type f, @function
 g:
 	mov rdi, 1
-	call malloc
+	call malloc@PLT
 	ret
 	.size g, .-g
 	.type g, @function
