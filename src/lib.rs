@@ -21,6 +21,7 @@ pub mod printers;
 pub mod regs;
 pub mod steensgaard;
 mod uaf;
+mod context;
 pub mod use_def;
 pub mod var;
 pub use datalog::Database;

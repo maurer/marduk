@@ -169,7 +169,7 @@ pub fn lift(i: &LoadLiftIn) -> Vec<LoadLiftOut> {
             fall: Loc {
                 file_name: i.loc.file_name,
                 addr: fall,
-                stack: Stack::NoStack,
+                stack: i.loc.stack.clone(),
             },
             call: is_call,
             ret: is_ret,
@@ -182,13 +182,21 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
     if fall {
         targets.push(i.fall.addr);
     }
+    let stack = match &i.src.stack {
+        &Stack::NoStack => Stack::NoStack,
+        s => if i.is_call {
+            Stack::Return(Box::new(i.fall.clone()))
+        } else {
+            s.clone()
+        },
+    };
     targets
         .into_iter()
         .map(|x| LoadSemaSuccOut {
             dst: Loc {
                 file_name: i.fall.file_name,
                 addr: x,
-                stack: Stack::NoStack,
+                stack: stack.clone(),
             },
         })
         .collect()

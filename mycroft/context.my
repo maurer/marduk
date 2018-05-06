@@ -1,0 +1,14 @@
+context_enable(bool)
+
+live_mult {free: Loc, stacked: Loc}
+live_mult_promote: live_mult {free, stacked} <- live {loc: stacked} + context::strip_stack
+
+malloc_mult: malloc_call {loc: stacked} <- malloc_call {loc: free} & live_mult {free, stacked}
+free_mult: free_call {loc: stacked, args} <- free_call {loc: free, args} & live_mult {free, stacked}
+
+// TODO: check whether I need a layer of indirection here
+// I'm overloading sym to seed live with a set of stack-sensitive starts
+// This might make call_site_dyn tricker (or easier)
+context_enable: live {loc: stacked} <- context_enable(~true) & sym {loc: free} + context::add_stack
+
+// TODO: inter-object callsites (rule call_site_dyn) is not properly handled, multiplying link_pad might be sufficient, but I want to get single-file working first
