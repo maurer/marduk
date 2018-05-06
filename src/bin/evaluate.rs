@@ -67,7 +67,7 @@ mod printers {
             writeln!(f)?;
 
             for tn in &self.true_negatives {
-                writeln!(f, "Missed bug! {}->{}", tn.0, tn.1)?;
+                writeln!(f, "Missed bug! 0x{:x}->0x{:x}", tn.0, tn.1)?;
             }
 
             Ok(())
