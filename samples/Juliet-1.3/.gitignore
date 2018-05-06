@@ -1,0 +1,4 @@
+C/testcases/*/*.out
+C/testcases/*/*.o
+C/testcases/*/CWE416
+/CWE416
