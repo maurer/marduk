@@ -42,13 +42,13 @@ impl Effect {
     }
 
     pub fn malloc(&mut self, site: &Loc) {
-        self.does_malloc.insert(*site);
+        self.does_malloc.insert(site.clone());
         self.maybe_malloc.remove(site);
     }
 
     fn maybe_malloc(&mut self, site: &Loc) {
         self.does_malloc.remove(site);
-        self.maybe_malloc.insert(*site);
+        self.maybe_malloc.insert(site.clone());
     }
 }
 

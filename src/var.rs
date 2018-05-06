@@ -1,7 +1,7 @@
 use load::Loc;
 use regs::Reg;
 
-#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug, Copy)]
+#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
     StackSlot { func_addr: Loc, offset: usize },
     Register { site: Loc, register: Reg },

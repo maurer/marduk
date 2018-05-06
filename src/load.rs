@@ -5,10 +5,23 @@ use datalog::*;
 use interned_string::InternedString;
 use std::collections::BTreeSet;
 
-#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash, Copy)]
+#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
+pub enum Stack {
+    /// Stack tracking not in use
+    NoStack,
+    /// Stack tracking in use, but nowhere to go
+    EmptyStack,
+    /// Stack tracking in use, should point to a Loc which is either EmptyStack or Return. If it
+    /// points to NoStack, that is a bug.
+    // TODO: maybe use a smart constructor here instead?
+    Return(Box<Loc>),
+}
+
+#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub file_name: InternedString,
     pub addr: u64,
+    pub stack: Stack,
 }
 
 macro_rules! vec_error {
@@ -92,6 +105,7 @@ pub fn dump_plt(i: &LoadDumpPltIn) -> Vec<LoadDumpPltOut> {
                 pad_loc: Loc {
                     file_name: InternedString::from_string(i.file_name),
                     addr: addr64,
+                    stack: Stack::NoStack,
                 },
             }
         })
@@ -113,6 +127,7 @@ pub fn dump_syms(i: &LoadDumpSymsIn) -> Vec<LoadDumpSymsOut> {
                         .to_u64()
                         .unwrap(),
                     file_name: InternedString::from_string(i.file_name),
+                    stack: Stack::NoStack,
                 },
                 end: BitVector::from_basic(&sym.memory().max_addr())
                     .to_u64()
@@ -154,6 +169,7 @@ pub fn lift(i: &LoadLiftIn) -> Vec<LoadLiftOut> {
             fall: Loc {
                 file_name: i.loc.file_name,
                 addr: fall,
+                stack: Stack::NoStack,
             },
             call: is_call,
             ret: is_ret,
@@ -172,6 +188,7 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
             dst: Loc {
                 file_name: i.fall.file_name,
                 addr: x,
+                stack: Stack::NoStack,
             },
         })
         .collect()

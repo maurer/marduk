@@ -84,7 +84,7 @@ fn extract_expr(
                 Vec::new()
             } else if bv.name == "RSP" {
                 vec![E::AddrOf(Var::StackSlot {
-                    func_addr: *func_addr,
+                    func_addr: func_addr.clone(),
                     offset: 0,
                 })]
             } else {
@@ -95,7 +95,7 @@ fn extract_expr(
                             .iter()
                             .map(|site| {
                                 E::Base(Var::Register {
-                                    site: *site,
+                                    site: site.clone(),
                                     register: reg,
                                 })
                             })
@@ -134,7 +134,7 @@ fn extract_expr(
                     if lv.name == "RSP" {
                         match **rhs {
                             BE::Const(ref bv) => vec![E::AddrOf(Var::StackSlot {
-                                func_addr: *func_addr,
+                                func_addr: func_addr.clone(),
                                 offset: bv.to_u64().unwrap() as usize,
                             })],
                             _ => out,
@@ -146,7 +146,7 @@ fn extract_expr(
                     if rv.name == "RSP" {
                         match **lhs {
                             BE::Const(ref bv) => vec![E::AddrOf(Var::StackSlot {
-                                func_addr: *func_addr,
+                                func_addr: func_addr.clone(),
                                 offset: bv.to_u64().unwrap() as usize,
                             })],
                             _ => out,
@@ -272,7 +272,7 @@ fn extract_move(
                 return Vec::new();
             } else if let Ok(reg) = Reg::from_str(lhs.name.as_str()) {
                 Var::Register {
-                    site: *cur_addr,
+                    site: cur_addr.clone(),
                     register: reg,
                 }
             } else {
@@ -282,14 +282,23 @@ fn extract_move(
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
                 .map(|eval| match eval {
-                    E::AddrOf(var) => Constraint::AddrOf { a: lv, b: var },
-                    E::Base(var) => Constraint::Asgn { a: lv, b: var },
-                    E::Deref(var) => Constraint::Deref { a: lv, b: var },
+                    E::AddrOf(var) => Constraint::AddrOf {
+                        a: lv.clone(),
+                        b: var,
+                    },
+                    E::Base(var) => Constraint::Asgn {
+                        a: lv.clone(),
+                        b: var,
+                    },
+                    E::Deref(var) => Constraint::Deref {
+                        a: lv.clone(),
+                        b: var,
+                    },
                 })
                 .collect();
             if !lhs.tmp {
                 // We've just overwritten a non-temporary, update the def chain
-                let our_addr = vec![*cur_addr];
+                let our_addr = vec![cur_addr.clone()];
                 defs.insert(Reg::from_str(lhs.name.as_str()).unwrap(), our_addr);
             }
             out

@@ -51,27 +51,27 @@ impl PointsTo {
 
     pub fn make_dup(&mut self, alloc_site: &Loc) {
         let stale = Var::Alloc {
-            site: *alloc_site,
+            site: alloc_site.clone(),
             stale: true,
         };
         let fresh = Var::Alloc {
-            site: *alloc_site,
+            site: alloc_site.clone(),
             stale: false,
         };
         if self.super_live.contains(&fresh) {
-            self.super_live.insert(stale);
+            self.super_live.insert(stale.clone());
         }
         if let Some(pt) = self.inner.remove(&fresh) {
-            self.inner.insert(stale, pt.clone());
-            self.inner.insert(fresh, pt);
+            self.inner.insert(stale.clone(), pt.clone());
+            self.inner.insert(fresh.clone(), pt);
         }
         for pt in self.inner.values_mut() {
             *pt = pt.iter()
                 .flat_map(|v| {
                     if v == &fresh {
-                        vec![stale, fresh]
+                        vec![stale.clone(), fresh.clone()]
                     } else {
-                        vec![*v]
+                        vec![v.clone()]
                     }
                 })
                 .collect();
@@ -80,22 +80,28 @@ impl PointsTo {
 
     pub fn make_stale(&mut self, alloc_site: &Loc) {
         let stale = Var::Alloc {
-            site: *alloc_site,
+            site: alloc_site.clone(),
             stale: true,
         };
         let fresh = Var::Alloc {
-            site: *alloc_site,
+            site: alloc_site.clone(),
             stale: false,
         };
         if self.super_live.remove(&fresh) {
-            self.super_live.insert(stale);
+            self.super_live.insert(stale.clone());
         }
         if let Some(pt) = self.inner.remove(&fresh) {
-            self.inner.insert(stale, pt);
+            self.inner.insert(stale.clone(), pt);
         }
         for pt in self.inner.values_mut() {
             *pt = pt.iter()
-                .map(|v| if v == &fresh { stale } else { *v })
+                .map(|v| {
+                    if v == &fresh {
+                        stale.clone()
+                    } else {
+                        v.clone()
+                    }
+                })
                 .collect();
         }
     }
@@ -210,7 +216,7 @@ impl PointsTo {
     pub fn pt_to(&self) -> BTreeSet<Var> {
         let mut pointed_to: BTreeSet<Var> = self.super_live.clone();
         for v in self.inner.values() {
-            pointed_to.extend(v);
+            pointed_to.extend(v.clone());
         }
         pointed_to
     }
@@ -219,7 +225,7 @@ impl PointsTo {
     /// keys
     fn gc<F>(&mut self, roots: F)
     where
-        F: Fn(Var) -> bool,
+        F: Fn(&Var) -> bool,
     {
         // mark
         let mut old_size: isize = -1;
@@ -227,8 +233,8 @@ impl PointsTo {
         while live.len() as isize != old_size {
             old_size = live.len() as isize;
             for (k, v) in &self.inner {
-                if roots(*k) || live.contains(k) {
-                    live.insert(*k);
+                if roots(k) || live.contains(k) {
+                    live.insert(k.clone());
                     live.extend(v.iter().cloned());
                 }
             }
@@ -282,7 +288,7 @@ impl PointsTo {
             .iter()
             .flat_map(|d| self.get_all(d))
             .filter_map(|pt| match pt {
-                Var::Freed { ref site } => Some(*site),
+                Var::Freed { ref site } => Some(site.clone()),
                 _ => None,
             })
             .collect()

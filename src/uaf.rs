@@ -9,7 +9,7 @@ pub fn free_args(i: &UafFreeArgsIn) -> Vec<UafFreeArgsOut> {
             for def in defs {
                 out.push(UafFreeArgsOut {
                     arg: Var::Register {
-                        site: *def,
+                        site: def.clone(),
                         register: ARGS[*arg_n],
                     },
                 });
@@ -20,7 +20,10 @@ pub fn free_args(i: &UafFreeArgsIn) -> Vec<UafFreeArgsOut> {
 }
 
 pub fn expand_vars(i: &UafExpandVarsIn) -> Vec<UafExpandVarsOut> {
-    i.vs.iter().map(|v| UafExpandVarsOut { v2: *v }).collect()
+    i.vs
+        .iter()
+        .map(|v| UafExpandVarsOut { v2: v.clone() })
+        .collect()
 }
 
 pub fn reads_vars(i: &UafReadsVarsIn) -> Vec<UafReadsVarsOut> {
@@ -36,7 +39,7 @@ pub fn use_vars(i: &UafUseVarsIn) -> Vec<UafUseVarsOut> {
         .iter()
         .map(|site| UafUseVarsOut {
             v: Var::Register {
-                site: *site,
+                site: site.clone(),
                 register: *i.r,
             },
         })

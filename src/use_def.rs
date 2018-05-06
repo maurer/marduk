@@ -52,7 +52,7 @@ pub fn killspec_regs(i: &UseDefKillspecRegsIn) -> Vec<UseDefKillspecRegsOut> {
 
 pub fn stack_wipe(i: &UseDefStackWipeIn) -> Vec<UseDefStackWipeOut> {
     vec![UseDefStackWipeOut {
-        ks: KillSpec::StackFrame(*i.base),
+        ks: KillSpec::StackFrame(i.base.clone()),
     }]
 }
 
@@ -73,7 +73,9 @@ pub fn only_ret(i: &UseDefOnlyRetIn) -> Vec<UseDefOnlyRetOut> {
 }
 
 pub fn promote_def(i: &UseDefPromoteDefIn) -> Vec<UseDefPromoteDefOut> {
-    vec![UseDefPromoteDefOut { defs: vec![*i.def] }]
+    vec![UseDefPromoteDefOut {
+        defs: vec![i.def.clone()],
+    }]
 }
 
 pub fn expand_registers(i: &UseDefExpandRegistersIn) -> Vec<UseDefExpandRegistersOut> {

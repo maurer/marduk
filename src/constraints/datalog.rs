@@ -14,11 +14,11 @@ pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMa
     vec![ConstraintsMallocConstraintOut {
         c: vec![vec![Constraint::AddrOf {
             a: Var::Register {
-                site: *i.loc,
+                site: i.loc.clone(),
                 register: RET_REG,
             },
             b: Var::Alloc {
-                site: *i.loc,
+                site: i.loc.clone(),
                 stale: false,
             },
         }]],
@@ -33,10 +33,12 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
                 out.push(ConstraintsFreeConstraintOut {
                     c: vec![vec![Constraint::StackLoad {
                         a: Var::Register {
-                            site: *def,
+                            site: def.clone(),
                             register: ARGS[*arg_n],
                         },
-                        b: Var::Freed { site: *i.loc },
+                        b: Var::Freed {
+                            site: i.loc.clone(),
+                        },
                     }]],
                 });
             }
