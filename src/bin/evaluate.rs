@@ -1,3 +1,6 @@
+// Addresses are considered long literals, but I'd prefer not to insert an underscore every four
+// characters
+#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
 extern crate jemalloc_ctl;
 extern crate marduk;
 extern crate num_traits;
