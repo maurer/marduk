@@ -31,6 +31,19 @@ mod printers {
     use marduk::printers::fmt_vec;
     use std::fmt::{Display, Formatter, Result};
     use Measurement;
+    fn fmt_space(f: &mut Formatter, space: usize) -> Result {
+        const GIGA: usize = 1024 * MEGA;
+        const MEGA: usize = 1024 * KILO;
+        const KILO: usize = 1024;
+        if space > GIGA {
+            write!(f, "{}G", space / GIGA)
+        } else if space > MEGA {
+            write!(f, "{}M", space / MEGA)
+        } else {
+            write!(f, "{}k", space / KILO)
+        }
+    }
+
     impl Display for Measurement {
         fn fmt(&self, f: &mut Formatter) -> Result {
             fmt_vec(f, &self.artifact)?;
@@ -47,7 +60,8 @@ mod printers {
             }
             writeln!(f, "{}s", time_secs)?;
 
-            writeln!(f, "{}G", self.space / (1024 * 1024 * 1024))?;
+            fmt_space(f, self.space)?;
+            writeln!(f)?;
 
             for tn in &self.true_negatives {
                 writeln!(f, "Missed bug! {}->{}", tn.0, tn.1)?;
