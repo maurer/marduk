@@ -223,7 +223,43 @@ const GNOME_NETTOOL: Case = Case {
     expected: &[(0x411ba6, 0x4124d1)],
 };
 
-const KNOWN_BUGS: &[Case] = &[GNOME_NETTOOL];
+const GOACCESS: Case = Case {
+    names: &["goaccess"],
+    expected: &[(0x40b1dc, 0x40b230)],
+};
+
+const LIBARCHIVE: Case = Case {
+    names: &["bsdcpio_test"],
+    expected: &[(0x40e012, 0x40e021)],
+};
+
+const SHADOWSOCKS: Case = Case {
+    names: &["ss-server"],
+    expected: &[(0x411336, 0x412b57), (0x411336, 0x412b5d)],
+};
+
+const ISISD: Case = Case {
+    names: &["isisd"],
+    expected: &[(0x40a84f, 0x40aa1f)],
+};
+
+const OSPF6D: Case = Case {
+    names: &["ospf6d"],
+    expected: &[
+        (0x42de10, 0x436c59),
+        (0x42de10, 0x437cf1),
+        (0x42de10, 0x437d05),
+    ],
+};
+
+const KNOWN_BUGS: &[Case] = &[
+    GNOME_NETTOOL,
+    GOACCESS,
+    LIBARCHIVE,
+    SHADOWSOCKS,
+    ISISD,
+    OSPF6D,
+];
 
 fn main() {
     let known_measures: Vec<_> = KNOWN_BUGS
