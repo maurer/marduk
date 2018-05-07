@@ -139,7 +139,17 @@ impl Display for InternedString {
 
 impl Display for Loc {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "0x{:x}", self.addr)
+        write!(f, "0x{:x}", self.addr)?;
+        match self.stack {
+            ::load::Stack::Return(ref loc) => {
+                write!(f, "+{}", loc)?;
+            }
+            ::load::Stack::EmptyStack => {
+                write!(f, "{{}}")?;
+            }
+            _ => (),
+        }
+        Ok(())
     }
 }
 

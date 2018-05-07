@@ -24,6 +24,12 @@ pub struct Loc {
     pub stack: Stack,
 }
 
+impl Loc {
+    pub fn is_stacked(&self) -> bool {
+        !(self.stack == Stack::NoStack)
+    }
+}
+
 macro_rules! vec_error {
     ($e:expr) => {{
         let name: ::bap::basic::Result<_> = $e;
@@ -303,4 +309,16 @@ pub fn is_returning_name(i: &LoadIsReturningNameIn) -> Vec<LoadIsReturningNameOu
     } else {
         vec![LoadIsReturningNameOut {}]
     }
+}
+
+pub fn call_site_stack(i: &LoadCallSiteStackIn) -> Vec<LoadCallSiteStackOut> {
+    let mut target_loc_adjusted = i.target_loc.clone();
+    if !i.call_loc.is_stacked() {
+        target_loc_adjusted.stack = Stack::NoStack;
+    } else {
+        target_loc_adjusted.stack = i.pad_loc.stack.clone();
+    }
+    vec![LoadCallSiteStackOut {
+        target_loc_adjusted,
+    }]
 }

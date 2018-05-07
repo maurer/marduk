@@ -8,7 +8,7 @@ fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limi
         .iter()
         .map(|x| format!("samples/chops/{}", x))
         .collect();
-    let mut db = uaf(&names, marduk::AliasMode::All);
+    let mut db = uaf(&names, marduk::AliasMode::All, false);
     db.run_rules();
 
     let mut false_positives_found = 0;

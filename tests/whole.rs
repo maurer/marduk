@@ -33,6 +33,7 @@ fn run_uaf(
         } else {
             marduk::AliasMode::SteensOnly
         },
+        false,
     );
     db.run_rules();
 

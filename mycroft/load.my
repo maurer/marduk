@@ -84,4 +84,5 @@ func_walk_over: func {base, contains: new_contains} <- succ_over {src: contains,
 call_site_internal: call_site { call_loc, target_loc } <- succ { src: call_loc, dst: target_loc, is_call: ~true }
 
 // Inter-object call sites
-call_site_dyn: call_site { call_loc, target_loc } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name }
+call_site_dyn: call_site { call_loc, target_loc: target_loc_adjusted } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } + ::load::call_site_stack
+call_site_live: live {loc} <- call_site {target_loc: loc}

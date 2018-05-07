@@ -46,3 +46,11 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
     }
     out
 }
+
+pub fn loc_is_unstacked(i: &ConstraintsLocIsUnstackedIn) -> Vec<ConstraintsLocIsUnstackedOut> {
+    if i.loc.is_stacked() {
+        Vec::new()
+    } else {
+        vec![ConstraintsLocIsUnstackedOut {}]
+    }
+}

@@ -15,3 +15,17 @@ pub fn add_stack(i: &ContextAddStackIn) -> Vec<ContextAddStackOut> {
     stacked.stack = Stack::EmptyStack;
     vec![ContextAddStackOut { stacked }]
 }
+
+pub fn flow_only_context(i: &ContextFlowOnlyContextIn) -> Vec<ContextFlowOnlyContextOut> {
+    let stacked_use = i.use_.is_stacked();
+    let stacked_free = i.free.is_stacked();
+    //assert_eq!(stacked_use, stacked_free);
+    if stacked_use != stacked_free {
+        eprintln!("stack_mismatch: {} -> {}", i.free, i.use_);
+    }
+    if stacked_use {
+        vec![ContextFlowOnlyContextOut {}]
+    } else {
+        Vec::new()
+    }
+}
