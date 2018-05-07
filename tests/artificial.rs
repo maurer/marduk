@@ -104,6 +104,12 @@ fn restale() {
     run_uaf(&["restale"], 1, 0, 0);
 }
 
+// Mostly a test to make sure ctx sensitive doesn't jam
+#[test]
+fn recurse() {
+    run_uaf(&["recurse"], 1, 0, 0);
+}
+
 #[test]
 fn ll_structure() {
     let mut db = uaf(

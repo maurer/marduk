@@ -17,6 +17,32 @@ pub enum Stack {
     Return(Box<Loc>),
 }
 
+impl Stack {
+    // TODO this is pretty slowly written with unnecessary clones
+    fn find(&self, addr: u64) -> Option<Self> {
+        match *self {
+            Stack::Return(ref tgt) => {
+                if addr == tgt.addr {
+                    Some(self.clone())
+                } else {
+                    tgt.stack.find(addr)
+                }
+            }
+            _ => None,
+        }
+    }
+    pub fn deloop(self) -> Self {
+        match *&self {
+            Stack::Return(ref tgt) => match tgt.stack.find(tgt.addr) {
+                Some(new) => return new,
+                None => (),
+            },
+            _ => (),
+        }
+        self
+    }
+}
+
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub file_name: InternedString,
@@ -191,7 +217,7 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
     let stack = match &i.src.stack {
         &Stack::NoStack => Stack::NoStack,
         s => if i.is_call {
-            Stack::Return(Box::new(i.fall.clone()))
+            Stack::Return(Box::new(i.fall.clone())).deloop()
         } else {
             s.clone()
         },
