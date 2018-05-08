@@ -182,6 +182,9 @@ pub fn lift(i: &LoadLiftIn) -> Vec<LoadLiftOut> {
     if (addr < start) || (addr > end) {
         return vec![];
     }
+    if i.loc.is_stacked() {
+        return Vec::new();
+    }
     vec_error!(Bap::with(|bap| {
         let bin: &[u8] = &i.seg_contents[((addr - start) as usize)..];
         let disas = BasicDisasm::new(bap, *i.arch)?;

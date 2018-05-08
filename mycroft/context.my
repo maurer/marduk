@@ -6,6 +6,7 @@ live_mult_promote: live_mult {free, stacked} <- live {loc: stacked} + context::s
 malloc_mult: malloc_call {loc: stacked} <- malloc_call {loc: free} & live_mult {free, stacked}
 free_mult: free_call {loc: stacked, args} <- free_call {loc: free, args} & live_mult {free, stacked}
 //returning_mult: returning_call {loc: stacked} <- returning_call {loc: free} & live_mult {free, stacked}
+lift_mult: lift {loc: stacked, bil, fallthrough: fallthrough_stacked, disassembly, is_call, is_ret} <- lift {loc: free, bil, fallthrough, disassembly, is_call, is_ret} & live_mult {free, stacked} + context::stack_fallthrough
 pad_mult: link_pad {pad_loc: stacked, pad_name} <- link_pad {pad_loc: free, pad_name} & live_mult {free, stacked}
 //TODO: does var need to be promoted here?
 uses_mult: uses(var, stacked) <- live_mult {free, stacked} & uses(var, free)

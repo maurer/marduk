@@ -29,3 +29,11 @@ pub fn flow_only_context(i: &ContextFlowOnlyContextIn) -> Vec<ContextFlowOnlyCon
         Vec::new()
     }
 }
+
+pub fn stack_fallthrough(i: &ContextStackFallthroughIn) -> Vec<ContextStackFallthroughOut> {
+    let mut fallthrough_stacked = i.fallthrough.clone();
+    fallthrough_stacked.stack = i.stacked.stack.clone();
+    vec![ContextStackFallthroughOut {
+        fallthrough_stacked,
+    }]
+}

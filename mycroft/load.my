@@ -72,7 +72,7 @@ returning_call_by_ret: returning_call { loc } <- func {base: loc, contains: ret_
 // If we have a non-call successor, it's also a step-over successor
 succ_over_normal: succ_over { src, dst } <- succ { src, dst, is_call: ~false }
 // If we have a calling successor, the step-over successor is the fallthrough, not the call target
-succ_over_skip_call: succ_over { src: loc, dst: fall } <- lift { loc, fallthrough: fall } & returning_call { loc: func_loc } & succ { src: loc, dst: func_loc, is_call: ~true }
+succ_over_skip_call@2: succ_over { src: loc, dst: fall } <- lift { loc, fallthrough: fall } & returning_call { loc: func_loc } & succ { src: loc, dst: func_loc, is_call: ~true }
 
 // Assume symbols give us function starts
 func_start: func{base: loc, contains: loc} <- sym { loc }
@@ -84,5 +84,5 @@ func_walk_over: func {base, contains: new_contains} <- succ_over {src: contains,
 call_site_internal: call_site { call_loc, target_loc } <- succ { src: call_loc, dst: target_loc, is_call: ~true }
 
 // Inter-object call sites
-call_site_dyn: call_site { call_loc, target_loc: target_loc_adjusted } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } + ::load::call_site_stack
+call_site_dyn@1: call_site { call_loc, target_loc: target_loc_adjusted } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } + ::load::call_site_stack
 call_site_live: live {loc} <- call_site {target_loc: loc}

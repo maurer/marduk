@@ -26,7 +26,7 @@ kill_call: kill(loc, ~(::use_def::KillSpec::Registers(::regs::caller_saved()))) 
 kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} + ::use_def::stack_wipe
 
 succ_ret{src: Loc, dst: Loc}
-ret_flat: succ_ret {src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
+ret_flat@1: succ_ret {src, dst} <- lift{loc: src, is_ret: ~true} & func {base, contains: src} & call_site {call_loc, target_loc: base} & succ_over {src: call_loc, dst}
 succ_call{src: Loc, dst: Loc}
 call_flat: succ_call {src, dst} <- succ {src, is_call: ~true} & call_site{call_loc: src, target_loc: dst}
 
