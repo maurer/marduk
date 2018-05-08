@@ -32,13 +32,16 @@ pub fn reads_vars(i: &UafReadsVarsIn) -> Vec<UafReadsVarsOut> {
 }
 
 pub fn use_vars(i: &UafUseVarsIn) -> Vec<UafUseVarsOut> {
-    i.dc[i.r]
+    i.dc
+        .get(i.r)
         .iter()
-        .map(|site| UafUseVarsOut {
-            v: Var::Register {
-                site: *site,
-                register: *i.r,
-            },
+        .flat_map(|e| {
+            e.iter().map(|site| UafUseVarsOut {
+                v: Var::Register {
+                    site: *site,
+                    register: *i.r,
+                },
+            })
         })
         .collect()
 }
