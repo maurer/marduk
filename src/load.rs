@@ -5,6 +5,8 @@ use datalog::*;
 use interned_string::InternedString;
 use std::collections::BTreeSet;
 
+const STACK_MAX_DEPTH: usize = 1;
+
 #[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub enum Stack {
     /// Stack tracking not in use
@@ -40,6 +42,17 @@ impl Stack {
             _ => (),
         }
         self
+    }
+    pub fn relimit(&mut self, limit: usize) {
+        if limit == 0 {
+            *self = Stack::EmptyStack;
+        }
+        match *self {
+            Stack::Return(ref mut tgt) => {
+                tgt.stack.relimit(limit - 1);
+            }
+            _ => (),
+        }
     }
 }
 
@@ -220,7 +233,9 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
     let stack = match &i.src.stack {
         &Stack::NoStack => Stack::NoStack,
         s => if i.is_call {
-            Stack::Return(Box::new(i.fall.clone())).deloop()
+            let mut s = Stack::Return(Box::new(i.fall.clone())).deloop();
+            s.relimit(STACK_MAX_DEPTH);
+            s
         } else {
             s.clone()
         },
