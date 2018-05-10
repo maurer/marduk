@@ -78,7 +78,8 @@ func {
 
 call_site {
   call_loc: Loc,
-  target_loc: Loc
+  target_loc: Loc,
+  ret_loc: Loc
 }
 
 skip_func {
