@@ -79,8 +79,8 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
     let mut out = Vec::new();
     for (name, tps) in juliet_tp {
         let path = format!("samples/Juliet-1.3/CWE416/individuals/{}", name);
-        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly { ctx: false });
-        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly { ctx: false });
+        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly { ctx: false }).unwrap();
+        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly { ctx: false }).unwrap();
 
         // Check that Steens contains all of Flow. Since Flow has all the TPs, this means Steens
         // does too. Additionally, it's a bug if Steens doesn't contain something Flow does.
@@ -133,7 +133,7 @@ fn measure_bad_juliet() -> Vec<Measurement> {
             .unwrap()
             .to_string();
         let mode = AliasMode::FlowOnly { ctx: false };
-        let mut run = marduk(&[path.clone()], mode);
+        let mut run = marduk(&[path.clone()], mode).unwrap();
         out.push(Measurement {
             mode,
             artifact: vec![path.to_string()],
@@ -155,8 +155,9 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
     [
         AliasMode::SteensOnly { ctx: false },
         AliasMode::FlowOnly { ctx: false },
+        AliasMode::FlowOnly { ctx: true },
     ].iter()
-        .map(|mode| measure_mode(&names, *mode, expected))
+        .flat_map(|mode| measure_mode(&names, *mode, expected))
         .collect()
 }
 
@@ -166,18 +167,27 @@ struct Run {
     space: usize,
 }
 
-fn marduk(names: &[String], mode: AliasMode) -> Run {
+pub const MEMORY_LIMIT: usize = 1024 * 1024 * 1024 * 100; // 100G
+
+fn check_mem() -> usize {
+    let epoch = Epoch::new().unwrap();
+    let allocated = Allocated::new().unwrap();
+    epoch.advance().unwrap(); // Refresh the allocated statistic.
+    allocated.get().unwrap()
+}
+
+fn marduk(names: &[String], mode: AliasMode) -> Option<Run> {
     let mut db = uaf(names, mode);
     let pre = Instant::now();
-    db.run_rules();
+    while !db.run_rules_once().is_empty() {
+        if check_mem() > MEMORY_LIMIT {
+            eprintln!("Over memory on {:?}", names);
+            return None;
+        }
+    }
     let time = pre.elapsed();
-    let space = {
-        let epoch = Epoch::new().unwrap();
-        let allocated = Allocated::new().unwrap();
-        epoch.advance().unwrap(); // Refresh the allocated statistic.
-        allocated.get().unwrap()
-    };
-    Run { db, time, space }
+    let space = check_mem();
+    Some(Run { db, time, space })
 }
 
 fn uaf_tuple(uaf: &marduk::datalog::AllUafResult) -> (u64, u64) {
@@ -188,7 +198,7 @@ fn uaf_tuple(uaf: &marduk::datalog::AllUafResult) -> (u64, u64) {
 }
 
 fn measure_whole_juliet(mode: AliasMode, tps: usize) -> Measurement {
-    let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], mode);
+    let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], mode).unwrap();
     Measurement {
         mode,
         artifact: vec!["CWE416".to_string()],
@@ -200,19 +210,24 @@ fn measure_whole_juliet(mode: AliasMode, tps: usize) -> Measurement {
     }
 }
 
-fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> Measurement {
-    let mut run = marduk(names, mode);
+fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> Option<Measurement> {
+    let mut run = marduk(names, mode)?;
     let mut false_positives = 0;
     let mut expected_not_found = expected.to_vec();
+    let mut found = BTreeSet::new();
     for uaf in run.db.query_all_uaf() {
         let expect = uaf_tuple(&uaf);
+        if !found.insert(expect) {
+            // We already processed this candidate
+            continue;
+        }
         if let Some(pos) = expected_not_found.iter().position(|e| e == &expect) {
             expected_not_found.remove(pos);
         } else {
             false_positives += 1;
         }
     }
-    Measurement {
+    Some(Measurement {
         mode,
         artifact: names.to_vec(),
         true_positives: expected.len() - expected_not_found.len(),
@@ -220,7 +235,7 @@ fn measure_mode(names: &[String], mode: AliasMode, expected: &[(u64, u64)]) -> M
         true_negatives: expected_not_found,
         time: run.time,
         space: run.space,
-    }
+    })
 }
 
 const GNOME_NETTOOL: Case = Case {
