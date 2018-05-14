@@ -79,8 +79,8 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
     let mut out = Vec::new();
     for (name, tps) in juliet_tp {
         let path = format!("samples/Juliet-1.3/CWE416/individuals/{}", name);
-        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly);
-        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly);
+        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly { ctx: false });
+        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly { ctx: false });
 
         // Check that Steens contains all of Flow. Since Flow has all the TPs, this means Steens
         // does too. Additionally, it's a bug if Steens doesn't contain something Flow does.
@@ -95,7 +95,7 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
         assert_eq!(flow_set.difference(&steens_set).count(), 0);
 
         out.push(Measurement {
-            mode: AliasMode::SteensOnly,
+            mode: AliasMode::SteensOnly { ctx: false },
             artifact: vec![path.to_string()],
             true_positives: *tps,
             false_positives: steens_set.len() - tps,
@@ -104,7 +104,7 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
             space: steens_run.space,
         });
         out.push(Measurement {
-            mode: AliasMode::FlowOnly,
+            mode: AliasMode::FlowOnly { ctx: false },
             artifact: vec![path.to_string()],
             true_positives: *tps,
             false_positives: flow_set.len() - tps,
@@ -132,7 +132,7 @@ fn measure_bad_juliet() -> Vec<Measurement> {
             .to_str()
             .unwrap()
             .to_string();
-        let mode = AliasMode::FlowOnly;
+        let mode = AliasMode::FlowOnly { ctx: false };
         let mut run = marduk(&[path.clone()], mode);
         out.push(Measurement {
             mode,
@@ -152,8 +152,10 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
         .iter()
         .map(|x| format!("samples/whole/{}", x))
         .collect();
-    [AliasMode::SteensOnly, AliasMode::FlowOnly]
-        .iter()
+    [
+        AliasMode::SteensOnly { ctx: false },
+        AliasMode::FlowOnly { ctx: false },
+    ].iter()
         .map(|mode| measure_mode(&names, *mode, expected))
         .collect()
 }
@@ -165,7 +167,7 @@ struct Run {
 }
 
 fn marduk(names: &[String], mode: AliasMode) -> Run {
-    let mut db = uaf(names, mode, false);
+    let mut db = uaf(names, mode);
     let pre = Instant::now();
     db.run_rules();
     let time = pre.elapsed();
@@ -300,10 +302,10 @@ fn main() {
     let juliet_tp_sum = juliet_tp.values().sum();
     println!(
         "{}",
-        measure_whole_juliet(AliasMode::FlowOnly, juliet_tp_sum)
+        measure_whole_juliet(AliasMode::FlowOnly { ctx: false }, juliet_tp_sum)
     );
     println!(
         "{}",
-        measure_whole_juliet(AliasMode::SteensOnly, juliet_tp_sum)
+        measure_whole_juliet(AliasMode::SteensOnly { ctx: false }, juliet_tp_sum)
     );
 }

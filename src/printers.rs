@@ -26,11 +26,15 @@ impl Display for AliasMode {
             f,
             "{}",
             match *self {
-                AliasMode::SteensOnly => "Insensitive",
-                AliasMode::FlowOnly => "Flow sensitive",
-                AliasMode::All => "Both",
+                AliasMode::SteensOnly { .. } => "Insensitive",
+                AliasMode::FlowOnly { .. } => "Flow sensitive",
+                AliasMode::Both { .. } => "Both",
             }
-        )
+        )?;
+        if self.uses_ctx() {
+            write!(f, "+ctx")?;
+        }
+        Ok(())
     }
 }
 

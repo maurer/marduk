@@ -13,7 +13,7 @@ fn run_uaf(
         .map(|x| format!("samples/artificial/{}", x))
         .collect();
     {
-        let mut db = uaf(&names, marduk::AliasMode::All, false);
+        let mut db = uaf(&names, marduk::AliasMode::Both { ctx: false });
         db.run_rules();
         let found_insensitive_bugs = db.query_uaf().len();
         if found_insensitive_bugs != insensitive_bugs {
@@ -35,7 +35,7 @@ fn run_uaf(
         }
     }
     {
-        let mut db = uaf(&names, marduk::AliasMode::FlowOnly, true);
+        let mut db = uaf(&names, marduk::AliasMode::FlowOnly { ctx: true });
         db.run_rules();
         let ctx_bugs = db.query_context_flow();
         let found_ctx_bugs = ctx_bugs.len();
@@ -114,8 +114,7 @@ fn recurse() {
 fn ll_structure() {
     let mut db = uaf(
         &["samples/artificial/ll".to_string()],
-        marduk::AliasMode::All,
-        false,
+        marduk::AliasMode::FlowOnly { ctx: false },
     );
     db.run_rules();
     // We're searching for something where a variable can point to itself and a dynamic value,
@@ -138,8 +137,7 @@ fn ll_structure() {
 fn seq_call() {
     let mut db = uaf(
         &["samples/artificial/seq_call".to_string()],
-        marduk::AliasMode::All,
-        false,
+        marduk::AliasMode::FlowOnly { ctx: false },
     );
     db.run_rules();
     let mut main_exit = 0;

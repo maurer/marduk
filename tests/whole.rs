@@ -29,11 +29,10 @@ fn run_uaf(
     let mut db = uaf(
         &names,
         if flow {
-            marduk::AliasMode::All
+            marduk::AliasMode::Both { ctx: false }
         } else {
-            marduk::AliasMode::SteensOnly
+            marduk::AliasMode::SteensOnly { ctx: false }
         },
-        false,
     );
     db.run_rules();
 

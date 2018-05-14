@@ -28,13 +28,33 @@ pub use datalog::Database;
 
 #[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd)]
 pub enum AliasMode {
-    SteensOnly,
-    FlowOnly,
-    All,
+    SteensOnly { ctx: bool },
+    FlowOnly { ctx: bool },
+    Both { ctx: bool },
+}
+use AliasMode::*;
+
+impl AliasMode {
+    pub fn uses_steens(&self) -> bool {
+        match *self {
+            SteensOnly { .. } | Both { .. } => true,
+            FlowOnly { .. } => false,
+        }
+    }
+    pub fn uses_flow(&self) -> bool {
+        match *self {
+            FlowOnly { .. } | Both { .. } => true,
+            SteensOnly { .. } => false,
+        }
+    }
+    pub fn uses_ctx(&self) -> bool {
+        match *self {
+            FlowOnly { ref ctx } | SteensOnly { ref ctx } | Both { ref ctx } => *ctx,
+        }
+    }
 }
 
-pub fn uaf(files: &[String], alias_mode: AliasMode, context_sensitivity: bool) -> Database {
-    use AliasMode::*;
+pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
     let mut db = Database::new();
     for file_name in files {
         use std::fs::File;
@@ -49,16 +69,13 @@ pub fn uaf(files: &[String], alias_mode: AliasMode, context_sensitivity: bool) -
         });
     }
 
-    match alias_mode {
-        SteensOnly => db.insert_steens_enable(datalog::SteensEnable { arg0: true }),
-        FlowOnly => db.insert_flow_enable(datalog::FlowEnable { arg0: true }),
-        All => {
-            db.insert_steens_enable(datalog::SteensEnable { arg0: true });
-            db.insert_flow_enable(datalog::FlowEnable { arg0: true })
-        }
-    };
-
-    if context_sensitivity {
+    if alias_mode.uses_steens() {
+        db.insert_steens_enable(datalog::SteensEnable { arg0: true });
+    }
+    if alias_mode.uses_flow() {
+        db.insert_flow_enable(datalog::FlowEnable { arg0: true });
+    }
+    if alias_mode.uses_ctx() {
         db.insert_context_enable(datalog::ContextEnable { arg0: true });
     }
 

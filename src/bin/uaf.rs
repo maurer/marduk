@@ -31,8 +31,7 @@ fn main() {
     env_logger::init();
     let mut db = marduk::uaf(
         &::std::env::args().collect::<Vec<_>>()[1..],
-        marduk::AliasMode::All,
-        true,
+        marduk::AliasMode::Both { ctx: true },
     );
     db.run_rules();
     print_state(&mut db);
