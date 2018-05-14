@@ -4,7 +4,7 @@ func_effect(Loc, Effect^effect_merge)
 //TODO check all_funcs and don't run this rule if the link pad is in there
 unlinked_effect: func_effect(base, ~(Effect::nop())) <- link_pad { pad_loc: base }
 
-local_init: local_effect {base, local: base, effect: ~(Effect::nop())} <- sym {loc: base}
+local_init@5: local_effect {base, local: base, effect: ~(Effect::nop())} <- sym {loc: base}
 local_ret: func_effect(base, effect) <- local_effect {base, local, effect} & succ_ret {src: local}
 local_xfer: local_effect {base, local: local2, effect} <- local_effect {base, local, effect} & succ {src: local, dst: local2, is_call: ~false}
 // BUG! local_call needs to somehow ignore malloc or this doesn't work

@@ -21,6 +21,7 @@ use points_to::PointsTo;
 use use_def::KillSpec;
 
 use constraints::datalog as constraints;
+use context;
 
 fn effect_merge(efs: &[&Effect]) -> Effect {
     let mut out = efs[0].clone();
@@ -94,6 +95,7 @@ mycroft_files!(
     "mycroft/flow.my",
     "mycroft/uaf.my",
     "mycroft/fun_effect.my",
+    "mycroft/context.my",
     "mycroft/queries.my"
 );
 pub use self::mycroft_program::*;

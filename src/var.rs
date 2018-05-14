@@ -1,7 +1,7 @@
 use load::Loc;
 use regs::Reg;
 
-#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug, Copy)]
+#[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
     StackSlot { func_addr: Loc, offset: usize },
     Register { site: Loc, register: Reg },
@@ -19,6 +19,19 @@ impl Var {
 
         Var::Temp {
             serial: num.parse().unwrap(),
+        }
+    }
+
+    pub fn is_stacked(&self) -> bool {
+        match *self {
+            Var::StackSlot {
+                func_addr: ref site,
+                ..
+            }
+            | Var::Register { ref site, .. }
+            | Var::Alloc { ref site, .. }
+            | Var::Freed { ref site, .. } => site.is_stacked(),
+            _ => false,
         }
     }
 

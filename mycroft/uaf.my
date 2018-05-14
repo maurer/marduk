@@ -21,3 +21,6 @@ uaf_flow@11: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) +
 all_uaf(Var, Loc, Loc)
 promote_steens_uaf: all_uaf(v, loc, loc2) <- uaf(v, loc, loc2)
 promote_flow_uaf: all_uaf(v, loc, loc2) <- uaf_flow(v, loc, loc2)
+
+context_flow(Var, Loc, Loc)
+context_flow_filter: context_flow(v, free, use_) <- uaf_flow(v, free, use_) + context::flow_only_context

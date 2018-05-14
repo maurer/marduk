@@ -38,9 +38,9 @@ impl UF {
             let pays = &mut self.pays;
             let points_to = &mut self.points_to;
 
-            *self.inv.entry(v).or_insert_with(|| {
+            *self.inv.entry(v.clone()).or_insert_with(|| {
                 backing.push(Default::default());
-                pays.push(Some(v));
+                pays.push(Some(v.clone()));
                 points_to.push(None);
                 pays.len() - 1
             })
@@ -110,7 +110,7 @@ impl UF {
 
     fn process(&mut self, c: &Constraint) {
         use constraints::Constraint::*;
-        match *c {
+        match c.clone() {
             // a = &b
             AddrOf { a, b } => self.process(&Write { a, b }),
             // a = b
@@ -176,6 +176,6 @@ pub fn steens_solve(i: &SteensgaardSteensSolveIn) -> Vec<SteensgaardSteensSolveO
 pub fn steens_expando(i: &SteensgaardSteensExpandoIn) -> Vec<SteensgaardSteensExpandoOut> {
     i.vs
         .iter()
-        .map(|v| SteensgaardSteensExpandoOut { v: *v })
+        .map(|v| SteensgaardSteensExpandoOut { v: v.clone() })
         .collect()
 }

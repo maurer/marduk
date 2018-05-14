@@ -9,7 +9,7 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
     match *c {
         // *a = &b
         Constraint::StackLoad { ref a, ref b } => for pt in pts.get(a) {
-            out_pts.add_alias(pt, *b);
+            out_pts.add_alias(pt, b.clone());
         },
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
@@ -17,20 +17,20 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 out_pts.make_stale(site);
             }
             if updated.contains(a) {
-                out_pts.add_alias(*a, *b);
+                out_pts.add_alias(a.clone(), b.clone());
             } else {
-                out_pts.replace_alias(*a, *b);
-                updated.push(*a);
+                out_pts.replace_alias(a.clone(), b.clone());
+                updated.push(a.clone());
             }
         }
         // a = b;
         Constraint::Asgn { ref a, ref b } => {
             let ptb = pts.get(b);
             if updated.contains(a) {
-                out_pts.extend_alias(*a, ptb);
+                out_pts.extend_alias(a.clone(), ptb);
             } else {
-                out_pts.set_alias(*a, ptb);
-                updated.push(*a);
+                out_pts.set_alias(a.clone(), ptb);
+                updated.push(a.clone());
             }
         }
         // a = *b;
@@ -39,9 +39,9 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
             if updated.contains(a) {
-                out_pts.extend_alias(*a, ptb);
+                out_pts.extend_alias(a.clone(), ptb);
             } else {
-                out_pts.set_alias(*a, ptb);
+                out_pts.set_alias(a.clone(), ptb);
                 updated.push(a.clone());
             }
         }
@@ -105,7 +105,7 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
         .filter(|v| v.is_dyn() || v.is_stack())
         .collect();
     pts.add_live(new_live);
-    pts.add_frame(*i.dst);
+    pts.add_frame(i.dst.clone());
     vec![FlowStackPurgeOut { pts2: pts }]
 }
 
@@ -113,19 +113,19 @@ pub fn dyn_clear(i: &FlowDynClearIn) -> Vec<FlowDynClearOut> {
     let mut pts = i.pts.clone();
     pts.clear_live();
     pts.clear_frames();
-    pts.add_frame(*i.base);
+    pts.add_frame(i.base.clone());
     vec![FlowDynClearOut { pts2: pts }]
 }
 
 pub fn base_pts(i: &FlowBasePtsIn) -> Vec<FlowBasePtsOut> {
     vec![FlowBasePtsOut {
-        pts: PointsTo::new(*i.base),
+        pts: PointsTo::new(i.base.clone()),
     }]
 }
 
 pub fn promote_loc(i: &FlowPromoteLocIn) -> Vec<FlowPromoteLocOut> {
     vec![FlowPromoteLocOut {
-        src_promoted: vec![*i.src],
+        src_promoted: vec![i.src.clone()],
     }]
 }
 

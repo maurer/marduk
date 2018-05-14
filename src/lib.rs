@@ -10,6 +10,7 @@ extern crate mycroft_support;
 extern crate num_traits;
 
 mod constraints;
+mod context;
 pub mod datalog;
 mod effect;
 pub mod flow;
@@ -32,7 +33,7 @@ pub enum AliasMode {
     All,
 }
 
-pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
+pub fn uaf(files: &[String], alias_mode: AliasMode, context_sensitivity: bool) -> Database {
     use AliasMode::*;
     let mut db = Database::new();
     for file_name in files {
@@ -56,6 +57,10 @@ pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
             db.insert_flow_enable(datalog::FlowEnable { arg0: true })
         }
     };
+
+    if context_sensitivity {
+        db.insert_context_enable(datalog::ContextEnable { arg0: true });
+    }
 
     db
 }

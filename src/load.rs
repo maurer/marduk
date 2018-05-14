@@ -5,10 +5,68 @@ use datalog::*;
 use interned_string::InternedString;
 use std::collections::BTreeSet;
 
-#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash, Copy)]
+const STACK_MAX_DEPTH: usize = 1;
+
+#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
+pub enum Stack {
+    /// Stack tracking not in use
+    NoStack,
+    /// Stack tracking in use, but nowhere to go
+    EmptyStack,
+    /// Stack tracking in use, should point to a Loc which is either EmptyStack or Return. If it
+    /// points to NoStack, that is a bug.
+    // TODO: maybe use a smart constructor here instead?
+    Return(Box<Loc>),
+}
+
+impl Stack {
+    // TODO this is pretty slowly written with unnecessary clones
+    fn find(&self, addr: u64) -> Option<Self> {
+        match *self {
+            Stack::Return(ref tgt) => {
+                if addr == tgt.addr {
+                    Some(self.clone())
+                } else {
+                    tgt.stack.find(addr)
+                }
+            }
+            _ => None,
+        }
+    }
+    pub fn deloop(self) -> Self {
+        match *&self {
+            Stack::Return(ref tgt) => match tgt.stack.find(tgt.addr) {
+                Some(new) => return new,
+                None => (),
+            },
+            _ => (),
+        }
+        self
+    }
+    pub fn relimit(&mut self, limit: usize) {
+        if limit == 0 {
+            *self = Stack::EmptyStack;
+        }
+        match *self {
+            Stack::Return(ref mut tgt) => {
+                tgt.stack.relimit(limit - 1);
+            }
+            _ => (),
+        }
+    }
+}
+
+#[derive(Debug, Eq, Clone, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Loc {
     pub file_name: InternedString,
     pub addr: u64,
+    pub stack: Stack,
+}
+
+impl Loc {
+    pub fn is_stacked(&self) -> bool {
+        !(self.stack == Stack::NoStack)
+    }
 }
 
 macro_rules! vec_error {
@@ -92,6 +150,7 @@ pub fn dump_plt(i: &LoadDumpPltIn) -> Vec<LoadDumpPltOut> {
                 pad_loc: Loc {
                     file_name: InternedString::from_string(i.file_name),
                     addr: addr64,
+                    stack: Stack::NoStack,
                 },
             }
         })
@@ -113,6 +172,7 @@ pub fn dump_syms(i: &LoadDumpSymsIn) -> Vec<LoadDumpSymsOut> {
                         .to_u64()
                         .unwrap(),
                     file_name: InternedString::from_string(i.file_name),
+                    stack: Stack::NoStack,
                 },
                 end: BitVector::from_basic(&sym.memory().max_addr())
                     .to_u64()
@@ -135,6 +195,9 @@ pub fn lift(i: &LoadLiftIn) -> Vec<LoadLiftOut> {
     if (addr < start) || (addr > end) {
         return vec![];
     }
+    if i.loc.is_stacked() {
+        return Vec::new();
+    }
     vec_error!(Bap::with(|bap| {
         let bin: &[u8] = &i.seg_contents[((addr - start) as usize)..];
         let disas = BasicDisasm::new(bap, *i.arch)?;
@@ -154,6 +217,7 @@ pub fn lift(i: &LoadLiftIn) -> Vec<LoadLiftOut> {
             fall: Loc {
                 file_name: i.loc.file_name,
                 addr: fall,
+                stack: i.loc.stack.clone(),
             },
             call: is_call,
             ret: is_ret,
@@ -166,12 +230,23 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
     if fall {
         targets.push(i.fall.addr);
     }
+    let stack = match &i.src.stack {
+        &Stack::NoStack => Stack::NoStack,
+        s => if i.is_call {
+            let mut s = Stack::Return(Box::new(i.fall.clone())).deloop();
+            s.relimit(STACK_MAX_DEPTH);
+            s
+        } else {
+            s.clone()
+        },
+    };
     targets
         .into_iter()
         .map(|x| LoadSemaSuccOut {
             dst: Loc {
                 file_name: i.fall.file_name,
                 addr: x,
+                stack: stack.clone(),
             },
         })
         .collect()
@@ -278,4 +353,16 @@ pub fn is_returning_name(i: &LoadIsReturningNameIn) -> Vec<LoadIsReturningNameOu
     } else {
         vec![LoadIsReturningNameOut {}]
     }
+}
+
+pub fn call_site_stack(i: &LoadCallSiteStackIn) -> Vec<LoadCallSiteStackOut> {
+    let mut target_loc_adjusted = i.target_loc.clone();
+    if !i.call_loc.is_stacked() {
+        target_loc_adjusted.stack = Stack::NoStack;
+    } else {
+        target_loc_adjusted.stack = i.pad_loc.stack.clone();
+    }
+    vec![LoadCallSiteStackOut {
+        target_loc_adjusted,
+    }]
 }

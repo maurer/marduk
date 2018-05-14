@@ -165,7 +165,7 @@ struct Run {
 }
 
 fn marduk(names: &[String], mode: AliasMode) -> Run {
-    let mut db = uaf(names, mode);
+    let mut db = uaf(names, mode, false);
     let pre = Instant::now();
     db.run_rules();
     let time = pre.elapsed();
