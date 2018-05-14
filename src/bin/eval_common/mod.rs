@@ -18,6 +18,8 @@ pub struct Measurement {
     pub false_positives: usize,
     // Which bugs were missed
     pub true_negatives: Vec<(u64, u64)>,
+    // What was found at all, mostly for use in debug or triage later.
+    pub found: Vec<(u64, u64)>,
     pub time: Duration,
     pub space: usize, // bytes
 }
@@ -138,6 +140,7 @@ pub fn measure_mode(
         artifact: names.to_vec(),
         true_positives: expected.len() - expected_not_found.len(),
         false_positives,
+        found: found.iter().cloned().collect(),
         true_negatives: expected_not_found,
         time: run.time,
         space: run.space,

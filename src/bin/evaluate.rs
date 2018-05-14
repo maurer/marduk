@@ -36,6 +36,7 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
             artifact: vec![path.to_string()],
             true_positives: *tps,
             false_positives: steens_set.len() - tps,
+            found: steens_set.iter().cloned().collect(),
             true_negatives: Vec::new(),
             time: steens_run.time,
             space: steens_run.space,
@@ -45,6 +46,7 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
             artifact: vec![path.to_string()],
             true_positives: *tps,
             false_positives: flow_set.len() - tps,
+            found: flow_set.iter().cloned().collect(),
             true_negatives: Vec::new(),
             time: flow_run.time,
             space: flow_run.space,
@@ -71,10 +73,12 @@ fn measure_bad_juliet() -> Vec<Measurement> {
             .to_string();
         let mode = AliasMode::FlowOnly { ctx: false };
         let mut run = marduk(&[path.clone()], mode).unwrap();
+        let out_set: BTreeSet<_> = run.db.query_all_uaf().iter().map(uaf_tuple).collect();
         out.push(Measurement {
             mode,
             artifact: vec![path.to_string()],
-            true_positives: run.db.query_all_uaf().len(),
+            true_positives: out_set.len(),
+            found: out_set.iter().cloned().collect(),
             false_positives: 0,
             true_negatives: Vec::new(),
             time: run.time,
@@ -100,11 +104,13 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
 
 fn measure_whole_juliet(mode: AliasMode, tps: usize) -> Measurement {
     let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], mode).unwrap();
+    let out_set: BTreeSet<_> = run.db.query_all_uaf().iter().map(uaf_tuple).collect();
     Measurement {
         mode,
         artifact: vec!["CWE416".to_string()],
         true_positives: tps,
-        false_positives: run.db.query_all_uaf().len() - tps,
+        false_positives: out_set.len() - tps,
+        found: out_set.iter().cloned().collect(),
         true_negatives: Vec::new(),
         time: run.time,
         space: run.space,
