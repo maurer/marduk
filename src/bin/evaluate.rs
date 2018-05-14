@@ -1,10 +1,16 @@
 // Addresses are considered long literals, but I'd prefer not to insert an underscore every four
 // characters
 #![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
+
+// Macros need to be loaded at root
+#[macro_use]
+extern crate serde_derive;
+
 mod eval_common;
 use eval_common::*;
 
 pub const MEMORY_LIMIT: usize = 1024 * 1024 * 1024 * 100; // 100G
+pub const TIME_LIMIT: u64 = 24 * 60 * 60; // 24hrs, effectively infinite
 
 fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measurement> {
     let mut out = Vec::new();

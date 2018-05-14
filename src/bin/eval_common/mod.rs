@@ -1,6 +1,7 @@
 extern crate jemalloc_ctl;
 extern crate marduk;
 extern crate num_traits;
+extern crate serde;
 
 pub use self::jemalloc_ctl::stats::Allocated;
 pub use self::jemalloc_ctl::Epoch;
@@ -9,7 +10,7 @@ pub use self::num_traits::cast::ToPrimitive;
 pub use std::collections::{BTreeMap, BTreeSet};
 pub use std::time::{Duration, Instant};
 
-#[derive(Clone, Eq, Debug, PartialOrd, PartialEq)]
+#[derive(Clone, Eq, Debug, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub struct Measurement {
     pub mode: AliasMode,
     pub artifact: Vec<String>,
@@ -88,9 +89,14 @@ fn check_mem() -> usize {
 pub fn marduk(names: &[String], mode: AliasMode) -> Option<Run> {
     let mut db = uaf(names, mode);
     let pre = Instant::now();
+    let time_limit = Duration::from_secs(::TIME_LIMIT);
     while !db.run_rules_once().is_empty() {
         if check_mem() > ::MEMORY_LIMIT {
             eprintln!("Over memory on {:?}", names);
+            return None;
+        }
+        if pre.elapsed() > time_limit {
+            eprintln!("Out of time on {:?}", names);
             return None;
         }
     }

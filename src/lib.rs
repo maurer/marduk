@@ -8,6 +8,9 @@ extern crate mktemp;
 extern crate mycroft_macros;
 extern crate mycroft_support;
 extern crate num_traits;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde;
 
 mod constraints;
 mod context;
@@ -26,7 +29,7 @@ pub mod use_def;
 pub mod var;
 pub use datalog::Database;
 
-#[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd)]
+#[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum AliasMode {
     SteensOnly { ctx: bool },
     FlowOnly { ctx: bool },
