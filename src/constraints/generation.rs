@@ -265,7 +265,7 @@ fn extract_move(
                                 stale: false,
                             };
                             vec![
-                                Constraint::Asgn {
+                                Constraint::Deref {
                                     a: l,
                                     b: alloc.clone(),
                                 },
@@ -275,7 +275,22 @@ fn extract_move(
                                 },
                             ]
                         }
-                        (_, UndefDeref(_)) => panic!("*?a = *b (emit xfer?)"),
+                        (Base(l), UndefDeref(loc)) => {
+                            let alloc = Var::Alloc {
+                                site: loc,
+                                stale: false,
+                            };
+                            vec![
+                                Constraint::Xfer {
+                                    a: l,
+                                    b: alloc.clone(),
+                                },
+                                Constraint::Write {
+                                    a: alloc.clone(),
+                                    b: alloc,
+                                },
+                            ]
+                        }
                         (UndefDeref(_), _) => panic!("**?a = x ?"),
                         (_, Undef(_)) | (Undef(_), _) => Vec::new(),
                     })
