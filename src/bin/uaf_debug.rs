@@ -40,14 +40,6 @@ fn print_state(db: &mut marduk::datalog::Database) {
         println!("func {}: {}", x.base, x.contains);
     }
 
-    for x in db.query_call_over() {
-        if (x.src.is_stacked() != x.dst.is_stacked()) || (x.dst.is_stacked() != x.func.is_stacked())
-        {
-            println!("CALL_OVER BUG");
-        }
-        println!("call_over {}-{}->{}", x.src, x.func, x.dst);
-    }
-
     for x in db.query_call_site() {
         if x.call_loc.is_stacked() != x.target_loc.is_stacked() {
             println!("CALL_SITE BUG");

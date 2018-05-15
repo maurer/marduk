@@ -19,4 +19,3 @@
 ?all_uaf: all_uaf(_, free, use_)
 ?context_flow: context_flow(_, free, use_)
 ?func: func {base, contains}
-?call_over: call_over {src, func, dst}
