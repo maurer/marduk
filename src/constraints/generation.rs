@@ -67,6 +67,8 @@ enum E {
     AddrOf(Var),
     Base(Var),
     Deref(Var),
+    Undef(Loc),
+    UndefDeref(Loc),
 }
 
 fn extract_expr(
@@ -90,7 +92,7 @@ fn extract_expr(
             } else {
                 match Reg::from_str(bv.name.as_str()) {
                     Ok(reg) => match defs.get(&reg) {
-                        None => Vec::new(),
+                        None => vec![E::Undef(cur_addr.clone())],
                         Some(sites) => sites
                             .iter()
                             .map(|site| {
@@ -117,6 +119,7 @@ fn extract_expr(
             .map(|e| match e {
                 E::Base(v) => E::Deref(v),
                 E::AddrOf(v) => E::Base(v),
+                E::Undef(l) => E::UndefDeref(l),
                 _ => panic!("doubly nested load"),
             })
             .collect(),
@@ -248,14 +251,33 @@ fn extract_move(
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
                 for rhs_evar in rhs_vars.clone() {
-                    out.push(match (lhs_evar.clone(), rhs_evar) {
-                        (AddrOf(l), AddrOf(r)) => Constraint::AddrOf { a: l, b: r },
-                        (AddrOf(l), Base(r)) => Constraint::Asgn { a: l, b: r },
-                        (AddrOf(l), Deref(r)) => Constraint::Deref { a: l, b: r },
+                    out.extend(match (lhs_evar.clone(), rhs_evar) {
+                        (AddrOf(l), AddrOf(r)) => vec![Constraint::AddrOf { a: l, b: r }],
+                        (AddrOf(l), Base(r)) => vec![Constraint::Asgn { a: l, b: r }],
+                        (AddrOf(l), Deref(r)) => vec![Constraint::Deref { a: l, b: r }],
                         (Deref(_), _) => panic!("**a = x ?"),
-                        (Base(l), AddrOf(r)) => Constraint::StackLoad { a: l, b: r },
-                        (Base(l), Base(r)) => Constraint::Write { a: l, b: r },
-                        (Base(l), Deref(r)) => Constraint::Xfer { a: l, b: r },
+                        (Base(l), AddrOf(r)) => vec![Constraint::StackLoad { a: l, b: r }],
+                        (Base(l), Base(r)) => vec![Constraint::Write { a: l, b: r }],
+                        (Base(l), Deref(r)) => vec![Constraint::Xfer { a: l, b: r }],
+                        (AddrOf(l), UndefDeref(loc)) => {
+                            let alloc = Var::Alloc {
+                                site: loc,
+                                stale: false,
+                            };
+                            vec![
+                                Constraint::Asgn {
+                                    a: l,
+                                    b: alloc.clone(),
+                                },
+                                Constraint::Write {
+                                    a: alloc.clone(),
+                                    b: alloc,
+                                },
+                            ]
+                        }
+                        (_, UndefDeref(_)) => panic!("*?a = *b (emit xfer?)"),
+                        (UndefDeref(_), _) => panic!("**?a = x ?"),
+                        (_, Undef(_)) | (Undef(_), _) => Vec::new(),
                     })
                 }
             }
@@ -281,19 +303,36 @@ fn extract_move(
             };
             let out = extract_expr(rhs, defs, cur_addr, func_addr)
                 .into_iter()
-                .map(|eval| match eval {
-                    E::AddrOf(var) => Constraint::AddrOf {
+                .flat_map(|eval| match eval {
+                    E::AddrOf(var) => vec![Constraint::AddrOf {
                         a: lv.clone(),
                         b: var,
-                    },
-                    E::Base(var) => Constraint::Asgn {
+                    }],
+                    E::Base(var) => vec![Constraint::Asgn {
                         a: lv.clone(),
                         b: var,
-                    },
-                    E::Deref(var) => Constraint::Deref {
+                    }],
+                    E::Deref(var) => vec![Constraint::Deref {
                         a: lv.clone(),
                         b: var,
-                    },
+                    }],
+                    E::Undef(_) => Vec::new(),
+                    E::UndefDeref(loc) => {
+                        let alloc = Var::Alloc {
+                            site: loc,
+                            stale: false,
+                        };
+                        vec![
+                            Constraint::Asgn {
+                                a: lv.clone(),
+                                b: alloc.clone(),
+                            },
+                            Constraint::Write {
+                                a: alloc.clone(),
+                                b: alloc,
+                            },
+                        ]
+                    }
                 })
                 .collect();
             if !lhs.tmp {
