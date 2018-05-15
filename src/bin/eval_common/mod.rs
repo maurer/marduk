@@ -125,6 +125,11 @@ pub fn measure_mode(
     let mut found = BTreeSet::new();
     for uaf in run.db.query_all_uaf() {
         let expect = uaf_tuple(&uaf);
+        if mode.uses_ctx() {
+            if !uaf.free.is_stacked() {
+                continue;
+            }
+        }
         if !found.insert(expect) {
             // We already processed this candidate
             continue;
