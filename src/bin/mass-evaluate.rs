@@ -4,6 +4,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 mod eval_common;
+mod stats;
 use eval_common::*;
 
 pub const MEMORY_LIMIT: usize = 1024 * 1024 * 1024 * 100; // 100G
@@ -52,23 +53,6 @@ fn measure_uaf(name: &str) -> Vec<Measurement> {
         .collect()
 }
 
-fn post_analysis(_dat: Vec<Measurement>) {
-    // TODO, actually implement
-    // For now I'm dumping all the data, so I should be able to slurp it back in and run this on it
-    // once I've got it working right.
-    // Questions
-    // For each alias mode,
-    //    What was the FP rate, memory usage, and time usage for _successful_ runs
-    //      Average?
-    //      Median?
-    //      Stddev?
-    //    How many programs were judged safe? (0 FPs)
-    //    What was the success rate (e.g. no OOM or timeout)
-    // For each step of alias mode (e.g. a->b and b->c)
-    //    Geometric mean of ratio of FP, memory usage, and time between for each case
-    //    For FP, if the FP count is 0, swap it for a 1 to prevent divergence
-}
-
 fn main() {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -87,5 +71,5 @@ fn main() {
         let mut out = File::create("out.json").unwrap();
         serde_json::to_writer(&mut out, &full).unwrap();
     }
-    post_analysis(full);
+    stats::post_analysis(full);
 }
