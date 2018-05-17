@@ -5,6 +5,7 @@
 // Macros need to be loaded at root
 #[macro_use]
 extern crate serde_derive;
+extern crate serde_json;
 
 mod eval_common;
 use eval_common::*;
@@ -161,14 +162,22 @@ const KNOWN_BUGS: &[Case] = &[
 ];
 
 fn main() {
-    let known_measures: Vec<_> = KNOWN_BUGS
+    let mut known = Vec::new();
+    println!("Known bugs:");
+    for measure in KNOWN_BUGS
         .iter()
         .flat_map(|case| measure_uaf(case.names, case.expected))
-        .collect();
-    println!("Known bugs:");
-    for measure in known_measures {
-        println!("{}", measure)
+    {
+        println!("{}", measure);
+        known.push(measure);
     }
+
+    {
+        let mut out = ::std::fs::File::create("eval.json").unwrap();
+        serde_json::to_writer(&mut out, &known).unwrap();
+    }
+
+    println!("Processing juliet");
 
     let juliet_tp = {
         use std::path::PathBuf;
