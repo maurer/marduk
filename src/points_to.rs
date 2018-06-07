@@ -36,7 +36,8 @@ impl PointsTo {
 
     /// Filters register definition based on a whitelist
     pub fn only_regs(&mut self, whitelist: &[Reg]) {
-        let to_kill: Vec<_> = self.inner
+        let to_kill: Vec<_> = self
+            .inner
             .keys()
             .filter(|v| match *v {
                 Var::Register { register, .. } => !whitelist.contains(register),
@@ -66,7 +67,8 @@ impl PointsTo {
             self.inner.insert(fresh.clone(), pt);
         }
         for pt in self.inner.values_mut() {
-            *pt = pt.iter()
+            *pt = pt
+                .iter()
                 .flat_map(|v| {
                     if v == &fresh {
                         vec![stale.clone(), fresh.clone()]
@@ -94,7 +96,8 @@ impl PointsTo {
             self.inner.insert(stale.clone(), pt);
         }
         for pt in self.inner.values_mut() {
-            *pt = pt.iter()
+            *pt = pt
+                .iter()
                 .map(|v| {
                     if v == &fresh {
                         stale.clone()
@@ -221,6 +224,10 @@ impl PointsTo {
         pointed_to
     }
 
+    pub fn clobber(&mut self, v: &Var) {
+        self.inner.remove(v);
+    }
+
     /// Mark and sweep gc for points-to relationship using roots as a a predicate to identify root
     /// keys
     fn gc<F>(&mut self, roots: F)
@@ -240,7 +247,8 @@ impl PointsTo {
             }
         }
         // sweep
-        let dead: Vec<_> = self.inner
+        let dead: Vec<_> = self
+            .inner
             .keys()
             .filter(|x| !live.contains(x))
             .cloned()

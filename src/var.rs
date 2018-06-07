@@ -4,7 +4,7 @@ use regs::Reg;
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
     StackSlot { func_addr: Loc, offset: usize },
-    Register { site: Loc, register: Reg },
+    Register { register: Reg },
     Temp { serial: u32 },
     Alloc { site: Loc, stale: bool },
     Freed { site: Loc },
@@ -28,7 +28,6 @@ impl Var {
                 func_addr: ref site,
                 ..
             }
-            | Var::Register { ref site, .. }
             | Var::Alloc { ref site, .. }
             | Var::Freed { ref site, .. } => site.is_stacked(),
             _ => false,

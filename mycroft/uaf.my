@@ -4,14 +4,8 @@ uaf(Var, Loc, Loc)
 path_exists(Loc, Loc)
 deref_var(Var, Loc)
 
-base_freed: freed_base(arg, loc) <- free_call {loc, args} & chain(loc, dc) & steens_enable(~true) + ::uaf::free_args
-all_freed: freed_var(v2, loc) <- steens_point(v, vs) & freed_base(v, loc) + ::uaf::expand_vars
-
-path_init: path_exists(loc, loc) <- freed_base(_, loc) & steens_enable(~true)
-path_step: path_exists(loc, loc3) <- path_exists(loc, loc2) & succ_any {src: loc2, dst: loc3}
-
-read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} & chain(loc, dc) + ::uaf::reads_vars
-use_vars: deref_var(v, loc) <- uses(r, loc) & chain(loc, dc) + ::uaf::use_vars
+read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} + ::uaf::reads_vars
+use_vars: deref_var(v, loc) <- uses(r, loc) + ::uaf::use_vars
 
 uaf@6: uaf(v, loc, loc2) <- freed_var(v, loc) & path_exists(loc, loc2) & deref_var(v, loc2)
 

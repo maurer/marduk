@@ -6,51 +6,34 @@ use var::Var;
 
 pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
     vec![ConstraintsGenConstraintsOut {
-        c: generation::extract_constraints(i.bil, i.dc.clone(), i.loc, i.base),
+        c: generation::extract_constraints(i.bil, i.loc, i.base),
     }]
 }
 
 pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMallocConstraintOut> {
     vec![ConstraintsMallocConstraintOut {
-        c: vec![vec![Constraint::AddrOf {
-            a: Var::Register {
-                site: i.loc.clone(),
-                register: RET_REG,
-            },
+        c: vec![Constraint::AddrOf {
+            a: Var::Register { register: RET_REG },
             b: Var::Alloc {
                 site: i.loc.clone(),
                 stale: false,
             },
-        }]],
+        }],
     }]
 }
 
 pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeConstraintOut> {
-    let mut out = Vec::new();
-    for arg_n in i.args {
-        if let Some(defs) = i.dc.get(&ARGS[*arg_n]) {
-            for def in defs {
-                out.push(ConstraintsFreeConstraintOut {
-                    c: vec![vec![Constraint::StackLoad {
-                        a: Var::Register {
-                            site: def.clone(),
-                            register: ARGS[*arg_n],
-                        },
-                        b: Var::Freed {
-                            site: i.loc.clone(),
-                        },
-                    }]],
-                });
-            }
-        }
-    }
-    out
-}
-
-pub fn loc_is_unstacked(i: &ConstraintsLocIsUnstackedIn) -> Vec<ConstraintsLocIsUnstackedOut> {
-    if i.loc.is_stacked() {
-        Vec::new()
-    } else {
-        vec![ConstraintsLocIsUnstackedOut {}]
-    }
+    vec![ConstraintsFreeConstraintOut {
+        c: i.args
+            .iter()
+            .map(|arg_n| Constraint::StackLoad {
+                a: Var::Register {
+                    register: ARGS[*arg_n],
+                },
+                b: Var::Freed {
+                    site: i.loc.clone(),
+                },
+            })
+            .collect(),
+    }]
 }

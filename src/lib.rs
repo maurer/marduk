@@ -23,9 +23,8 @@ pub mod load;
 pub mod points_to;
 pub mod printers;
 pub mod regs;
-pub mod steensgaard;
 mod uaf;
-pub mod use_def;
+mod use_def;
 pub mod var;
 pub use datalog::Database;
 
@@ -73,7 +72,7 @@ pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
     }
 
     if alias_mode.uses_steens() {
-        db.insert_steens_enable(datalog::SteensEnable { arg0: true });
+        panic!("Steens disabled");
     }
     if alias_mode.uses_flow() {
         db.insert_flow_enable(datalog::FlowEnable { arg0: true });

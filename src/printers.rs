@@ -58,11 +58,7 @@ impl Display for Var {
                 ref func_addr,
                 ref offset,
             } => write!(f, "sp+{}@{}", offset, func_addr),
-            Var::Register {
-                ref site,
-                ref register,
-                ..
-            } => write!(f, "{}@{}", register, site),
+            Var::Register { ref register, .. } => write!(f, "{}", register),
             Var::Alloc {
                 ref site,
                 ref stale,
@@ -88,6 +84,7 @@ impl Display for Constraint {
             Write { ref a, ref b } => write!(f, "*{} = {}", a, b),
             Xfer { ref a, ref b } => write!(f, "*{} = *{}", a, b),
             StackLoad { ref a, ref b } => write!(f, "*{} = &{}", a, b),
+            Clobber {ref v } => write!(f, "{} = ?", v),
         }
     }
 }
@@ -122,19 +119,6 @@ impl Display for CallSiteResult {
     }
 }
 
-impl Display for SteensSetsResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        fmt_vec(f, &self.vs)
-    }
-}
-
-impl Display for SteensResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}->", self.v)?;
-        fmt_vec(f, &self.vs)
-    }
-}
-
 impl Display for InternedString {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}", self.to_string())
@@ -160,12 +144,6 @@ impl Display for Loc {
 impl Display for DefinesResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{} defs {:?}", self.loc, self.registers)
-    }
-}
-
-impl Display for ReachingResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:?}:{}->{}", self.def, self.register, self.reached)
     }
 }
 

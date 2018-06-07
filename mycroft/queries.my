@@ -1,5 +1,3 @@
-?steens_sets: steens_may_sets(vs)
-?steens: steens_point(v, vs)
 ?call_site: call_site { call_loc, target_loc }
 ?succ: succ { src, dst, is_call }
 ?sym: sym { loc, name, end }

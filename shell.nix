@@ -1,6 +1,6 @@
 { nixpkgs ? import <nixpkgs> {}}:
 nixpkgs.callPackage (
-{ stdenv, rust, postgresql, openssl, libbap, vim_configurable, llvmPackages, clang }:
+{ stdenv, rust, postgresql, openssl, libbap, vim_configurable, llvmPackages, clang, rustracer, rustc }:
 
 # Vim with rust + git support
 let vim = vim_configurable.customize {
@@ -28,7 +28,7 @@ let vim = vim_configurable.customize {
 
 stdenv.mkDerivation rec {
   name = "bap-rust";
-  buildInputs = [ rust libbap vim clang ];
+  buildInputs = [ rust libbap vim clang rustracer rustc ];
   LIBCLANG_PATH = "${llvmPackages.clang-unwrapped.lib}/lib";
 }
 ) {rust = nixpkgs.rustChannels.nightly.rust; }

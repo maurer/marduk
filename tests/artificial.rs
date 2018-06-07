@@ -4,7 +4,7 @@ use marduk::uaf;
 
 fn run_uaf(
     names: &[&'static str],
-    insensitive_bugs: usize,
+    _insensitive_bugs: usize,
     expected_flow_bugs: usize,
     expected_ctx_bugs: usize,
 ) {
@@ -13,15 +13,8 @@ fn run_uaf(
         .map(|x| format!("samples/artificial/{}", x))
         .collect();
     {
-        let mut db = uaf(&names, marduk::AliasMode::Both { ctx: false });
+        let mut db = uaf(&names, marduk::AliasMode::FlowOnly { ctx: false });
         db.run_rules();
-        let found_insensitive_bugs = db.query_uaf().len();
-        if found_insensitive_bugs != insensitive_bugs {
-            panic!(
-                "Found {} insensitive bugs, expected {}",
-                found_insensitive_bugs, insensitive_bugs
-            );
-        }
         let flow_bugs = db.query_uaf_flow();
         let found_flow_bugs = flow_bugs.len();
         if found_flow_bugs != expected_flow_bugs {
@@ -179,7 +172,8 @@ fn seq_call() {
 fn check_rax(pts: &PointsTo, target: usize, msg: &str) {
     use marduk::regs::Reg::RAX;
     use marduk::var::Var;
-    let raxes = pts.iter()
+    let raxes = pts
+        .iter()
         .filter(|(v, _)| match **v {
             Var::Register { register: RAX, .. } => true,
             _ => false,

@@ -5,63 +5,54 @@ use regs::ARGS;
 use std::collections::BTreeSet;
 use var::Var;
 
-fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Constraint) {
+fn apply(pts: &mut PointsTo, c: &Constraint) {
     match *c {
         // *a = &b
         Constraint::StackLoad { ref a, ref b } => for pt in pts.get(a) {
-            out_pts.add_alias(pt, b.clone());
+            pts.add_alias(pt, b.clone());
         },
         // a = &b;
         Constraint::AddrOf { ref a, ref b } => {
             if let Var::Alloc { ref site, .. } = *b {
-                out_pts.make_stale(site);
+                pts.make_stale(site);
             }
-            if updated.contains(a) {
-                out_pts.add_alias(a.clone(), b.clone());
-            } else {
-                out_pts.replace_alias(a.clone(), b.clone());
-                updated.push(a.clone());
-            }
+            pts.replace_alias(a.clone(), b.clone());
         }
         // a = b;
         Constraint::Asgn { ref a, ref b } => {
             let ptb = pts.get(b);
-            if updated.contains(a) {
-                out_pts.extend_alias(a.clone(), ptb);
-            } else {
-                out_pts.set_alias(a.clone(), ptb);
-                updated.push(a.clone());
-            }
+            pts.set_alias(a.clone(), ptb);
         }
         // a = *b;
         Constraint::Deref { ref a, ref b } => {
-            let ptb = pts.get(b)
+            let ptb = pts
+                .get(b)
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
-            if updated.contains(a) {
-                out_pts.extend_alias(a.clone(), ptb);
-            } else {
-                out_pts.set_alias(a.clone(), ptb);
-                updated.push(a.clone());
-            }
+                pts.set_alias(a.clone(), ptb);
         }
         // *a = b;
         Constraint::Write { ref a, ref b } => {
             let pta = pts.get(a);
             let ptb = pts.get(b);
             for pt in pta {
-                out_pts.extend_alias(pt, ptb.clone());
+                pts.extend_alias(pt, ptb.clone());
             }
         }
         // *a = *b;
         Constraint::Xfer { ref a, ref b } => {
             let pta = pts.get(a);
-            let ptb = pts.get(b)
+            let ptb = pts
+                .get(b)
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
             for pt in pta {
-                out_pts.extend_alias(pt, ptb.clone());
+                pts.extend_alias(pt, ptb.clone());
             }
+        }
+        // a = const
+        Constraint::Clobber {ref v} => {
+            pts.clobber(v)
         }
     }
 }
@@ -69,17 +60,15 @@ fn apply(pts: &PointsTo, out_pts: &mut PointsTo, updated: &mut Vec<Var>, c: &Con
 pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     trace!("addr {}:\n{}", i.loc, i.pts);
     let mut pts = i.pts.clone();
-    let mut pts_0 = pts.clone();
-    let mut updated = Vec::new();
-    for cs in i.cs.iter() {
-        for c in cs {
-            apply(&pts_0, &mut pts, &mut updated, c)
-        }
-        pts_0 = pts.clone();
+    for c in i.cs {
+        apply(&mut pts, c)
     }
     pts.remove_temps();
     pts.canonicalize();
-    i.ks.purge_pts(&mut pts, i.loc);
+    trace!("prepurge:\n{}", pts);
+    trace!("ks:\n{:?}", i.ks);
+    i.ks.purge_pts(&mut pts);
+    trace!("postpurge:\n{}", pts);
     vec![FlowXferOut { pts2: pts }]
 }
 
@@ -99,7 +88,8 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     //TODO: Now that I have clear_frames, can drop_stack here be replaced by a call to
     //canonicalize()?
     pts.drop_stack();
-    let new_live: Vec<_> = i.pts
+    let new_live: Vec<_> = i
+        .pts
         .pt_to()
         .into_iter()
         .filter(|v| v.is_dyn() || v.is_stack())

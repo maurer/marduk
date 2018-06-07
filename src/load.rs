@@ -101,7 +101,8 @@ pub fn dump_segments(i: &LoadDumpSegmentsIn) -> Vec<LoadDumpSegmentsOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let segs = image.segments();
-        let out = segs.iter()
+        let out = segs
+            .iter()
             .map(|seg| {
                 let mem = seg.memory();
                 LoadDumpSegmentsOut {
@@ -164,7 +165,8 @@ pub fn dump_syms(i: &LoadDumpSymsIn) -> Vec<LoadDumpSymsOut> {
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let syms = image.symbols();
-        let out = syms.iter()
+        let out = syms
+            .iter()
             .map(|sym| LoadDumpSymsOut {
                 name: sym.name(),
                 loc: Loc {
@@ -323,7 +325,9 @@ pub fn get_arch(i: &LoadGetArchIn) -> Vec<LoadGetArchOut> {
 }
 
 pub fn malloc_name(func_name: &str) -> bool {
-    func_name.contains("malloc") || func_name.contains("calloc") || func_name == "_Znam"
+    func_name.contains("malloc")
+        || func_name.contains("calloc")
+        || func_name == "_Znam"
         || func_name == "_Znwm"
 }
 

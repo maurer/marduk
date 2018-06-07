@@ -16,6 +16,8 @@ pub enum Constraint {
     Xfer { a: Var, b: Var },
     // *a = &b (can exist when b is a stack variable)
     StackLoad { a: Var, b: Var },
+    // v = ???
+    Clobber { v: Var },
 }
 
 impl Constraint {
@@ -28,6 +30,7 @@ impl Constraint {
             | Write { ref a, ref b }
             | Xfer { ref a, ref b }
             | StackLoad { ref a, ref b } => (a, b),
+            | Clobber {ref v} => return v.is_stacked(),
         };
         a.is_stacked() || b.is_stacked()
     }
