@@ -9,19 +9,20 @@ use var::Var;
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum KillSpec {
-    Empty,
+    Registers(Vec<Reg>),
     StackFrame(Loc),
 }
 
 impl KillSpec {
     pub fn empty() -> Self {
-        KillSpec::Empty
+        KillSpec::Registers(Vec::new())
     }
     fn kill(&self, v: &Var) -> bool {
         // TODO: suppress kill if definition site and kill site are equal?
         use self::KillSpec::*;
         use var::Var::*;
         match (self, v) {
+            (&Registers(ref rs), &Register {ref register, ..}) => rs.contains(register),
             (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
             (&StackFrame(_), &Register { ref register, .. }) => register != &RET_REG,
             _ => false,

@@ -1,6 +1,7 @@
 // TODO this should not be merged, but I'll fix that in a second pass
 constraint(Loc, Constraints^concat)
 
-malloc_constraint: constraint(loc, c) <- malloc_call{loc} + constraints::malloc_constraint
-free_constraint: constraint(loc, c) <- free_call{loc, args} + constraints::free_constraint
-gen_constraints: constraint(loc, c) <- lift {loc, bil} & func {base, contains: loc} + constraints::gen_constraints
+// TODO don't commit this, it's hella bad - it depends on the ordering of the merge for correctness, which mycroft is free to change
+gen_constraints@4: constraint(loc, c) <- lift {loc, bil, is_call} & func {base, contains: loc} + constraints::gen_constraints
+malloc_constraint@5: constraint(loc, c) <- malloc_call{loc} + constraints::malloc_constraint
+free_constraint@5: constraint(loc, c) <- free_call{loc, args} + constraints::free_constraint

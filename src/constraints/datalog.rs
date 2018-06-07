@@ -1,12 +1,16 @@
 use super::generation;
 use super::Constraint;
 use datalog::*;
-use regs::{ARGS, RET_REG};
+use regs::{ARGS, CALLER_SAVED, RET_REG};
 use var::Var;
 
 pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
     vec![ConstraintsGenConstraintsOut {
-        c: generation::extract_constraints(i.bil, i.loc, i.base),
+        c: if i.is_call {
+            CALLER_SAVED.iter().map(|reg| Constraint::Clobber {v: Var::Register {register: *reg}}).collect()
+        } else {
+            generation::extract_constraints(i.bil, i.loc, i.base)
+        },
     }]
 }
 

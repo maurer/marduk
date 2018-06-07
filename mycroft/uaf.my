@@ -1,13 +1,8 @@
-freed_var(Var, Loc)
-freed_base(Var, Loc)
 uaf(Var, Loc, Loc)
-path_exists(Loc, Loc)
 deref_var(Var, Loc)
 
 read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} + ::uaf::reads_vars
 use_vars: deref_var(v, loc) <- uses(r, loc) + ::uaf::use_vars
-
-uaf@6: uaf(v, loc, loc2) <- freed_var(v, loc) & path_exists(loc, loc2) & deref_var(v, loc2)
 
 uaf_flow(Var, Loc, Loc)
 uaf_flow@11: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) + ::flow::is_freed

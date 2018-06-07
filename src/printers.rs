@@ -89,12 +89,6 @@ impl Display for Constraint {
     }
 }
 
-impl Display for PathExistsResult {
-    fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}->{}", self.src, self.dst)
-    }
-}
-
 impl Display for DerefVarResult {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "{}:*{}", self.loc, self.var)
