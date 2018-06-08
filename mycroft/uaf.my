@@ -2,7 +2,7 @@ uaf(Var, Loc, Loc)
 deref_var(Var, Loc)
 
 read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} + ::uaf::reads_vars
-use_vars: deref_var(v, loc) <- uses(r, loc) + ::uaf::use_vars
+use_vars: deref_var(v, loc) <- func_uses(r, loc) + ::uaf::use_vars
 
 uaf_flow(Var, Loc, Loc)
 uaf_flow@11: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) + ::flow::is_freed
