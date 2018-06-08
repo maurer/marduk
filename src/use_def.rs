@@ -2,7 +2,7 @@ use bap::high::bil::{Statement, Type, Variable};
 use datalog::*;
 use load::Loc;
 use points_to::PointsTo;
-use regs::{Reg, RET_REG};
+use regs::{Reg, RET_REG, CALLER_SAVED, ARGS};
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use var::Var;
@@ -90,4 +90,47 @@ pub fn defines(i: &UseDefDefinesIn) -> Vec<UseDefDefinesOut> {
     vec![UseDefDefinesOut {
         registers: defs.into_iter().collect(),
     }]
+}
+
+pub fn expand_registers(i: &UseDefExpandRegistersIn) -> Vec<UseDefExpandRegistersOut> {
+    i.registers
+        .iter()
+        .map(|register| UseDefExpandRegistersOut {
+            register: *register,
+        })
+        .collect()
+}
+
+pub fn exclude_registers(i: &UseDefExcludeRegistersIn) -> Vec<UseDefExcludeRegistersOut> {
+    if i.prev_defines.contains(i.register) {
+        Vec::new()
+    } else {
+        vec![UseDefExcludeRegistersOut {}]
+    }
+}
+
+pub fn exclude_call_registers(
+    i: &UseDefExcludeCallRegistersIn,
+) -> Vec<UseDefExcludeCallRegistersOut> {
+    if CALLER_SAVED.contains(i.register) {
+        Vec::new()
+    } else {
+        vec![UseDefExcludeCallRegistersOut {}]
+    }
+}
+
+pub fn only_args(i: &UseDefOnlyArgsIn) -> Vec<UseDefOnlyArgsOut> {
+    if !ARGS.contains(&i.register) {
+        Vec::new()
+    } else {
+        vec![UseDefOnlyArgsOut {}]
+    }
+}
+
+pub fn only_ret(i: &UseDefOnlyRetIn) -> Vec<UseDefOnlyRetOut> {
+    if i.register == &RET_REG {
+        vec![UseDefOnlyRetOut {}]
+    } else {
+        Vec::new()
+    }
 }

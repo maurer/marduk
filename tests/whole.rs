@@ -21,6 +21,9 @@ fn run_uaf(
     flow_false_positives_limit: Option<usize>,
     flow: bool,
 ) {
+    if !flow {
+        return
+    }
     let _memlock = MEMLOCK.lock().unwrap();
     let names: Vec<_> = names
         .iter()
@@ -29,47 +32,14 @@ fn run_uaf(
     let mut db = uaf(
         &names,
         if flow {
-            marduk::AliasMode::Both { ctx: false }
+            marduk::AliasMode::FlowOnly { ctx: false }
         } else {
             marduk::AliasMode::SteensOnly { ctx: false }
         },
     );
     db.run_rules();
 
-    {
-        let mut false_positives_found = 0;
-        let mut expected_not_found = expected.to_vec();
-        for uaf in db.query_uaf() {
-            let expect = (
-                uaf.free.addr.to_u64().unwrap(),
-                uaf.use_.addr.to_u64().unwrap(),
-            );
-            if let Some(pos) = expected_not_found.iter().position(|e| e == &expect) {
-                expected_not_found.remove(pos);
-            } else {
-                false_positives_found += 1;
-            }
-        }
-
-        if !expected_not_found.is_empty() {
-            eprintln!("Expected insensitive bugs not found!");
-            for absent in expected_not_found {
-                eprintln!("free: 0x{:x} -> use: 0x{:x}", absent.0, absent.1);
-            }
-            panic!()
-        }
-
-        if let Some(false_positives) = false_positives_limit {
-            if false_positives_found > false_positives {
-                panic!(
-                    "Too many insensitive false positives. Found: {} Expected: {}",
-                    false_positives_found, false_positives
-                );
-            }
-        }
-    }
     if flow {
-        // TODO eliminate dup
         let mut false_positives_found = 0;
         let mut expected_not_found = expected.to_vec();
         for uaf in db.query_uaf_flow() {
