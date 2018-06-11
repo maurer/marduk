@@ -7,7 +7,12 @@ use var::Var;
 pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
     vec![ConstraintsGenConstraintsOut {
         c: if i.is_call {
-            CALLER_SAVED.iter().map(|reg| Constraint::Clobber {v: Var::Register {register: *reg}}).collect()
+            CALLER_SAVED
+                .iter()
+                .map(|reg| Constraint::Clobber {
+                    v: Var::Register { register: *reg },
+                })
+                .collect()
         } else {
             generation::extract_constraints(i.bil, i.loc, i.base)
         },

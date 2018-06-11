@@ -1,0 +1,39 @@
+defined_vars {
+  loc: Loc,
+  vars: Vars
+}
+
+live_var {
+  loc: Loc,
+  var: Var
+}
+
+used_var {
+  loc: Loc,
+  var: Var
+}
+
+live_vars {
+  loc: Loc,
+  vars: Vars^concat
+}
+
+
+var_used@4: used_var {loc, var} <- lift {loc, bil} & func {base, contains: loc} + live::used
+used_live@5: live_var {loc, var} <- used_var {loc, var}
+malloc_uses: used_var {loc, var: ~(VAR_ARG_0)} <- malloc_call {loc}
+free_uses: used_var {loc, var: ~(VAR_ARG_0)} <- free_call {loc}
+// HACK. Most frees don't use this, but qfree does
+free_uses2: used_var {loc, var: ~(VAR_ARG_1)} <- free_call {loc}
+var_defined: defined_vars {loc, vars} <- lift {loc, bil, is_call: ~false} & func {base, contains: loc} + live::defined
+call_define_var: defined_vars {loc, vars} <- lift {loc, is_call: ~true} + live::call_defs
+// Time for another manual fuse table yay
+succ_over_defined {src: Loc, dst: Loc, vars: Vars}
+succ_over_defined_def: succ_over_defined {src, dst, vars} <- succ_over {src, dst} & defined_vars {loc: src, vars}
+var_backprop: live_var {loc: src, var} <- succ_over_defined {src, dst, vars} & live_var {loc: dst, var} + live::not_defined
+var_retprop: live_var {loc: ret, var} <- live_var {loc: ret_target, var} & succ_ret {src: ret, dst: ret_target} + live::drop_stack
+var_callprop: live_var {loc: call, var} <- live_var {loc: func, var} & succ_call {src: call, dst: func} + live::drop_frame
+
+// We computed liveness using pre-live (e.g. incoming edge), but to use them, we want them on the outgoing edge
+// To do this, we step along succ_any on the way in
+promote_live_var: live_vars {loc: src, vars} <- succ_any {src, dst} & live_var {loc: dst, var} + live::promote_var

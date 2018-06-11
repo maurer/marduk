@@ -2,7 +2,7 @@ use bap::high::bil::{Statement, Type, Variable};
 use datalog::*;
 use load::Loc;
 use points_to::PointsTo;
-use regs::{Reg, RET_REG, CALLER_SAVED, ARGS};
+use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
 use std::collections::BTreeSet;
 use std::str::FromStr;
 use var::Var;
@@ -22,7 +22,7 @@ impl KillSpec {
         use self::KillSpec::*;
         use var::Var::*;
         match (self, v) {
-            (&Registers(ref rs), &Register {ref register, ..}) => rs.contains(register),
+            (&Registers(ref rs), &Register { ref register, .. }) => rs.contains(register),
             (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,
             (&StackFrame(_), &Register { ref register, .. }) => register != &RET_REG,
             _ => false,
@@ -37,7 +37,7 @@ impl KillSpec {
 
 pub fn killspec_regs(i: &UseDefKillspecRegsIn) -> Vec<UseDefKillspecRegsOut> {
     vec![UseDefKillspecRegsOut {
-        ks: KillSpec::empty()
+        ks: KillSpec::empty(),
     }]
 }
 

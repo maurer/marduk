@@ -29,7 +29,7 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
                 .get(b)
                 .iter()
                 .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
-                pts.set_alias(a.clone(), ptb);
+            pts.set_alias(a.clone(), ptb);
         }
         // *a = b;
         Constraint::Write { ref a, ref b } => {
@@ -51,9 +51,7 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
             }
         }
         // a = const
-        Constraint::Clobber {ref v} => {
-            pts.clobber(v)
-        }
+        Constraint::Clobber { ref v } => pts.clobber(v),
     }
 }
 
@@ -61,11 +59,14 @@ pub fn xfer(i: &FlowXferIn) -> Vec<FlowXferOut> {
     trace!("addr {}:\n{}", i.loc, i.pts);
     let mut pts = i.pts.clone();
     for c in i.cs {
-        apply(&mut pts, c)
+        trace!("{}\n", c);
+        apply(&mut pts, c);
     }
     pts.remove_temps();
     pts.canonicalize();
     trace!("prepurge:\n{}", pts);
+    pts.purge_dead(i.vars);
+    trace!("postlive:\n{}", pts);
     trace!("ks:\n{:?}", i.ks);
     i.ks.purge_pts(&mut pts);
     trace!("postpurge:\n{}", pts);

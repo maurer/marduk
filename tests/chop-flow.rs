@@ -60,26 +60,10 @@ fn color() {
 fn isisd() {
     let use_sites: &[u64] = &[
         // Deletion of deleted adj
-        0x34fe,
-        0x350f,
-        0x3523,
-        0x3533,
-        0x3553,
-        0x3564,
-        0x3578,
-        0x3589,
-        0x359d,
-        0x35ae,
-        // Re-use and recursion inside isis_adj_state_change
+        0x34fe, 0x350f, 0x3523, 0x3533, 0x3553, 0x3564, 0x3578,
+        0x3589, 0x359d, 0x35ae, // Re-use and recursion inside isis_adj_state_change
         0x363c,
-        0x364f,
-        0x37a2,
-        0x380f,
-        0x39d8,
-        0x3a3d,
-        0x3a6b,
-        0x3ab2,
-        0x3acc,
+        0x364f, 0x37a2, 0x380f, 0x39d8, 0x3a3d, 0x3a6b, 0x3ab2, 0x3acc,
     ];
     let bugs: Vec<_> = use_sites.iter().map(|x| (0x35d2, *x)).collect();
     // False positive rate here is due to functions passign an adj in to isis_adj_state_change

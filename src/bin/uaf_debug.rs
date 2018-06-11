@@ -45,6 +45,14 @@ fn print_state(db: &mut marduk::datalog::Database) {
         }
         println!("call_site {} -> {}", x.call_loc, x.target_loc);
     }
+
+    for x in db.query_used_var() {
+        println!("{}", x);
+    }
+
+    for x in db.query_live_vars() {
+        println!("{}", x);
+    }
 }
 
 fn main() {

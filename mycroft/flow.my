@@ -17,5 +17,11 @@ pred_call_over@9: flow_in(dst, pts2) <- flow_out(src, pts) & call_site {call_loc
 // It's important that we use flow_in rather than flow_out here, so that the killset for calls can actually kill caller saved registers
 pred_call@10: flow_in(dst, pts2) <- flow_in(src, pts) & succ_call {src, dst} + ::flow::stack_purge
 pred_ret@9: flow_in(dst, pts2) <- flow_out(src, pts) & succ_ret {src, dst} & func {base, contains: dst} + ::flow::dyn_clear
-
-flow_xfer: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) + ::flow::xfer
+// MORE FUSE
+fxs {
+  loc: Loc,
+  cs: Constraints,
+  vars: Vars
+}
+fxs_def@6: fxs {loc, cs, vars} <- constraint(loc, cs) & kill(loc, ks) & ~live_vars{loc, vars}
+flow_xfer@7: flow_out(loc, pts2) <- flow_in(loc, pts) & constraint(loc, cs) & kill(loc, ks) & ~live_vars{loc, vars} + ::flow::xfer

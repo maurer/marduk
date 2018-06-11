@@ -19,6 +19,7 @@ mod effect;
 pub mod flow;
 pub mod fmt_str;
 pub mod interned_string;
+mod live;
 pub mod load;
 pub mod points_to;
 pub mod printers;
@@ -33,6 +34,7 @@ pub enum AliasMode {
     SteensOnly { ctx: bool },
     FlowOnly { ctx: bool },
     Both { ctx: bool },
+    LoadOnly { ctx: bool },
 }
 use AliasMode::*;
 
@@ -40,18 +42,21 @@ impl AliasMode {
     pub fn uses_steens(&self) -> bool {
         match *self {
             SteensOnly { .. } | Both { .. } => true,
-            FlowOnly { .. } => false,
+            LoadOnly { .. } | FlowOnly { .. } => false,
         }
     }
     pub fn uses_flow(&self) -> bool {
         match *self {
             FlowOnly { .. } | Both { .. } => true,
-            SteensOnly { .. } => false,
+            LoadOnly { .. } | SteensOnly { .. } => false,
         }
     }
     pub fn uses_ctx(&self) -> bool {
         match *self {
-            FlowOnly { ref ctx } | SteensOnly { ref ctx } | Both { ref ctx } => *ctx,
+            FlowOnly { ref ctx }
+            | SteensOnly { ref ctx }
+            | Both { ref ctx }
+            | LoadOnly { ref ctx } => *ctx,
         }
     }
 }

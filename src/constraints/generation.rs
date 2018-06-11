@@ -6,7 +6,7 @@ use regs::Reg;
 use std::str::FromStr;
 use var::Var;
 
-fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc) -> Vec<A>>(
+pub fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc) -> Vec<A>>(
     stmt: &Statement,
     cur_addr: &Loc,
     func_addr: &Loc,
@@ -50,13 +50,13 @@ fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc) -> Vec<A>>(
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
-enum E {
+pub enum E {
     AddrOf(Var),
     Base(Var),
     Deref(Var),
 }
 
-fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec<E> {
+pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec<E> {
     use bap::high::bil::Expression as BE;
     use num_traits::ToPrimitive;
     match *e {
@@ -229,8 +229,8 @@ fn extract_move(
                 }
                 if rhs_vars.is_empty() {
                     match lhs_evar.clone() {
-                        AddrOf(l) => out.push(Constraint::Clobber {v: l}),
-                        _ => ()
+                        AddrOf(l) => out.push(Constraint::Clobber { v: l }),
+                        _ => (),
                     }
                 }
             }
@@ -269,7 +269,7 @@ fn extract_move(
                 })
                 .collect();
             if out.is_empty() {
-                vec![Constraint::Clobber {v: lv}]
+                vec![Constraint::Clobber { v: lv }]
             } else {
                 out
             }

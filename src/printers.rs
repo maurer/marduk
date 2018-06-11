@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter, Result};
 use var::Var;
 use AliasMode;
 
-pub struct CB<'a>(pub &'a Vec<Constraint>);
+pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
 
 pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
     write!(f, "[")?;
@@ -29,6 +29,7 @@ impl Display for AliasMode {
                 AliasMode::SteensOnly { .. } => "Insensitive",
                 AliasMode::FlowOnly { .. } => "Flow sensitive",
                 AliasMode::Both { .. } => "Both",
+                AliasMode::LoadOnly { .. } => "Load",
             }
         )?;
         if self.uses_ctx() {
@@ -38,9 +39,21 @@ impl Display for AliasMode {
     }
 }
 
-impl<'a> Display for CB<'a> {
+impl<'a, T: Display> Display for CB<'a, T> {
     fn fmt(&self, f: &mut Formatter) -> Result {
         fmt_vec(f, self.0)
+    }
+}
+
+impl Display for UsedVarResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "use@{}: {}", self.loc, self.var)
+    }
+}
+
+impl Display for LiveVarsResult {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "live@{}: {}", self.loc, CB(&self.vars))
     }
 }
 
@@ -84,7 +97,7 @@ impl Display for Constraint {
             Write { ref a, ref b } => write!(f, "*{} = {}", a, b),
             Xfer { ref a, ref b } => write!(f, "*{} = *{}", a, b),
             StackLoad { ref a, ref b } => write!(f, "*{} = &{}", a, b),
-            Clobber {ref v } => write!(f, "{} = ?", v),
+            Clobber { ref v } => write!(f, "{} = ?", v),
         }
     }
 }

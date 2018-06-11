@@ -12,6 +12,7 @@ type Regs = Vec<Reg>;
 type Constraints = Vec<Constraint>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
+type Vars = Vec<Var>;
 use effect::Effect;
 use load::Loc;
 use points_to::PointsTo;
@@ -19,6 +20,10 @@ use use_def::KillSpec;
 
 use constraints::datalog as constraints;
 use context;
+use live;
+
+pub const VAR_ARG_0: Var = Var::Register { register: ARGS[0] };
+pub const VAR_ARG_1: Var = Var::Register { register: ARGS[1] };
 
 fn effect_merge(efs: &[&Effect]) -> Effect {
     let mut out = efs[0].clone();
@@ -69,6 +74,7 @@ fn union<T: Clone + Eq + Ord>(bts: &[&BTreeSet<T>]) -> BTreeSet<T> {
 mycroft_files!(
     "mycroft/schema.my",
     "mycroft/load.my",
+    "mycroft/live.my",
     "mycroft/defs.my",
     "mycroft/fmt_str.my",
     "mycroft/constraints.my",

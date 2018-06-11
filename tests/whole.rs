@@ -22,7 +22,7 @@ fn run_uaf(
     flow: bool,
 ) {
     if !flow {
-        return
+        return;
     }
     let _memlock = MEMLOCK.lock().unwrap();
     let names: Vec<_> = names

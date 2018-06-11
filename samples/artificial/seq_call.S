@@ -23,3 +23,8 @@ main:
 	ret
 	.size main, .-main
 	.type main, @function
+dummy:
+	call main
+	mov rbx, rax
+	.size dummy, .-dummy
+	.type dummy, @function

@@ -290,6 +290,19 @@ impl PointsTo {
         self.gc(|v| !v.is_dyn() && !v.other_func(&frames) || super_live.contains(&v));
     }
 
+    pub fn purge_dead(&mut self, live: &[Var]) {
+        let mut to_purge = Vec::new();
+        for key in self.inner.keys() {
+            if !live.contains(key) && !key.is_dyn() {
+                to_purge.push(key.clone());
+            }
+        }
+        for key in to_purge {
+            self.inner.remove(&key);
+        }
+        self.canonicalize();
+    }
+
     /// Finds all locations where v may have been freed.
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
         self.get(v)

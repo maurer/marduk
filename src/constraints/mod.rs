@@ -30,7 +30,7 @@ impl Constraint {
             | Write { ref a, ref b }
             | Xfer { ref a, ref b }
             | StackLoad { ref a, ref b } => (a, b),
-            | Clobber {ref v} => return v.is_stacked(),
+            | Clobber { ref v } => return v.is_stacked(),
         };
         a.is_stacked() || b.is_stacked()
     }
