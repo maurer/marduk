@@ -17,31 +17,12 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
     let mut out = Vec::new();
     for (name, tps) in juliet_tp {
         let path = format!("samples/Juliet-1.3/CWE416/individuals/{}", name);
-        let mut steens_run = marduk(&[path.clone()], AliasMode::SteensOnly { ctx: false }).unwrap();
         let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly { ctx: false }).unwrap();
 
         // Check that Steens contains all of Flow. Since Flow has all the TPs, this means Steens
         // does too. Additionally, it's a bug if Steens doesn't contain something Flow does.
 
-        let steens_set: BTreeSet<_> = steens_run
-            .db
-            .query_all_uaf()
-            .iter()
-            .map(uaf_tuple)
-            .collect();
         let flow_set: BTreeSet<_> = flow_run.db.query_all_uaf().iter().map(uaf_tuple).collect();
-        assert_eq!(flow_set.difference(&steens_set).count(), 0);
-
-        out.push(Measurement {
-            mode: AliasMode::SteensOnly { ctx: false },
-            artifact: vec![path.to_string()],
-            true_positives: *tps,
-            false_positives: steens_set.len() - tps,
-            found: steens_set.iter().cloned().collect(),
-            true_negatives: Vec::new(),
-            time: steens_run.time,
-            space: steens_run.space,
-        });
         out.push(Measurement {
             mode: AliasMode::FlowOnly { ctx: false },
             artifact: vec![path.to_string()],
@@ -95,7 +76,6 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
         .map(|x| format!("samples/whole/{}", x))
         .collect();
     [
-        AliasMode::SteensOnly { ctx: false },
         AliasMode::FlowOnly { ctx: false },
         AliasMode::FlowOnly { ctx: true },
     ].iter()
@@ -206,9 +186,5 @@ fn main() {
     println!(
         "{}",
         measure_whole_juliet(AliasMode::FlowOnly { ctx: false }, juliet_tp_sum)
-    );
-    println!(
-        "{}",
-        measure_whole_juliet(AliasMode::SteensOnly { ctx: false }, juliet_tp_sum)
     );
 }
