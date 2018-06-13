@@ -18,7 +18,7 @@ live_vars {
   vars: Vars^concat
 }
 
-
+var_used_func: used_var {loc, var} <- func_uses(reg, loc) + live::promote_reg
 var_used@4: used_var {loc, var} <- lift {loc, bil} & func {base, contains: loc} + live::used
 used_live@5: live_var {loc, var} <- used_var {loc, var}
 malloc_uses: used_var {loc, var: ~(VAR_ARG_0)} <- malloc_call {loc}

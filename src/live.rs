@@ -158,3 +158,7 @@ pub fn drop_frame(i: &LiveDropFrameIn) -> Vec<LiveDropFrameOut> {
         _ => vec![LiveDropFrameOut {}],
     }
 }
+
+pub fn promote_reg(i: &LivePromoteRegIn) -> Vec<LivePromoteRegOut> {
+    vec![LivePromoteRegOut {var: Var::Register {register: *i.reg} }]
+}
