@@ -3,7 +3,7 @@ use datalog::*;
 use load::Loc;
 use regs::Reg;
 use std::str::FromStr;
-use var::Var;
+use var::{Var, var_args};
 
 use constraints::generation::move_walk;
 
@@ -161,4 +161,38 @@ pub fn drop_frame(i: &LiveDropFrameIn) -> Vec<LiveDropFrameOut> {
 
 pub fn promote_reg(i: &LivePromoteRegIn) -> Vec<LivePromoteRegOut> {
     vec![LivePromoteRegOut {var: Var::Register {register: *i.reg} }]
+}
+
+pub fn entry_defined_promote(i: &LiveEntryDefinedPromoteIn) -> Vec<LiveEntryDefinedPromoteOut> {
+    vec![LiveEntryDefinedPromoteOut {vars: vec![Var::Register {register: *i.register}]}]
+}
+
+pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
+    use points_to::PointsTo;
+    let mut undefs = Vec::new();
+    trace!("undef_live candidate: {}", i.loc);
+    let args = var_args();
+    for var in i.live {
+        if !i.defined.contains(var) && args.contains(var) {
+            undefs.push(var.clone());
+        }
+    }
+    if undefs.is_empty() {
+        trace!("All values defined, skipping");
+        return Vec::new()
+    }
+    trace!("Some values undefined:");
+    for var in &undefs {
+        trace!("{}", var);
+    }
+    let mut pts = PointsTo::new(i.loc.clone());
+    let region = Var::Alloc {site: i.loc.clone(), stale: false};
+    pts.add_alias(region.clone(), region.clone());
+    for var in undefs {
+        pts.add_alias(var, region.clone());
+    }
+    trace!("Generated self-referential region and assigned.");
+    vec![LiveUndefLiveOut {
+        pts: pts
+    }]
 }

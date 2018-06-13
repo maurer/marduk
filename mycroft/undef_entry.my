@@ -1,0 +1,10 @@
+// If at an entry point, a variable is live, and there does not exist a reaching definition for it, generate a PTS0
+
+entry_defined {
+  loc: Loc,
+  vars: Vars^concat
+}
+
+entry_defined_base: entry_defined {loc, vars: ~(Vec::new())} <- sym {loc}
+entry_defined_promote@5: entry_defined {loc, vars} <- reaching {register, reached: loc} & sym {loc} + live::entry_defined_promote
+entry_undef_live@6: flow_in(loc, pts) <- ~entry_defined {loc, vars: defined} & ~live_vars {loc, vars: live} + live::undef_live

@@ -69,5 +69,9 @@ fn isisd() {
     // False positive rate here is due to functions passign an adj in to isis_adj_state_change
     // which comes back freed. However, control flow + values in the surrounding code actually
     // guard against continued usage in this case.
-    run_uaf(&["isisd.so"], bugs.as_slice(), Some(101));
+    //
+    // We're getting more false positives now due to turning on the "undefined variables are
+    // self-referential" code. Uncalled functions are now potentially buggy as opposed to
+    // automatically clean.
+    run_uaf(&["isisd.so"], bugs.as_slice(), Some(281));
 }

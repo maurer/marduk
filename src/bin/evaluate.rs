@@ -115,7 +115,7 @@ const LIBARCHIVE: Case = Case {
 
 const SHADOWSOCKS: Case = Case {
     names: &["ss-server"],
-    expected: &[(0x411336, 0x412b57), (0x411336, 0x412b5d)],
+    expected: &[(0x410f16, 0x412c97), (0x410f16, 0x412c90)],
 };
 
 const ISISD: Case = Case {
@@ -126,9 +126,7 @@ const ISISD: Case = Case {
 const OSPF6D: Case = Case {
     names: &["ospf6d"],
     expected: &[
-        (0x42de10, 0x436c59),
-        (0x42de10, 0x437cf1),
-        (0x42de10, 0x437d05),
+        (0x42ed00, 0x437506),
     ],
 };
 

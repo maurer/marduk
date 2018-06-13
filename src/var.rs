@@ -1,5 +1,5 @@
 use load::Loc;
-use regs::Reg;
+use regs::{Reg, ARGS};
 
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {
@@ -8,6 +8,10 @@ pub enum Var {
     Temp { serial: u32 },
     Alloc { site: Loc, stale: bool },
     Freed { site: Loc },
+}
+
+pub fn var_args() -> Vec<Var> {
+    ARGS.iter().map(|reg| Var::Register {register: *reg}).collect()
 }
 
 impl Var {

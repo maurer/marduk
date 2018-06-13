@@ -76,6 +76,7 @@ mycroft_files!(
     "mycroft/load.my",
     "mycroft/live.my",
     "mycroft/defs.my",
+    "mycroft/undef_entry.my",
     "mycroft/fmt_str.my",
     "mycroft/constraints.my",
     "mycroft/flow.my",
