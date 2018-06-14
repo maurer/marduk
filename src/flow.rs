@@ -125,3 +125,9 @@ pub fn count(i: &FlowCountIn) -> Vec<FlowCountOut> {
         count: i.preds.len(),
     }]
 }
+
+pub fn empty_pts(i: &FlowEmptyPtsIn) -> Vec<FlowEmptyPtsOut> {
+    vec![FlowEmptyPtsOut {
+        pts: PointsTo::new(i.loc.clone())
+    }]
+}

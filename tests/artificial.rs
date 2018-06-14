@@ -78,7 +78,7 @@ fn remalloc() {
 fn ll() {
     // If we add field sensitivity to the flow, this should drop a bit, but still not zero
     // Since called from main, double contexts
-    run_uaf(&["ll"], 8, 6, 12);
+    run_uaf(&["ll"], 8, 8, 16);
 }
 
 #[test]
@@ -101,6 +101,11 @@ fn restale() {
 #[test]
 fn recurse() {
     run_uaf(&["recurse"], 1, 0, 0);
+}
+
+#[test]
+fn undef_stack() {
+    run_uaf(&["undef_stack"], 1, 1, 1);
 }
 
 #[test]

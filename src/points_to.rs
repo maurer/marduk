@@ -293,7 +293,7 @@ impl PointsTo {
     pub fn purge_dead(&mut self, live: &[Var]) {
         let mut to_purge = Vec::new();
         for key in self.inner.keys() {
-            if !live.contains(key) && !key.is_dyn() {
+            if !live.contains(key) && !key.is_dyn() && !self.super_live.contains(key) {
                 to_purge.push(key.clone());
             }
         }
@@ -322,6 +322,11 @@ impl ::std::fmt::Display for PointsTo {
         write!(f, "frames: ")?;
         for frame in &self.frames {
             write!(f, "{}, ", frame)?;
+        }
+        writeln!(f)?;
+        write!(f, "super_live: ")?;
+        for live in &self.super_live {
+            write!(f, "{}, ", live)?;
         }
         writeln!(f)?;
         for (k, v) in &self.inner {
