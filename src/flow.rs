@@ -83,6 +83,8 @@ pub fn is_freed(i: &FlowIsFreedIn) -> Vec<FlowIsFreedOut> {
 
 pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     let mut pts = i.pts.clone();
+    trace!("stack_purge@{}->{}", i.src, i.dst);
+    trace!("pre: {}", pts);
     pts.clear_live();
     pts.clear_frames();
     pts.only_regs(ARGS);
@@ -97,6 +99,7 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
         .collect();
     pts.add_live(new_live);
     pts.add_frame(i.dst.clone());
+    trace!("post: {}", pts);
     vec![FlowStackPurgeOut { pts2: pts }]
 }
 
