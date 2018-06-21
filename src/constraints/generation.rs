@@ -1,4 +1,5 @@
-use super::Constraint;
+use std::collections::BTreeSet;
+use super::{Constraint, VarPath};
 use bap::high::bil;
 use bap::high::bil::Statement;
 use load::Loc;
@@ -51,9 +52,8 @@ pub fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc) -> Vec<A
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum E {
-    AddrOf(Var),
-    Base(Var),
-    Deref(Var),
+    VP(VarPath),
+    Const(u64),
 }
 
 pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec<E> {
@@ -65,15 +65,12 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec
             if bv.type_ == bil::Type::Immediate(1) {
                 Vec::new()
             } else if bv.name == "RSP" {
-                vec![E::AddrOf(Var::StackSlot {
-                    func_addr: func_addr.clone(),
-                    offset: 0,
-                })]
+                vec![E::VP(VarPath::stack_addr(func_addr, 0))]
             } else {
                 match Reg::from_str(bv.name.as_str()) {
-                    Ok(reg) => vec![E::Base(Var::Register { register: reg })],
+                    Ok(reg) => vec![E::VP(VarPath::reg(&reg))],
                     Err(_) => if bv.tmp {
-                        vec![E::Base(Var::temp(bv.name.as_str()))]
+                        vec![E::VP(VarPath::temp(bv.name.as_str()))]
                     } else {
                         error!("Unrecognized variable name: {:?}", bv.name);
                         Vec::new()
@@ -81,14 +78,15 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec
                 }
             }
         }
-        // Disabled for speed, enable for global tracking
-        BE::Const(_) => Vec::new(),
+        BE::Const(ref e) => vec![E::Const(e.to_u64().unwrap())],
         BE::Load { ref index, .. } => extract_expr(index, cur_addr, func_addr)
             .into_iter()
-            .map(|e| match e {
-                E::Base(v) => E::Deref(v),
-                E::AddrOf(v) => E::Base(v),
-                _ => panic!("doubly nested load"),
+            .flat_map(|e| match e {
+                E::VP(v) => vec![E::VP(v.deref())],
+                E::Const(_) => {
+                    trace!("constant dereference");
+                    Vec::new()
+                }
             })
             .collect(),
         BE::Store { .. } => panic!("Extracting on memory"),
@@ -98,38 +96,61 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc) -> Vec
             ref rhs,
             op,
         } => {
-            let mut out = extract_expr(lhs, cur_addr, func_addr);
-            out.extend(extract_expr(rhs, cur_addr, func_addr));
             if op == bil::BinOp::Add {
+            // Check for stack-relative addressing
                 if let BE::Var(ref lv) = **lhs {
                     if lv.name == "RSP" {
                         match **rhs {
-                            BE::Const(ref bv) => vec![E::AddrOf(Var::StackSlot {
-                                func_addr: func_addr.clone(),
-                                offset: bv.to_u64().unwrap() as usize,
-                            })],
-                            _ => out,
+                            BE::Const(ref bv) => 
+                                return vec![E::VP(VarPath::stack_addr(func_addr, bv.to_usize().unwrap()))],
+                            _ => (),
                         }
-                    } else {
-                        out
                     }
                 } else if let BE::Var(ref rv) = **rhs {
                     if rv.name == "RSP" {
                         match **lhs {
-                            BE::Const(ref bv) => vec![E::AddrOf(Var::StackSlot {
-                                func_addr: func_addr.clone(),
-                                offset: bv.to_u64().unwrap() as usize,
-                            })],
-                            _ => out,
+                            BE::Const(ref bv) =>
+                                return vec![E::VP(VarPath::stack_addr(func_addr, bv.to_usize().unwrap()))],
+                            _ => (),
                         }
-                    } else {
-                        out
                     }
-                } else {
-                    out
                 }
+            // Since we don't have stack relative addressing, it's time to do field math
+                let lhe = extract_expr(lhs, cur_addr, func_addr);
+                let rhe = extract_expr(rhs, cur_addr, func_addr);
+                let mut out = Vec::new();
+                for e0 in &lhe {
+                    for e1 in &rhe {
+                        match (e0, e1) {
+                            (&E::Const(ref k), &E::VP(ref v)) | (&E::VP(ref v), &E::Const(ref k)) => out.push(E::VP(v.plus(*k))),
+                            // TODO this is a little iffy, doesn't do bitwidth right
+                            // Unlikely to be a problem with pointers though
+                            (&E::Const(ref k), &E::Const(ref k2)) => out.push(E::Const(*k + *k2)),
+                            (&E::VP(ref v), &E::VP(ref v2)) => {
+                                out.push(E::VP(v.unknown()));
+                                out.push(E::VP(v2.unknown()));
+                            }
+                        }
+                    }
+                }
+                return out
             } else {
-                out
+                // Some kind of unknown computation is happening on the pointers. It might be
+                // subtraction, it might be some weird oring/anding, in any case, we no longer know
+                // the offset.
+                // Just enumerate everything on the left, everything on the right, set their offset
+                // to None for "who knows", and return. This is equivalent to the old field
+                // insensitive code
+                let mut used: Vec<E> = extract_expr(lhs, cur_addr, func_addr);
+                used.extend(extract_expr(rhs, cur_addr, func_addr));
+                let mut out = BTreeSet::new();
+                for e in used {
+                    match e {
+                        E::VP(v) => {out.insert(E::VP(v.unknown())); ()}
+                        E::Const(_) => (),
+                    }
+                }
+                return out.into_iter().collect()
             }
         }
         BE::IfThenElse {
@@ -170,13 +191,15 @@ fn extract_move_var(
             let rhs_vars = extract_expr(rhs, cur_addr, func_addr);
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
-                if let Base(l) = lhs_evar {
-                    out.push(l)
+                if let VP(l) = lhs_evar {
+                    out.push(l.base)
                 }
             }
             for rhs_evar in rhs_vars {
-                if let Deref(v) = rhs_evar {
-                    out.push(v)
+                if let VP(v) = rhs_evar {
+                    if v.derefs() > 2 {
+                        out.push(v.base)
+                    }
                 }
             }
             out
@@ -184,8 +207,11 @@ fn extract_move_var(
         bil::Type::Immediate(_) => {
             let mut out = Vec::new();
             for eval in extract_expr(rhs, cur_addr, func_addr) {
-                if let E::Deref(v) = eval {
-                    out.push(v)
+                match eval {
+                    E::VP(v) => if v.derefs() > 2 {
+                        out.push(v.base)
+                    }
+                    E::Const(_) => ()
                 }
             }
             out
@@ -201,7 +227,6 @@ fn extract_move(
 ) -> Vec<Constraint> {
     match lhs.type_ {
         bil::Type::Memory { .. } => {
-            use self::E::*;
             let (index, value) = if let bil::Expression::Store {
                 ref index,
                 ref value,
@@ -217,20 +242,23 @@ fn extract_move(
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
                 for rhs_evar in rhs_vars.clone() {
-                    out.extend(match (lhs_evar.clone(), rhs_evar) {
-                        (AddrOf(l), AddrOf(r)) => vec![Constraint::AddrOf { a: l, b: r }],
-                        (AddrOf(l), Base(r)) => vec![Constraint::Asgn { a: l, b: r }],
-                        (AddrOf(l), Deref(r)) => vec![Constraint::Deref { a: l, b: r }],
-                        (Deref(_), _) => panic!("**a = x ?"),
-                        (Base(l), AddrOf(r)) => vec![Constraint::StackLoad { a: l, b: r }],
-                        (Base(l), Base(r)) => vec![Constraint::Write { a: l, b: r }],
-                        (Base(l), Deref(r)) => vec![Constraint::Xfer { a: l, b: r }],
-                    })
-                }
-                if rhs_vars.is_empty() {
-                    match lhs_evar.clone() {
-                        AddrOf(l) => out.push(Constraint::Clobber { v: l }),
-                        _ => (),
+                    match &lhs_evar {
+                        E::Const(_) => warn!("Ignoring write to constant address"),
+                        E::VP(ref lhs) => {
+                            if lhs.derefs() > 1 {
+                                warn!("Attempting to do a nested store");
+                            }
+                            match rhs_evar {
+                                // We're not dealing with clobbers at the moment
+                                E::Const(_) => continue,
+                                E::VP(rhs) => {
+                                    if rhs.derefs() > 2 {
+                                        warn!("Attempting to do nested load");
+                                    }
+                                    out.push(Constraint {lhs: lhs.deref(), rhs: rhs});
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -254,25 +282,14 @@ fn extract_move(
             let out: Vec<_> = extract_expr(rhs, cur_addr, func_addr)
                 .into_iter()
                 .flat_map(|eval| match eval {
-                    E::AddrOf(var) => vec![Constraint::AddrOf {
-                        a: lv.clone(),
-                        b: var,
+                    E::VP(vp) => vec![Constraint {
+                        lhs: VarPath::var(lv.clone()),
+                        rhs: vp,
                     }],
-                    E::Base(var) => vec![Constraint::Asgn {
-                        a: lv.clone(),
-                        b: var,
-                    }],
-                    E::Deref(var) => vec![Constraint::Deref {
-                        a: lv.clone(),
-                        b: var,
-                    }],
+                    E::Const(_) => Vec::new(),
                 })
                 .collect();
-            if out.is_empty() {
-                vec![Constraint::Clobber { v: lv }]
-            } else {
-                out
-            }
+            out
         }
     }
 }

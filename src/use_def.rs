@@ -35,7 +35,7 @@ impl KillSpec {
 
 // Datalog functions
 
-pub fn killspec_regs(i: &UseDefKillspecRegsIn) -> Vec<UseDefKillspecRegsOut> {
+pub fn killspec_regs(_i: &UseDefKillspecRegsIn) -> Vec<UseDefKillspecRegsOut> {
     vec![UseDefKillspecRegsOut {
         ks: KillSpec::empty(),
     }]

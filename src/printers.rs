@@ -1,10 +1,11 @@
-use constraints::Constraint;
+use constraints::{Constraint, VarPath};
 use datalog::*;
 use interned_string::InternedString;
 use load::Loc;
 use regs::Reg;
 use std::fmt::{Display, Formatter, Result};
 use var::Var;
+use points_to::VarRef;
 use AliasMode;
 
 pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
@@ -63,6 +64,16 @@ impl Display for Reg {
     }
 }
 
+impl Display for VarRef {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        write!(f, "{}", self.var)?;
+        if let Some(ref offset) = self.offset {
+            write!(f, "+{}", offset)?;
+        }
+        Ok(())
+    }
+}
+
 impl Display for Var {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match *self {
@@ -87,18 +98,16 @@ impl Display for Var {
     }
 }
 
+impl Display for VarPath {
+    fn fmt(&self, f: &mut Formatter) -> Result {
+        // TODO proper display method
+        write!(f, "{:?}", self)
+    }
+}
+
 impl Display for Constraint {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        use constraints::Constraint::*;
-        match *self {
-            AddrOf { ref a, ref b } => write!(f, "{} = &{}", a, b),
-            Asgn { ref a, ref b } => write!(f, "{} = {}", a, b),
-            Deref { ref a, ref b } => write!(f, "{} = *{}", a, b),
-            Write { ref a, ref b } => write!(f, "*{} = {}", a, b),
-            Xfer { ref a, ref b } => write!(f, "*{} = *{}", a, b),
-            StackLoad { ref a, ref b } => write!(f, "*{} = &{}", a, b),
-            Clobber { ref v } => write!(f, "{} = ?", v),
-        }
+        write!(f, "{} = {}", self.lhs, self.rhs)
     }
 }
 

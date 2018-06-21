@@ -1,7 +1,7 @@
 uaf(Var, Loc, Loc)
 deref_var(Var, Loc)
 
-read_vars: deref_var(v, loc) <- lift {loc, bil} & func {base, contains: loc} + ::uaf::reads_vars
+read_vars: deref_var(v, loc) <- lift {loc, bil, is_call: ~false} & func {base, contains: loc} + ::uaf::reads_vars
 use_vars: deref_var(v, loc) <- func_uses(r, loc) + ::uaf::use_vars
 
 uaf_flow(Var, Loc, Loc)

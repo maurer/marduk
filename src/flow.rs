@@ -1,57 +1,89 @@
-use constraints::Constraint;
+use constraints::{VarPath, Constraint};
 use datalog::*;
 use points_to::PointsTo;
 use regs::ARGS;
 use std::collections::BTreeSet;
 use var::Var;
+use points_to::VarRef;
 
+fn off_plus(base: &mut Option<u64>, off: Option<u64>) {
+    match off {
+        Some(off_val) => {base.as_mut().map(|base_val| *base_val += off_val); ()}
+        None => *base = None
+    }
+}
+
+fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
+    // We can't assign to an address
+    assert!(vp.derefs() > 1);
+    // If derefs = 2, that means we're in base case e.g. writing to a register or variable directly
+    if vp.derefs() == 2 {
+        assert!(vp.offsets.last().unwrap().unwrap() == 0);
+        // We're on the left here, which means if our last deref is nonzero, this is an address
+        // You can't write (*a + b) = c;, which is what a nonzero value would indicate here.
+        return vec![VarRef {
+            var: vp.base,
+            offset: vp.offsets[0]
+        }]
+    } else {
+        // If derefs > 2, that means we need to query the pts and recurse
+        let (offset_0, offsets_rest) = vp.offsets.split_at(1);
+        let vr0 = VarRef {
+            var: vp.base,
+            offset: offset_0[0],
+        };
+        pts.get(&vr0).into_iter().flat_map(|vr| {
+            let mut offsets = offsets_rest.to_vec();
+            off_plus(&mut offsets[0], vr.offset);
+            let vpp = VarPath {
+                base: vr.var,
+                offsets: offsets
+            };
+            lhs_resolve(pts, vpp)
+        }).collect()
+    }
+}
+
+fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
+    // If derefs = 1, we're in the base case - just talking about the variable plus an offset, it
+    // fits in a VarRef
+    if vp.derefs() == 1 {
+        return vec![VarRef {
+            var: vp.base,
+            offset: vp.offsets[0]
+        }]
+    } else {
+        let (offset_0, offsets_rest) = vp.offsets.split_at(1);
+        let vr0 = VarRef {
+            var: vp.base,
+            offset: offset_0[0],
+        };
+        pts.get(&vr0).into_iter().flat_map(|vr| {
+            let mut offsets = offsets_rest.to_vec();
+            off_plus(&mut offsets[0], vr.offset);
+            let vpp = VarPath {
+                base: vr.var,
+                offsets: offsets
+            };
+            rhs_resolve(pts, vpp)
+        }).collect()
+    }
+}
+       
 fn apply(pts: &mut PointsTo, c: &Constraint) {
-    match *c {
-        // *a = &b
-        Constraint::StackLoad { ref a, ref b } => for pt in pts.get(a) {
-            pts.add_alias(pt, b.clone());
-        },
-        // a = &b;
-        Constraint::AddrOf { ref a, ref b } => {
-            if let Var::Alloc { ref site, .. } = *b {
-                pts.make_stale(site);
-            }
-            pts.replace_alias(a.clone(), b.clone());
-        }
-        // a = b;
-        Constraint::Asgn { ref a, ref b } => {
-            let ptb = pts.get(b);
-            pts.set_alias(a.clone(), ptb);
-        }
-        // a = *b;
-        Constraint::Deref { ref a, ref b } => {
-            let ptb = pts
-                .get(b)
-                .iter()
-                .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
-            pts.set_alias(a.clone(), ptb);
-        }
-        // *a = b;
-        Constraint::Write { ref a, ref b } => {
-            let pta = pts.get(a);
-            let ptb = pts.get(b);
-            for pt in pta {
-                pts.extend_alias(pt, ptb.clone());
-            }
-        }
-        // *a = *b;
-        Constraint::Xfer { ref a, ref b } => {
-            let pta = pts.get(a);
-            let ptb = pts
-                .get(b)
-                .iter()
-                .fold(BTreeSet::new(), |bs, ptb| &bs | &pts.get(ptb));
-            for pt in pta {
-                pts.extend_alias(pt, ptb.clone());
-            }
-        }
-        // a = const
-        Constraint::Clobber { ref v } => pts.clobber(v),
+    trace!("Applying {}", c);
+    if let Var::Alloc {ref site, ..} = c.rhs.base {
+        pts.make_stale(site);
+    }
+    let rhses: BTreeSet<_> = rhs_resolve(pts, c.rhs.clone()).into_iter().collect();
+    trace!("RHS resolution:");
+    for rhs in &rhses {
+        trace!("{}", rhs);
+    }
+    trace!("LHS resolution:");
+    for lhs in lhs_resolve(pts, c.lhs.clone()) {
+        trace!("{}", lhs);
+        pts.set_alias(lhs, rhses.clone());
     }
 }
 

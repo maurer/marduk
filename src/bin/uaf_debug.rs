@@ -53,6 +53,10 @@ fn print_state(db: &mut marduk::datalog::Database) {
     for x in db.query_live_vars() {
         println!("{}", x);
     }
+
+    for x in db.query_constraints() {
+        println!("c: {}: {}", x.loc, marduk::printers::CB(&x.c));
+    }
 }
 
 fn main() {

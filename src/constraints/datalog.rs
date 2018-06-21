@@ -1,18 +1,13 @@
 use super::generation;
-use super::Constraint;
+use super::{Constraint, VarPath};
 use datalog::*;
-use regs::{ARGS, CALLER_SAVED, RET_REG};
+use regs::{ARGS, RET_REG};
 use var::Var;
 
 pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
     vec![ConstraintsGenConstraintsOut {
         c: if i.is_call {
-            CALLER_SAVED
-                .iter()
-                .map(|reg| Constraint::Clobber {
-                    v: Var::Register { register: *reg },
-                })
-                .collect()
+            Vec::new()
         } else {
             generation::extract_constraints(i.bil, i.loc, i.base)
         },
@@ -21,12 +16,15 @@ pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenCon
 
 pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMallocConstraintOut> {
     vec![ConstraintsMallocConstraintOut {
-        c: vec![Constraint::AddrOf {
-            a: Var::Register { register: RET_REG },
-            b: Var::Alloc {
-                site: i.loc.clone(),
-                stale: false,
-            },
+        c: vec![Constraint {
+            lhs: VarPath::reg(&RET_REG),
+            rhs: VarPath {
+                base: Var::Alloc {
+                    site: i.loc.clone(),
+                    stale: false,
+                },
+                offsets: vec![Some(0)],
+            }
         }],
     }]
 }
@@ -35,13 +33,14 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
     vec![ConstraintsFreeConstraintOut {
         c: i.args
             .iter()
-            .map(|arg_n| Constraint::StackLoad {
-                a: Var::Register {
-                    register: ARGS[*arg_n],
-                },
-                b: Var::Freed {
-                    site: i.loc.clone(),
-                },
+            .map(|arg_n| Constraint {
+                lhs: VarPath::reg(&ARGS[*arg_n]).unknown().deref(),
+                rhs: VarPath {
+                    base: Var::Freed {
+                        site: i.loc.clone(),
+                    },
+                    offsets: vec![Some(0)],
+                }
             })
             .collect(),
     }]

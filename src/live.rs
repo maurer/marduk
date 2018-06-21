@@ -1,9 +1,11 @@
+use std::collections::BTreeSet;
 use bap::high::bil;
 use datalog::*;
 use load::Loc;
 use regs::Reg;
 use std::str::FromStr;
 use var::{Var, var_args};
+use points_to::VarRef;
 
 use constraints::generation::move_walk;
 
@@ -33,7 +35,9 @@ fn defined_walk(
             };
             for evar in extract_expr(index, cur_addr, func_addr) {
                 match evar {
-                    E::AddrOf(v) => out.push(v),
+                    E::VP(v) => if v.derefs() == 1 {
+                        out.push(v.base)
+                    },
                     _ => (),
                 }
             }
@@ -74,16 +78,16 @@ fn used_walk(
             };
             for evar in extract_expr(index, cur_addr, func_addr) {
                 match evar {
-                    E::Base(v) | E::Deref(v) => if !v.is_temp() {
-                        out.push(v)
+                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                        out.push(v.base)
                     },
                     _ => (),
                 }
             }
             for evar in extract_expr(value, cur_addr, func_addr) {
                 match evar {
-                    E::Base(v) | E::Deref(v) => if !v.is_temp() {
-                        out.push(v)
+                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                        out.push(v.base)
                     },
                     _ => (),
                 }
@@ -96,8 +100,8 @@ fn used_walk(
             }
             for evar in extract_expr(rhs, cur_addr, func_addr) {
                 match evar {
-                    E::Base(v) | E::Deref(v) => if !v.is_temp() {
-                        out.push(v)
+                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                        out.push(v.base)
                     },
                     _ => (),
                 }
@@ -186,10 +190,15 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
         trace!("{}", var);
     }
     let mut pts = PointsTo::new(i.loc.clone());
-    let region = Var::Alloc {site: i.loc.clone(), stale: false};
-    pts.add_alias(region.clone(), region.clone());
+    let region = VarRef {
+        var: Var::Alloc {site: i.loc.clone(), stale: false},
+        offset: None
+    };
+    let mut loop_set = BTreeSet::new();
+    loop_set.insert(region.clone());
+    pts.set_alias(region.clone(), loop_set.clone());
     for var in undefs {
-        pts.add_alias(var, region.clone());
+        pts.set_alias(VarRef {var: var, offset: None}, loop_set.clone());
     }
     trace!("Generated self-referential region and assigned.");
     vec![LiveUndefLiveOut {

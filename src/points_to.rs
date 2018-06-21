@@ -7,10 +7,158 @@ use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
 use var::Var;
 
+#[derive(Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
+pub struct VarRef {
+    pub var: Var,
+    pub offset: Option<u64>
+}
+
+impl VarRef {
+    pub fn is_freed(&self) -> bool {
+        self.var.is_freed()
+    }
+}
+
+pub type VarSet = BTreeSet<VarRef>;
+
+#[derive(Default, Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
+pub struct FieldMap {
+    unbounded: VarSet,
+    offsets: BTreeMap<u64, VarSet>,
+    ub_write: bool,
+}
+
+// Currently, we ignore partial reads/writes
+// TODO: Document in paper that construction of pointers via means other than arithmetic are
+// not dealt with.
+impl FieldMap {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn pt_to(&self) -> BTreeSet<Var> {
+        let mut out: BTreeSet<Var> = self.unbounded.iter().map(|v| v.var.clone()).collect();
+        for vs in self.offsets.values() {
+            out.extend(vs.iter().map(|v| v.var.clone()));
+        }
+        out
+    }
+
+    fn force_mut(&mut self, offset: u64) -> &mut BTreeSet<VarRef> {
+        // If there wasn't an entry for it before, initialize it with the writes which could have
+        // gone anywhere.
+        //
+        // We'll only need this function if we start doing nondestructive updates to precise fields
+        // This is possible (e.g. with an ite or cmov) but not yet generated in constraints
+        let ub = &self.unbounded;
+        self.offsets.entry(offset).or_insert_with(|| ub.clone())
+    }
+
+    pub fn merge(&mut self, other: &Self) {
+        self.unbounded.extend(other.unbounded.iter().cloned());
+        for (k, v) in other.offsets.iter() {
+            let mut do_insert = false; // Bool to get around borrowck
+            if let Some(our_v) = self.offsets.get_mut(k) {
+                our_v.extend(v.iter().cloned());
+            } else {
+                do_insert = true;
+            }
+            if do_insert {
+                self.offsets.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.unbounded.is_empty()
+    }
+
+    pub fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
+        let unbounded_remove: Vec<_> = self.unbounded.iter().filter(|vr| f(&vr.var)).cloned().collect();
+        for vr in unbounded_remove {
+            self.unbounded.remove(&vr);
+        }
+        for vs in self.offsets.values_mut() {
+            let to_remove: Vec<_> = vs.iter().filter(|vr| f(&vr.var)).cloned().collect();
+            for vr in to_remove {
+                vs.remove(&vr);
+            }
+        }
+    }
+
+    fn precise(&self, u_offset: Option<u64>) -> bool {
+        let offset = if let Some(offset) = u_offset {
+            offset
+        } else {
+            // If it's an unbounded write, we can't clobber anything
+            return false;
+        };
+
+        // If an unbounded write has occured, we can never be precise
+        if self.ub_write {
+            return false;
+        }
+
+        // If the offsets table is empty, and the unbounded hasn't been written to,
+        // everything is empty already, and we don't care whether we think it's imprecise.
+        // We return false because it'll be less work
+        if self.offsets.is_empty() {
+            return false;
+        }
+
+        // If we have more than one address written to, overwriting ub won't be precise.
+        if self.offsets.len() > 1 {
+            return false;
+        }
+
+        // If the address is not in the offsets already, we're adding a second so it's imprecise
+        if !self.offsets.contains_key(&offset) {
+            return false;
+        }
+
+        // We're precise!
+        true
+    }
+        
+
+    pub fn write(&mut self, u_offset: Option<u64>, val: VarSet) {
+        // If this is register-like (only accessed through one, specific address)
+        if self.precise(u_offset) {
+            //Reset the unbounded set before extending it, since we know the unbounded data only
+            //came from the address we now overwrite.
+            self.unbounded.clear();
+        }
+        
+        self.unbounded.extend(val.clone());
+
+        if let Some(offset) = u_offset {
+            // Destructive update
+            self.offsets.insert(offset, val);
+        } else {
+            self.ub_write = true;
+            // We don't understand where the write is, nondestructive updates for everyone
+            for vs in self.offsets.values_mut() {
+                vs.extend(val.clone());
+            }
+        }
+    }
+
+    pub fn read(&self, u_offset: Option<u64>) -> &VarSet {
+        if let Some(offset) = u_offset {
+            match self.offsets.get(&offset) {
+                None => &self.unbounded,
+                Some(ref vs) => vs
+            }
+        } else {
+            &self.unbounded
+        }
+    }
+}
+
 /// PointsTo manages information about what a given variable may point to
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, Default)]
 pub struct PointsTo {
-    inner: BTreeMap<Var, BTreeSet<Var>>,
+    inner: BTreeMap<Var, FieldMap>,
     super_live: BTreeSet<Var>,
     frames: BTreeSet<Loc>,
 }
@@ -21,17 +169,6 @@ impl PointsTo {
         let mut base = Self::default();
         base.add_frame(frame);
         base
-    }
-
-    /// Iterates over the underlying map.
-    ///
-    /// Do not depend on this iterator type not changing, it's only like this because rust's type
-    /// system makes it extremely cumbersome to return an abstract iterator.
-    ///
-    /// Generally, you should prefer to add a method to PointsTo rather than using the iterator
-    /// unless it is really fundamentally iteration.
-    pub fn iter(&self) -> btree_map::Iter<Var, BTreeSet<Var>> {
-        self.inner.iter()
     }
 
     /// Filters register definition based on a whitelist
@@ -66,17 +203,28 @@ impl PointsTo {
             self.inner.insert(stale.clone(), pt.clone());
             self.inner.insert(fresh.clone(), pt);
         }
-        for pt in self.inner.values_mut() {
-            *pt = pt
-                .iter()
-                .flat_map(|v| {
-                    if v == &fresh {
-                        vec![stale.clone(), fresh.clone()]
-                    } else {
-                        vec![v.clone()]
+        for fm in self.inner.values_mut() {
+            let mut u_new = Vec::new();
+            for vr in fm.unbounded.iter() {
+                if vr.var == fresh {
+                    let mut vr_new = vr.clone();
+                    vr_new.var = stale.clone();
+                    u_new.push(vr_new);
+                }
+            }
+            fm.unbounded.extend(u_new);
+
+            for vs in fm.offsets.values_mut() {
+                let mut o_new = Vec::new();
+                for vr in vs.iter() {
+                    if vr.var == fresh {
+                        let mut vr_new = vr.clone();
+                        vr_new.var = stale.clone();
+                        o_new.push(vr_new);
                     }
-                })
-                .collect();
+                }
+                vs.extend(o_new);
+            }
         }
     }
 
@@ -95,36 +243,59 @@ impl PointsTo {
         if let Some(pt) = self.inner.remove(&fresh) {
             self.inner.insert(stale.clone(), pt);
         }
-        for pt in self.inner.values_mut() {
-            *pt = pt
-                .iter()
-                .map(|v| {
-                    if v == &fresh {
-                        stale.clone()
-                    } else {
-                        v.clone()
+
+        for fm in self.inner.values_mut() {
+            let mut u_new = Vec::new();
+            let mut u_old = Vec::new();
+            for vr in fm.unbounded.iter() {
+                if vr.var == fresh {
+                    let mut vr_new = vr.clone();
+                    vr_new.var = stale.clone();
+                    u_new.push(vr_new);
+                    u_old.push(vr.clone());
+                }
+            }
+            for vr in u_old {
+                fm.unbounded.remove(&vr);
+            }
+            fm.unbounded.extend(u_new);
+
+            for vs in fm.offsets.values_mut() {
+                let mut o_new = Vec::new();
+                let mut o_old = Vec::new();
+                for vr in vs.iter() {
+                    if vr.var == fresh {
+                        let mut vr_new = vr.clone();
+                        vr_new.var = stale.clone();
+                        o_new.push(vr_new);
+                        o_old.push(vr.clone());
                     }
-                })
-                .collect();
+                }
+                for vr in o_old {
+                    vs.remove(&vr);
+                }
+                vs.extend(o_new);
+            }
         }
     }
 
     /// Gets the set of what a variable may point to, returning an empty set if unmapped, including
     /// potential free references
     // I want it to return the empty set when it finds no element, so it can't return a reference.
-    fn get_all(&self, v: &Var) -> BTreeSet<Var> {
-        match self.inner.get(v) {
-            Some(k) => k.clone(),
+    fn get_all(&self, v: &VarRef) -> VarSet {
+        match self.inner.get(&v.var) {
+            Some(k) => k.read(v.offset).clone(),
             None => BTreeSet::new(),
         }
     }
 
     /// Gets the set of what a variable may point to, not including any free references
-    pub fn get(&self, v: &Var) -> BTreeSet<Var> {
-        match self.inner.get(v) {
-            Some(k) => k.iter().filter(|x| !x.is_freed()).cloned().collect(),
-            None => BTreeSet::new(),
-        }
+    pub fn get(&self, v: &VarRef) -> VarSet {
+        self.get_all(v).iter().filter(|x| !x.is_freed()).cloned().collect()
+    }
+
+    pub fn get_var(&self, v: &Var) -> FieldMap {
+        self.inner.get(v).unwrap_or(&FieldMap::new()).clone()
     }
 
     /// Updates a points-to set with information from another, assuming both represent valid
@@ -133,7 +304,7 @@ impl PointsTo {
         for (k, v) in &other.inner {
             match self.inner.entry(k.clone()) {
                 btree_map::Entry::Occupied(mut o) => {
-                    o.get_mut().append(&mut v.clone());
+                    o.get_mut().merge(&v);
                 }
                 btree_map::Entry::Vacant(e) => {
                     e.insert(v.clone());
@@ -154,10 +325,7 @@ impl PointsTo {
                 if f(k) {
                     keys.push(k.clone())
                 } else {
-                    let vs: Vec<Var> = v.iter().cloned().filter(&f).collect();
-                    for vi in vs {
-                        v.remove(&vi);
-                    }
+                    v.remove_predicate(&f);
                     if v.is_empty() {
                         keys.push(k.clone())
                     }
@@ -171,37 +339,19 @@ impl PointsTo {
 
     // Helper function which gets us a mutable reference to what's pointed to by the provided
     // variable, creating the entry if needed.
-    fn force_mut(&mut self, src: Var) -> &mut BTreeSet<Var> {
-        self.inner.entry(src).or_insert_with(BTreeSet::new)
+    fn force_mut(&mut self, src: Var) -> &mut FieldMap {
+        self.inner.entry(src).or_insert_with(FieldMap::new)
     }
 
-    /// src->tgt is a possibility in addition to whatever may have been before.
-    pub fn add_alias(&mut self, src: Var, tgt: Var) {
-        self.force_mut(src).insert(tgt);
-    }
-
-    /// For each element in the tgts set, src may point there in addition to whatever it could
-    /// before.
-    pub fn extend_alias(&mut self, src: Var, tgts: BTreeSet<Var>) {
-        if !tgts.is_empty() {
-            self.force_mut(src).extend(tgts);
+    /// src->tgts only
+    pub fn set_alias(&mut self, src: VarRef, tgts: VarSet) {
+        // If we aren't updating anything, and the new field map would be empty, just leave it
+        // empty
+        if tgts.is_empty() && !self.inner.contains_key(&src.var) {
+            return
         }
-    }
-
-    /// src points only to tgt
-    pub fn replace_alias(&mut self, src: Var, tgt: Var) {
-        let mut bs = BTreeSet::new();
-        bs.insert(tgt);
-        self.inner.insert(src, bs);
-    }
-
-    /// src can only point to members of tgts
-    pub fn set_alias(&mut self, src: Var, tgts: BTreeSet<Var>) {
-        if tgts.is_empty() {
-            self.inner.remove(&src);
-        } else {
-            self.inner.insert(src, tgts);
-        }
+            
+        self.force_mut(src.var).write(src.offset, tgts);
     }
 
     /// Remove temporary variables from the points-to information.
@@ -219,7 +369,7 @@ impl PointsTo {
     pub fn pt_to(&self) -> BTreeSet<Var> {
         let mut pointed_to: BTreeSet<Var> = self.super_live.clone();
         for v in self.inner.values() {
-            pointed_to.extend(v.clone());
+            pointed_to.extend(v.pt_to());
         }
         pointed_to
     }
@@ -242,7 +392,7 @@ impl PointsTo {
             for (k, v) in &self.inner {
                 if roots(k) || live.contains(k) {
                     live.insert(k.clone());
-                    live.extend(v.iter().cloned());
+                    live.extend(v.pt_to());
                 }
             }
         }
@@ -305,9 +455,10 @@ impl PointsTo {
 
     /// Finds all locations where v may have been freed.
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
-        self.get(v)
+        self.get_var(v)
+            .pt_to()
             .iter()
-            .flat_map(|d| self.get_all(d))
+            .flat_map(|d| self.get_var(d).pt_to())
             .filter_map(|pt| match pt {
                 Var::Freed { ref site } => Some(site.clone()),
                 _ => None,
@@ -318,7 +469,6 @@ impl PointsTo {
 
 impl ::std::fmt::Display for PointsTo {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        use printers;
         write!(f, "frames: ")?;
         for frame in &self.frames {
             write!(f, "{}, ", frame)?;
@@ -330,10 +480,17 @@ impl ::std::fmt::Display for PointsTo {
         }
         writeln!(f)?;
         for (k, v) in &self.inner {
-            write!(f, "\t{} -> ", k)?;
-            printers::fmt_vec(f, &v.iter().collect::<Vec<_>>())?;
+            write!(f, "\t{} -> {}", k, v)?;
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+
+impl ::std::fmt::Display for FieldMap {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        use printers;
+        write!(f, "u: ")?;
+        printers::fmt_vec(f, &self.unbounded.iter().collect::<Vec<_>>())
     }
 }
