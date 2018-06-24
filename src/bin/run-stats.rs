@@ -10,10 +10,9 @@ use eval_common::*;
 pub const MEMORY_LIMIT: usize = 0;
 pub const TIME_LIMIT: u64 = 0;
 
-const ALIAS_MODES: &[AliasMode] = &[
-    AliasMode::SteensOnly { ctx: false },
-    AliasMode::FlowOnly { ctx: false },
-    AliasMode::FlowOnly { ctx: true },
+const ALIAS_MODES: &[Config] = &[
+    Config::CONTEXT_INSENSITIVE,
+    Config::CONTEXT_SENSITIVE,
 ];
 
 fn main() {

@@ -6,8 +6,7 @@ use regs::Reg;
 use std::fmt::{Display, Formatter, Result};
 use var::Var;
 use points_to::VarRef;
-use AliasMode;
-
+use {Config, LocType};
 pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
 
 pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
@@ -21,20 +20,17 @@ pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
     write!(f, "]")
 }
 
-impl Display for AliasMode {
+impl Display for Config {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                AliasMode::SteensOnly { .. } => "Insensitive",
-                AliasMode::FlowOnly { .. } => "Flow sensitive",
-                AliasMode::Both { .. } => "Both",
-                AliasMode::LoadOnly { .. } => "Load",
-            }
-        )?;
-        if self.uses_ctx() {
-            write!(f, "+ctx")?;
+        write!(f, "loc={}", match self.loc_type {
+            LocType::Addr => "addr",
+            LocType::AddrAndStack => "addr+stack",
+        })?;
+        if self.undef_hack {
+            write!(f, "&undef_hack")?;
+        }
+        if self.load_only {
+            write!(f, "&load_only")?;
         }
         Ok(())
     }

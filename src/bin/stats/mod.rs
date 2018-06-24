@@ -80,7 +80,7 @@ fn stats(dat: &[f64]) -> Stats {
     }
 }
 
-fn compare_modes(big: AliasMode, small: AliasMode, dat: &[Measurement]) {
+fn compare_modes(big: Config, small: Config, dat: &[Measurement]) {
     let mut bigs = BTreeMap::new();
     let mut smalls = BTreeMap::new();
     for m in dat {

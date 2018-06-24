@@ -17,14 +17,15 @@ fn measure_individual_juliet(juliet_tp: &BTreeMap<String, usize>) -> Vec<Measure
     let mut out = Vec::new();
     for (name, tps) in juliet_tp {
         let path = format!("samples/Juliet-1.3/CWE416/individuals/{}", name);
-        let mut flow_run = marduk(&[path.clone()], AliasMode::FlowOnly { ctx: false }).unwrap();
+        let flow_config = Config::CONTEXT_INSENSITIVE;
+        let mut flow_run = marduk(&[path.clone()], &flow_config).unwrap();
 
         // Check that Steens contains all of Flow. Since Flow has all the TPs, this means Steens
         // does too. Additionally, it's a bug if Steens doesn't contain something Flow does.
 
         let flow_set: BTreeSet<_> = flow_run.db.query_all_uaf().iter().map(uaf_tuple).collect();
         out.push(Measurement {
-            mode: AliasMode::FlowOnly { ctx: false },
+            mode: flow_config,
             artifact: vec![path.to_string()],
             true_positives: *tps,
             false_positives: flow_set.len() - tps,
@@ -53,8 +54,8 @@ fn measure_bad_juliet() -> Vec<Measurement> {
             .to_str()
             .unwrap()
             .to_string();
-        let mode = AliasMode::FlowOnly { ctx: false };
-        let mut run = marduk(&[path.clone()], mode).unwrap();
+        let mode = Config::CONTEXT_INSENSITIVE;
+        let mut run = marduk(&[path.clone()], &mode).unwrap();
         let out_set: BTreeSet<_> = run.db.query_all_uaf().iter().map(uaf_tuple).collect();
         out.push(Measurement {
             mode,
@@ -76,15 +77,15 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
         .map(|x| format!("samples/whole/{}", x))
         .collect();
     [
-        AliasMode::FlowOnly { ctx: false },
-        AliasMode::FlowOnly { ctx: true },
+        Config::CONTEXT_INSENSITIVE,
+        Config::CONTEXT_SENSITIVE,
     ].iter()
-        .flat_map(|mode| measure_mode(&names, *mode, expected))
+        .flat_map(|mode| measure_mode(&names, mode, expected))
         .collect()
 }
 
-fn measure_whole_juliet(mode: AliasMode, tps: usize) -> Measurement {
-    let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], mode).unwrap();
+fn measure_whole_juliet(mode: Config, tps: usize) -> Measurement {
+    let mut run = marduk(&["samples/Juliet-1.3/CWE416/CWE416".to_string()], &mode).unwrap();
     let out_set: BTreeSet<_> = run.db.query_all_uaf().iter().map(uaf_tuple).collect();
     Measurement {
         mode,
@@ -183,6 +184,6 @@ fn main() {
     let juliet_tp_sum = juliet_tp.values().sum();
     println!(
         "{}",
-        measure_whole_juliet(AliasMode::FlowOnly { ctx: false }, juliet_tp_sum)
+        measure_whole_juliet(Config::CONTEXT_INSENSITIVE, juliet_tp_sum)
     );
 }

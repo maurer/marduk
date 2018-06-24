@@ -30,38 +30,48 @@ pub mod var;
 pub use datalog::Database;
 
 #[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
-pub enum AliasMode {
-    SteensOnly { ctx: bool },
-    FlowOnly { ctx: bool },
-    Both { ctx: bool },
-    LoadOnly { ctx: bool },
+pub enum LocType {
+    Addr,
+    AddrAndStack
 }
-use AliasMode::*;
 
-impl AliasMode {
-    pub fn uses_steens(&self) -> bool {
-        match *self {
-            SteensOnly { .. } | Both { .. } => true,
-            LoadOnly { .. } | FlowOnly { .. } => false,
-        }
-    }
+#[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
+pub struct Config {
+    pub loc_type: LocType,
+    pub load_only: bool,
+    pub undef_hack: bool
+}
+
+impl Config {
+    pub const CONTEXT_SENSITIVE: Self =
+        Self {
+            loc_type: LocType::AddrAndStack,
+            load_only: false,
+            undef_hack: false,
+        };
+
+    pub const CONTEXT_INSENSITIVE: Self =
+        Config {
+            loc_type: LocType::Addr,
+            load_only: false,
+            undef_hack: false,
+        };
+
     pub fn uses_flow(&self) -> bool {
-        match *self {
-            FlowOnly { .. } | Both { .. } => true,
-            LoadOnly { .. } | SteensOnly { .. } => false,
-        }
+        !self.load_only
     }
     pub fn uses_ctx(&self) -> bool {
-        match *self {
-            FlowOnly { ref ctx }
-            | SteensOnly { ref ctx }
-            | Both { ref ctx }
-            | LoadOnly { ref ctx } => *ctx,
+        match self.loc_type {
+            LocType::AddrAndStack => true,
+            LocType::Addr => false,
         }
+    }
+    pub fn defines_undef(&self) -> bool {
+        self.undef_hack
     }
 }
 
-pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
+pub fn uaf(files: &[String], config: &Config) -> Database {
     let mut db = Database::new();
     for file_name in files {
         use std::fs::File;
@@ -76,14 +86,14 @@ pub fn uaf(files: &[String], alias_mode: AliasMode) -> Database {
         });
     }
 
-    if alias_mode.uses_steens() {
-        panic!("Steens disabled");
-    }
-    if alias_mode.uses_flow() {
+    if config.uses_flow() {
         db.insert_flow_enable(datalog::FlowEnable { arg0: true });
     }
-    if alias_mode.uses_ctx() {
+    if config.uses_ctx() {
         db.insert_context_enable(datalog::ContextEnable { arg0: true });
+    }
+    if config.defines_undef() {
+        db.insert_undef_hack(datalog::UndefHack { arg0: true});
     }
 
     db

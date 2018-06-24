@@ -33,10 +33,9 @@ fn log_measure(m: &Measurement) {
     }
 }
 
-const ALIAS_MODES: &[AliasMode] = &[
-    AliasMode::SteensOnly { ctx: false },
-    AliasMode::FlowOnly { ctx: false },
-    AliasMode::FlowOnly { ctx: true },
+const ALIAS_MODES: &[Config] = &[
+    Config::CONTEXT_INSENSITIVE,
+    Config::CONTEXT_SENSITIVE,
 ];
 
 fn measure_uaf(name: &str) -> Vec<Measurement> {
@@ -44,7 +43,7 @@ fn measure_uaf(name: &str) -> Vec<Measurement> {
     ALIAS_MODES
         .iter()
         .flat_map(|mode| {
-            let ms = measure_mode(&names, *mode, &[]);
+            let ms = measure_mode(&names, mode, &[]);
             if let Some(ref m) = ms {
                 log_measure(&m);
             }

@@ -63,7 +63,7 @@ fn main() {
     env_logger::init();
     let mut db = marduk::uaf(
         &::std::env::args().collect::<Vec<_>>()[1..],
-        marduk::AliasMode::FlowOnly { ctx: false },
+        &marduk::Config::CONTEXT_INSENSITIVE,
     );
     let mut step = 0;
     let mut last_round = Vec::new();

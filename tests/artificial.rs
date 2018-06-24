@@ -1,6 +1,5 @@
 extern crate marduk;
-use marduk::points_to::PointsTo;
-use marduk::uaf;
+use marduk::{uaf, Config};
 
 fn run_uaf(
     names: &[&'static str],
@@ -13,7 +12,9 @@ fn run_uaf(
         .map(|x| format!("samples/artificial/{}", x))
         .collect();
     {
-        let mut db = uaf(&names, marduk::AliasMode::FlowOnly { ctx: false });
+        let mut flow_mode = Config::CONTEXT_INSENSITIVE;
+        flow_mode.undef_hack = true;
+        let mut db = uaf(&names, &flow_mode); 
         db.run_rules();
         let flow_bugs = db.query_uaf_flow();
         let found_flow_bugs = flow_bugs.len();
@@ -28,7 +29,9 @@ fn run_uaf(
         }
     }
     {
-        let mut db = uaf(&names, marduk::AliasMode::FlowOnly { ctx: true });
+        let mut ctx_mode = Config::CONTEXT_SENSITIVE;
+        ctx_mode.undef_hack = true;
+        let mut db = uaf(&names, &ctx_mode);
         db.run_rules();
         let ctx_bugs = db.query_context_flow();
         let found_ctx_bugs = ctx_bugs.len();

@@ -5,14 +5,14 @@ extern crate serde;
 
 pub use self::jemalloc_ctl::stats::Allocated;
 pub use self::jemalloc_ctl::Epoch;
-pub use self::marduk::{uaf, AliasMode, Database};
+pub use self::marduk::{uaf, Config, LocType, Database};
 pub use self::num_traits::cast::ToPrimitive;
 pub use std::collections::{BTreeMap, BTreeSet};
 pub use std::time::{Duration, Instant};
 
 #[derive(Clone, Eq, Debug, PartialOrd, PartialEq, Serialize, Deserialize)]
 pub struct Measurement {
-    pub mode: AliasMode,
+    pub mode: Config,
     pub artifact: Vec<String>,
     pub true_positives: usize,
     pub false_positives: usize,
@@ -88,7 +88,7 @@ fn check_mem() -> usize {
     allocated.get().unwrap()
 }
 
-pub fn marduk(names: &[String], mode: AliasMode) -> Option<Run> {
+pub fn marduk(names: &[String], mode: &Config) -> Option<Run> {
     let mut db = uaf(names, mode);
     let pre = Instant::now();
     let time_limit = Duration::from_secs(::TIME_LIMIT);
@@ -116,7 +116,7 @@ pub fn uaf_tuple(uaf: &marduk::datalog::AllUafResult) -> (u64, u64) {
 
 pub fn measure_mode(
     names: &[String],
-    mode: AliasMode,
+    mode: &Config,
     expected: &[(u64, u64)],
 ) -> Option<Measurement> {
     let mut run = marduk(names, mode)?;
@@ -141,7 +141,7 @@ pub fn measure_mode(
         }
     }
     Some(Measurement {
-        mode,
+        mode: *mode,
         artifact: names.to_vec(),
         true_positives: expected.len() - expected_not_found.len(),
         false_positives,

@@ -5,6 +5,8 @@ entry_defined {
   vars: Vars^concat
 }
 
+undef_hack(bool)
+
 entry_defined_base: entry_defined {loc, vars: ~(Vec::new())} <- sym {loc}
 entry_defined_promote@5: entry_defined {loc, vars} <- reaching {register, reached: loc} & sym {loc} + live::entry_defined_promote
-entry_undef_live@6: flow_in(loc, pts) <- ~entry_defined {loc, vars: defined} & ~live_vars {loc, vars: live} + live::undef_live
+entry_undef_live@6: flow_in(loc, pts) <- ~entry_defined {loc, vars: defined} & ~live_vars {loc, vars: live} & undef_hack(~true) + live::undef_live
