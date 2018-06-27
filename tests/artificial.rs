@@ -3,7 +3,6 @@ use marduk::{uaf, Config};
 
 fn run_uaf(
     names: &[&'static str],
-    _insensitive_bugs: usize,
     expected_flow_bugs: usize,
     expected_ctx_bugs: usize,
 ) {
@@ -49,64 +48,69 @@ fn run_uaf(
 
 #[test]
 fn func() {
-    run_uaf(&["func"], 1, 1, 1);
+    run_uaf(&["func"], 1, 1);
 }
 
 #[test]
 fn link() {
-    run_uaf(&["link", "external.so"], 2, 2, 2);
+    run_uaf(&["link", "external.so"], 2, 2);
 }
 
 #[test]
 fn simple() {
-    run_uaf(&["simple"], 2, 2, 2);
+    run_uaf(&["simple"], 2, 2);
 }
 
 #[test]
 fn safe() {
-    run_uaf(&["safe"], 0, 0, 0);
+    run_uaf(&["safe"], 0, 0);
 }
 
 #[test]
 fn path_sensitive() {
-    run_uaf(&["path_sensitive"], 1, 1, 1);
+    run_uaf(&["path_sensitive"], 1, 1);
 }
 
 #[test]
 fn remalloc() {
-    run_uaf(&["remalloc"], 2, 0, 0);
+    run_uaf(&["remalloc"], 0, 0);
 }
 
 #[test]
 fn ll() {
     // If we add field sensitivity to the flow, this should drop a bit, but still not zero
     // Since called from main, double contexts
-    run_uaf(&["ll"], 4, 4, 8);
+    run_uaf(&["ll"], 4, 8);
 }
 
 #[test]
 fn loop_() {
     // Since both are called from main, there are two contexts under which the bugs occur
-    run_uaf(&["loop"], 2, 2, 4);
+    run_uaf(&["loop"], 2, 4);
 }
 
 #[test]
 fn reloop() {
-    run_uaf(&["reloop"], 1, 0, 0);
+    run_uaf(&["reloop"], 0, 0);
 }
 
 #[test]
 fn restale() {
-    run_uaf(&["restale"], 1, 0, 0);
+    run_uaf(&["restale"], 0, 0);
 }
 
 // Mostly a test to make sure ctx sensitive doesn't jam
 #[test]
 fn recurse() {
-    run_uaf(&["recurse"], 1, 0, 0);
+    run_uaf(&["recurse"], 0, 0);
 }
 
 #[test]
 fn undef_stack() {
-    run_uaf(&["undef_stack"], 1, 1, 1);
+    run_uaf(&["undef_stack"], 1, 1);
+}
+
+#[test]
+fn undef_edge() {
+    run_uaf(&["undef_edge"], 3, 3);
 }
