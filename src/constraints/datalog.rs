@@ -18,13 +18,13 @@ pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMa
     vec![ConstraintsMallocConstraintOut {
         c: vec![Constraint {
             lhs: VarPath::reg(&RET_REG),
-            rhs: VarPath {
+            rhss: vec![VarPath {
                 base: Var::Alloc {
                     site: i.loc.clone(),
                     stale: false,
                 },
                 offsets: vec![Some(0)],
-            }
+            }]
         }],
     }]
 }
@@ -35,12 +35,12 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
             .iter()
             .map(|arg_n| Constraint {
                 lhs: VarPath::reg(&ARGS[*arg_n]).unknown().deref(),
-                rhs: VarPath {
+                rhss: vec![VarPath {
                     base: Var::Freed {
                         site: i.loc.clone(),
                     },
                     offsets: vec![Some(0)],
-                }
+                }]
             })
             .collect(),
     }]

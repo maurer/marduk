@@ -13,12 +13,12 @@ pub struct VarPath {
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Constraint {
     pub lhs: VarPath,
-    pub rhs: VarPath,
+    pub rhss: Vec<VarPath>,
 }
 
 impl Constraint {
     pub fn has_stacked(&self) -> bool {
-        self.lhs.base.is_stacked() || self.rhs.base.is_stacked()
+        self.lhs.base.is_stacked() || self.rhss.iter().any(|vp| vp.base.is_stacked())
     }
 }
 

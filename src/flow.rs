@@ -72,10 +72,18 @@ fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
        
 fn apply(pts: &mut PointsTo, c: &Constraint) {
     trace!("Applying {}", c);
-    if let Var::Alloc {ref site, ..} = c.rhs.base {
-        pts.make_stale(site);
+    for rhs in &c.rhss {
+        if let Var::Alloc {ref site, ..} = rhs.base {
+            pts.make_stale(site);
+        }
     }
-    let rhses: BTreeSet<_> = rhs_resolve(pts, c.rhs.clone()).into_iter().collect();
+
+    // This needs to be done afterwards, because we need all staleness applied first.
+    let mut rhses = BTreeSet::new();
+    for rhs in &c.rhss {
+        rhses.extend(rhs_resolve(pts, rhs.clone()).into_iter());
+    }
+
     trace!("RHS resolution:");
     for rhs in &rhses {
         trace!("{}", rhs);

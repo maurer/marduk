@@ -241,25 +241,33 @@ fn extract_move(
             let rhs_vars = extract_expr(value, cur_addr, func_addr);
             let mut out = Vec::new();
             for lhs_evar in lhs_vars {
+                let lhs_expr = match &lhs_evar {
+                    E::Const(_) => {
+                        warn!("Ignoring write to constant address");
+                        continue
+                    }
+                    E::VP (ref lhs) => {
+                        if lhs.derefs() > 1 {
+                            warn!("attempting to do a nested store");
+                        }
+                        lhs.deref()
+                    }
+                };
+                let mut out_exprs = Vec::new();
                 for rhs_evar in rhs_vars.clone() {
-                    match &lhs_evar {
-                        E::Const(_) => warn!("Ignoring write to constant address"),
-                        E::VP(ref lhs) => {
-                            if lhs.derefs() > 1 {
-                                warn!("Attempting to do a nested store");
+                    match rhs_evar {
+                        // We're not dealing with clobbers at the moment
+                        E::Const(_) => continue,
+                        E::VP(rhs) => {
+                            if rhs.derefs() > 2 {
+                                warn!("Attempting to do nested load");
                             }
-                            match rhs_evar {
-                                // We're not dealing with clobbers at the moment
-                                E::Const(_) => continue,
-                                E::VP(rhs) => {
-                                    if rhs.derefs() > 2 {
-                                        warn!("Attempting to do nested load");
-                                    }
-                                    out.push(Constraint {lhs: lhs.deref(), rhs: rhs});
-                                }
-                            }
+                            out_exprs.push(rhs);
                         }
                     }
+                }
+                if !out_exprs.is_empty() {
+                    out.push(Constraint {lhs: lhs_expr, rhss: out_exprs})
                 }
             }
             out
@@ -279,17 +287,20 @@ fn extract_move(
                 warn!("Unrecognized variable name: {:?}", lhs.name);
                 return Vec::new();
             };
-            let out: Vec<_> = extract_expr(rhs, cur_addr, func_addr)
+            let rhs_exprs: Vec<_> = extract_expr(rhs, cur_addr, func_addr)
                 .into_iter()
-                .flat_map(|eval| match eval {
-                    E::VP(vp) => vec![Constraint {
-                        lhs: VarPath::var(lv.clone()),
-                        rhs: vp,
-                    }],
-                    E::Const(_) => Vec::new(),
-                })
-                .collect();
-            out
+                .filter_map(|eval| match eval {
+                    E::VP(vp) => Some(vp),
+                    E::Const(_) => None,
+                }).collect();
+            if rhs_exprs.is_empty() {
+                Vec::new()
+            } else {
+                vec![Constraint {
+                    lhs: VarPath::var(lv),
+                    rhss: rhs_exprs
+                }]
+            }
         }
     }
 }

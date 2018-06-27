@@ -65,6 +65,8 @@ impl Display for VarRef {
         write!(f, "{}", self.var)?;
         if let Some(ref offset) = self.offset {
             write!(f, "+{}", offset)?;
+        } else {
+            write!(f, "+?")?;
         }
         Ok(())
     }
@@ -104,7 +106,11 @@ impl Display for VarPath {
 
 impl Display for Constraint {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{} = {}", self.lhs, self.rhs)
+        write!(f, "{{")?;
+        for rhs in &self.rhss {
+            write!(f, "{} = {},", self.lhs, rhs)?;
+        }
+        write!(f, "}}")
     }
 }
 
