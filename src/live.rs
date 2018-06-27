@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, BTreeMap};
 use bap::high::bil;
 use datalog::*;
 use load::Loc;
@@ -22,6 +22,7 @@ fn defined_walk(
     rhs: &bil::Expression,
     cur_addr: &Loc,
     func_addr: &Loc,
+    tmp_db: &mut BTreeMap<Var, u64>
 ) -> Vec<Var> {
     use constraints::generation::{extract_expr, E};
     let mut out = Vec::new();
@@ -33,7 +34,7 @@ fn defined_walk(
             } else {
                 panic!("Writing to memory, but the expression isn't a store");
             };
-            for evar in extract_expr(index, cur_addr, func_addr) {
+            for evar in extract_expr(index, cur_addr, func_addr, tmp_db) {
                 match evar {
                     E::VP(v) => if v.derefs() == 1 {
                         out.push(v.base)
@@ -60,6 +61,7 @@ fn used_walk(
     rhs: &bil::Expression,
     cur_addr: &Loc,
     func_addr: &Loc,
+    tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Var> {
     use constraints::generation::{extract_expr, E};
     let mut out = Vec::new();
@@ -76,7 +78,7 @@ fn used_walk(
             } else {
                 panic!("Writing to memory, but the expression isn't a store");
             };
-            for evar in extract_expr(index, cur_addr, func_addr) {
+            for evar in extract_expr(index, cur_addr, func_addr, tmp_db) {
                 match evar {
                     E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
@@ -84,7 +86,7 @@ fn used_walk(
                     _ => (),
                 }
             }
-            for evar in extract_expr(value, cur_addr, func_addr) {
+            for evar in extract_expr(value, cur_addr, func_addr, tmp_db) {
                 match evar {
                     E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
@@ -98,7 +100,7 @@ fn used_walk(
             if lhs.name == "RSP" {
                 return Vec::new();
             }
-            for evar in extract_expr(rhs, cur_addr, func_addr) {
+            for evar in extract_expr(rhs, cur_addr, func_addr, tmp_db) {
                 match evar {
                     E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
@@ -113,16 +115,18 @@ fn used_walk(
 
 pub fn defined(i: &LiveDefinedIn) -> Vec<LiveDefinedOut> {
     let mut defined_vars = Vec::new();
+    let mut tmp_db = BTreeMap::new();
     for stmt in i.bil {
-        defined_vars.extend(move_walk(stmt, i.loc, i.base, &defined_walk));
+        defined_vars.extend(move_walk(stmt, i.loc, i.base, &defined_walk, &mut tmp_db));
     }
     vec![LiveDefinedOut { vars: defined_vars }]
 }
 
 pub fn used(i: &LiveUsedIn) -> Vec<LiveUsedOut> {
     let mut used_vars = Vec::new();
+    let mut tmp_db = BTreeMap::new();
     for stmt in i.bil {
-        used_vars.extend(move_walk(stmt, i.loc, i.base, &used_walk));
+        used_vars.extend(move_walk(stmt, i.loc, i.base, &used_walk, &mut tmp_db));
     }
     used_vars
         .into_iter()
