@@ -61,9 +61,11 @@ fn print_state(db: &mut marduk::datalog::Database) {
 
 fn main() {
     env_logger::init();
+    let mut config = marduk::Config::CONTEXT_SENSITIVE;
+    config.undef_hack = true;
     let mut db = marduk::uaf(
         &::std::env::args().collect::<Vec<_>>()[1..],
-        &marduk::Config::CONTEXT_INSENSITIVE,
+        &config
     );
     let mut step = 0;
     let mut last_round = Vec::new();

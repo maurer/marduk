@@ -8,6 +8,7 @@ pub enum Var {
     Temp { serial: u32 },
     Alloc { site: Loc, stale: bool },
     Freed { site: Loc },
+    Constructed { site: Loc, serial: usize },
 }
 
 pub fn var_args() -> Vec<Var> {
@@ -47,7 +48,7 @@ impl Var {
 
     pub fn is_dyn(&self) -> bool {
         match *self {
-            Var::Alloc { .. } => true,
+            Var::Constructed { .. } | Var::Alloc { .. } => true,
             _ => false,
         }
     }

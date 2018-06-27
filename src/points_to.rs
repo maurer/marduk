@@ -64,13 +64,15 @@ impl FieldMap {
                 do_insert = true;
             }
             if do_insert {
-                self.offsets.insert(k.clone(), v.clone());
+                let mut our_v = self.unbounded.clone();
+                our_v.extend(v.iter().cloned());
+                self.offsets.insert(k.clone(), our_v);
             }
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.unbounded.is_empty()
+        self.unbounded.is_empty() && self.offsets.is_empty()
     }
 
     pub fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
@@ -129,12 +131,12 @@ impl FieldMap {
             self.unbounded.clear();
         }
         
-        self.unbounded.extend(val.clone());
 
         if let Some(offset) = u_offset {
             // Destructive update
             self.offsets.insert(offset, val);
         } else {
+            self.unbounded.extend(val.clone());
             self.ub_write = true;
             // We don't understand where the write is, nondestructive updates for everyone
             for vs in self.offsets.values_mut() {
@@ -143,14 +145,18 @@ impl FieldMap {
         }
     }
 
-    pub fn read(&self, u_offset: Option<u64>) -> &VarSet {
+    pub fn read(&self, u_offset: Option<u64>) -> VarSet {
         if let Some(offset) = u_offset {
             match self.offsets.get(&offset) {
-                None => &self.unbounded,
-                Some(ref vs) => vs
+                None => self.unbounded.clone(),
+                Some(ref vs) => (*vs).clone()
             }
         } else {
-            &self.unbounded
+            let mut out = self.unbounded.clone();
+            for v in self.offsets.values() {
+                out.extend(v.iter().cloned());
+            }
+            out
         }
     }
 }
@@ -455,10 +461,9 @@ impl PointsTo {
 
     /// Finds all locations where v may have been freed.
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
-        self.get_var(v)
-            .pt_to()
+        self.get(&VarRef {var: v.clone(), offset: Some(0)})
             .iter()
-            .flat_map(|d| self.get_var(d).pt_to())
+            .flat_map(|d| self.get_var(&d.var).pt_to())
             .filter_map(|pt| match pt {
                 Var::Freed { ref site } => Some(site.clone()),
                 _ => None,
@@ -491,6 +496,11 @@ impl ::std::fmt::Display for FieldMap {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         use printers;
         write!(f, "u: ")?;
-        printers::fmt_vec(f, &self.unbounded.iter().collect::<Vec<_>>())
+        printers::fmt_vec(f, &self.unbounded.iter().collect::<Vec<_>>())?;
+        for (k, v) in &self.offsets {
+            write!(f, "\n{}: ", k)?;
+            printers::fmt_vec(f, &v.iter().collect::<Vec<_>>())?;
+        }
+        Ok(())
     }
 }

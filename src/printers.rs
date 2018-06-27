@@ -90,6 +90,7 @@ impl Display for Var {
                 Ok(())
             }
             Var::Freed { ref site } => write!(f, "freed@{}", site),
+            Var::Constructed { ref site, ref serial } => write!(f, "hack@{}+{}", site, serial),
         }
     }
 }

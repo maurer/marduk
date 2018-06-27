@@ -5,7 +5,7 @@ use load::Loc;
 use regs::Reg;
 use std::str::FromStr;
 use var::{Var, var_args};
-use points_to::VarRef;
+use points_to::{VarRef, PointsTo};
 
 use constraints::generation::move_walk;
 
@@ -171,8 +171,31 @@ pub fn entry_defined_promote(i: &LiveEntryDefinedPromoteIn) -> Vec<LiveEntryDefi
     vec![LiveEntryDefinedPromoteOut {vars: vec![Var::Register {register: *i.register}]}]
 }
 
+fn construct(serial: &mut usize, loc: &Loc) -> Var {
+    let out = Var::Constructed { serial: *serial, site: loc.clone() };
+    *serial += 1;
+    out
+}
+
+fn build_struct(pts: &mut PointsTo, serial: &mut usize, var: Var, loc: &Loc, width: usize, depth: usize) {
+    const WORD_SIZE: usize = 8;
+    let mut bases: Vec<Var> = vec![var];
+    for _ in 0..depth {
+        let mut new_bases: Vec<Var> = Vec::new();
+        for base in bases {
+            for w in 0..width {
+                let target = construct(serial, loc);
+                let mut target_set = BTreeSet::new();
+                target_set.insert(VarRef {var: target.clone(), offset: Some(0)});
+                pts.set_alias(VarRef {var: base.clone(), offset: Some((w * WORD_SIZE) as u64)}, target_set);
+                new_bases.push(target);
+            }
+        }
+        bases = new_bases
+    }
+}
+
 pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
-    use points_to::PointsTo;
     let mut undefs = Vec::new();
     trace!("undef_live candidate: {}", i.loc);
     let args = var_args();
@@ -190,17 +213,13 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
         trace!("{}", var);
     }
     let mut pts = PointsTo::new(i.loc.clone());
-    let region = VarRef {
-        var: Var::Alloc {site: i.loc.clone(), stale: false},
-        offset: None
-    };
-    let mut loop_set = BTreeSet::new();
-    loop_set.insert(region.clone());
-    pts.set_alias(region.clone(), loop_set.clone());
+
+    let mut serial = 0;
     for var in undefs {
-        pts.set_alias(VarRef {var: var, offset: None}, loop_set.clone());
+        build_struct(&mut pts, &mut serial, var, i.loc, 4, 2);
     }
     trace!("Generated self-referential region and assigned.");
+    trace!("undef_out: {}", pts);
     vec![LiveUndefLiveOut {
         pts: pts
     }]

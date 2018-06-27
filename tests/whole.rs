@@ -19,11 +19,7 @@ fn run_uaf(
     expected: &[(u64, u64)],
     false_positives_limit: Option<usize>,
     flow_false_positives_limit: Option<usize>,
-    flow: bool,
 ) {
-    if !flow {
-        return;
-    }
     let _memlock = MEMLOCK.lock().unwrap();
     let names: Vec<_> = names
         .iter()
@@ -31,15 +27,10 @@ fn run_uaf(
         .collect();
     let mut db = uaf(
         &names,
-        if flow {
-            marduk::AliasMode::FlowOnly { ctx: false }
-        } else {
-            marduk::AliasMode::SteensOnly { ctx: false }
-        },
+        &marduk::Config::CONTEXT_INSENSITIVE,
     );
     db.run_rules();
 
-    if flow {
         let mut false_positives_found = 0;
         let mut expected_not_found = expected.to_vec();
         for uaf in db.query_uaf_flow() {
@@ -70,7 +61,6 @@ fn run_uaf(
                 );
             }
         }
-    }
 }
 
 #[test]
@@ -80,20 +70,20 @@ fn gnome_nettool() {
         &[(0x411ba6, 0x4124d1)],
         None,
         Some(10),
-        true,
     );
 }
 
 #[test]
 fn goaccess() {
-    run_uaf(&["goaccess"], &[(0x40b1dc, 0x40b230)], None, None, true);
+    run_uaf(&["goaccess"], &[(0x40b1dc, 0x40b230)], None, None);
 }
 
 #[test]
 fn libarchive() {
-    run_uaf(&["bsdcpio_test"], &[(0x40e012, 0x40e021)], None, None, true);
+    run_uaf(&["bsdcpio_test"], &[(0x40e012, 0x40e021)], None, None);
 }
 
+/*
 #[test]
 fn shadowsocks_libev() {
     run_uaf(
@@ -104,10 +94,11 @@ fn shadowsocks_libev() {
         false,
     );
 }
+*/
 
 #[test]
 fn isisd() {
-    run_uaf(&["isisd"], &[(0x40a84f, 0x40aa1f)], None, None, true);
+    run_uaf(&["isisd"], &[(0x40a84f, 0x40aa1f)], None, None);
 }
 
 //#[test]
