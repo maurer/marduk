@@ -114,3 +114,8 @@ fn undef_stack() {
 fn undef_edge() {
     run_uaf(&["undef_edge"], 3, 3);
 }
+
+#[test]
+fn field_overwrite() {
+    run_uaf(&["field_overwrite"], 1, 1);
+}
