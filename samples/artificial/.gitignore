@@ -8,6 +8,10 @@ remalloc
 reloop
 loop
 ll
+field_overwrite
+recurse
+undef_edge
+undef_stack
 link.o
 seq_call
 restale
