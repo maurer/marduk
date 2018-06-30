@@ -24,7 +24,7 @@ pub fn malloc_constraint(i: &ConstraintsMallocConstraintIn) -> Vec<ConstraintsMa
                     stale: false,
                 },
                 offsets: vec![Some(0)],
-            }]
+            }],
         }],
     }]
 }
@@ -40,7 +40,7 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
                         site: i.loc.clone(),
                     },
                     offsets: vec![Some(0)],
-                }]
+                }],
             })
             .collect(),
     }]

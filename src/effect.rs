@@ -13,13 +13,11 @@ impl Effect {
         Self::default()
     }
     pub fn merge(&self, other: &Self) -> Self {
-        let does_malloc = self
-            .does_malloc
+        let does_malloc = self.does_malloc
             .intersection(&other.does_malloc)
             .cloned()
             .collect();
-        let mut maybe_malloc: BTreeSet<Loc> = self
-            .maybe_malloc
+        let mut maybe_malloc: BTreeSet<Loc> = self.maybe_malloc
             .union(&other.maybe_malloc)
             .cloned()
             .collect();

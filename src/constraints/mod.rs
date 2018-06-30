@@ -1,8 +1,8 @@
 pub mod datalog;
 pub mod generation;
-use var::Var;
-use regs::Reg;
 use load::Loc;
+use regs::Reg;
+use var::Var;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct VarPath {
@@ -32,12 +32,12 @@ impl VarPath {
             base: var,
             // First 0 is to the register "region", second is the 0 offset on the value of the
             // register
-            offsets: vec![Some(0), Some(0)]
+            offsets: vec![Some(0), Some(0)],
         }
     }
 
     pub fn reg(reg: &Reg) -> Self {
-        Self::var(Var::Register { register: *reg})
+        Self::var(Var::Register { register: *reg })
     }
 
     pub fn temp(s: &str) -> VarPath {
@@ -48,17 +48,17 @@ impl VarPath {
         Self {
             base: var,
             // First 0 is an offset into the register. We haven't dereferenced yet
-            offsets: vec![Some(0)]
+            offsets: vec![Some(0)],
         }
     }
 
     pub fn stack_addr(func_addr: &Loc, offset: usize) -> Self {
         Self::addr(Var::StackSlot {
             func_addr: func_addr.clone(),
-            offset: offset
+            offset: offset,
         })
     }
- 
+
     pub fn plus(&self, off: u64) -> Self {
         let mut out = self.clone();
         off_plus(out.offsets.last_mut().unwrap(), off);

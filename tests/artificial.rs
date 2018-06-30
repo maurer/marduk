@@ -1,11 +1,7 @@
 extern crate marduk;
 use marduk::{uaf, Config};
 
-fn run_uaf(
-    names: &[&'static str],
-    expected_flow_bugs: usize,
-    expected_ctx_bugs: usize,
-) {
+fn run_uaf(names: &[&'static str], expected_flow_bugs: usize, expected_ctx_bugs: usize) {
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/artificial/{}", x))
@@ -13,7 +9,7 @@ fn run_uaf(
     {
         let mut flow_mode = Config::CONTEXT_INSENSITIVE;
         flow_mode.undef_hack = true;
-        let mut db = uaf(&names, &flow_mode); 
+        let mut db = uaf(&names, &flow_mode);
         db.run_rules();
         let flow_bugs = db.query_uaf_flow();
         let found_flow_bugs = flow_bugs.len();

@@ -5,7 +5,7 @@ extern crate serde;
 
 pub use self::jemalloc_ctl::stats::Allocated;
 pub use self::jemalloc_ctl::Epoch;
-pub use self::marduk::{uaf, Config, LocType, Database};
+pub use self::marduk::{uaf, Config, Database, LocType};
 pub use self::num_traits::cast::ToPrimitive;
 pub use std::collections::{BTreeMap, BTreeSet};
 pub use std::time::{Duration, Instant};

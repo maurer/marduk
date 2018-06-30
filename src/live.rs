@@ -1,11 +1,11 @@
-use std::collections::{BTreeSet, BTreeMap};
 use bap::high::bil;
 use datalog::*;
 use load::Loc;
+use points_to::{PointsTo, VarRef};
 use regs::Reg;
+use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
-use var::{Var, var_args};
-use points_to::{VarRef, PointsTo};
+use var::{var_args, Var};
 
 use constraints::generation::move_walk;
 
@@ -22,7 +22,7 @@ fn defined_walk(
     rhs: &bil::Expression,
     cur_addr: &Loc,
     func_addr: &Loc,
-    tmp_db: &mut BTreeMap<Var, u64>
+    tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Var> {
     use constraints::generation::{extract_expr, E};
     let mut out = Vec::new();
@@ -168,20 +168,36 @@ pub fn drop_frame(i: &LiveDropFrameIn) -> Vec<LiveDropFrameOut> {
 }
 
 pub fn promote_reg(i: &LivePromoteRegIn) -> Vec<LivePromoteRegOut> {
-    vec![LivePromoteRegOut {var: Var::Register {register: *i.reg} }]
+    vec![LivePromoteRegOut {
+        var: Var::Register { register: *i.reg },
+    }]
 }
 
 pub fn entry_defined_promote(i: &LiveEntryDefinedPromoteIn) -> Vec<LiveEntryDefinedPromoteOut> {
-    vec![LiveEntryDefinedPromoteOut {vars: vec![Var::Register {register: *i.register}]}]
+    vec![LiveEntryDefinedPromoteOut {
+        vars: vec![Var::Register {
+            register: *i.register,
+        }],
+    }]
 }
 
 fn construct(serial: &mut usize, loc: &Loc) -> Var {
-    let out = Var::Constructed { serial: *serial, site: loc.clone() };
+    let out = Var::Constructed {
+        serial: *serial,
+        site: loc.clone(),
+    };
     *serial += 1;
     out
 }
 
-fn build_struct(pts: &mut PointsTo, serial: &mut usize, var: Var, loc: &Loc, width: usize, depth: usize) {
+fn build_struct(
+    pts: &mut PointsTo,
+    serial: &mut usize,
+    var: Var,
+    loc: &Loc,
+    width: usize,
+    depth: usize,
+) {
     const WORD_SIZE: usize = 8;
     let mut bases: Vec<Var> = vec![var];
     for _ in 0..depth {
@@ -190,8 +206,17 @@ fn build_struct(pts: &mut PointsTo, serial: &mut usize, var: Var, loc: &Loc, wid
             for w in 0..width {
                 let target = construct(serial, loc);
                 let mut target_set = BTreeSet::new();
-                target_set.insert(VarRef {var: target.clone(), offset: Some(0)});
-                pts.set_alias(VarRef {var: base.clone(), offset: Some((w * WORD_SIZE) as u64)}, target_set);
+                target_set.insert(VarRef {
+                    var: target.clone(),
+                    offset: Some(0),
+                });
+                pts.set_alias(
+                    VarRef {
+                        var: base.clone(),
+                        offset: Some((w * WORD_SIZE) as u64),
+                    },
+                    target_set,
+                );
                 new_bases.push(target);
             }
         }
@@ -210,7 +235,7 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
     }
     if undefs.is_empty() {
         trace!("All values defined, skipping");
-        return Vec::new()
+        return Vec::new();
     }
     trace!("Some values undefined:");
     for var in &undefs {
@@ -224,7 +249,5 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
     }
     trace!("Generated self-referential region and assigned.");
     trace!("undef_out: {}", pts);
-    vec![LiveUndefLiveOut {
-        pts: pts
-    }]
+    vec![LiveUndefLiveOut { pts: pts }]
 }

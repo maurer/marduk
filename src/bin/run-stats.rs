@@ -10,10 +10,7 @@ use eval_common::*;
 pub const MEMORY_LIMIT: usize = 0;
 pub const TIME_LIMIT: u64 = 0;
 
-const ALIAS_MODES: &[Config] = &[
-    Config::CONTEXT_INSENSITIVE,
-    Config::CONTEXT_SENSITIVE,
-];
+const ALIAS_MODES: &[Config] = &[Config::CONTEXT_INSENSITIVE, Config::CONTEXT_SENSITIVE];
 
 fn main() {
     use std::fs::File;

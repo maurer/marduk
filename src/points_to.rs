@@ -10,7 +10,7 @@ use var::Var;
 #[derive(Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
 pub struct VarRef {
     pub var: Var,
-    pub offset: Option<u64>
+    pub offset: Option<u64>,
 }
 
 impl VarRef {
@@ -76,7 +76,11 @@ impl FieldMap {
     }
 
     pub fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
-        let unbounded_remove: Vec<_> = self.unbounded.iter().filter(|vr| f(&vr.var)).cloned().collect();
+        let unbounded_remove: Vec<_> = self.unbounded
+            .iter()
+            .filter(|vr| f(&vr.var))
+            .cloned()
+            .collect();
         for vr in unbounded_remove {
             self.unbounded.remove(&vr);
         }
@@ -121,7 +125,6 @@ impl FieldMap {
         // We're precise!
         true
     }
-        
 
     pub fn write(&mut self, u_offset: Option<u64>, val: VarSet) {
         // If this is register-like (only accessed through one, specific address)
@@ -130,7 +133,6 @@ impl FieldMap {
             //came from the address we now overwrite.
             self.unbounded.clear();
         }
-        
 
         if let Some(offset) = u_offset {
             // Destructive update
@@ -149,7 +151,7 @@ impl FieldMap {
         if let Some(offset) = u_offset {
             match self.offsets.get(&offset) {
                 None => self.unbounded.clone(),
-                Some(ref vs) => (*vs).clone()
+                Some(ref vs) => (*vs).clone(),
             }
         } else {
             let mut out = self.unbounded.clone();
@@ -179,8 +181,7 @@ impl PointsTo {
 
     /// Filters register definition based on a whitelist
     pub fn only_regs(&mut self, whitelist: &[Reg]) {
-        let to_kill: Vec<_> = self
-            .inner
+        let to_kill: Vec<_> = self.inner
             .keys()
             .filter(|v| match *v {
                 Var::Register { register, .. } => !whitelist.contains(register),
@@ -297,7 +298,11 @@ impl PointsTo {
 
     /// Gets the set of what a variable may point to, not including any free references
     pub fn get(&self, v: &VarRef) -> VarSet {
-        self.get_all(v).iter().filter(|x| !x.is_freed()).cloned().collect()
+        self.get_all(v)
+            .iter()
+            .filter(|x| !x.is_freed())
+            .cloned()
+            .collect()
     }
 
     pub fn get_var(&self, v: &Var) -> FieldMap {
@@ -354,9 +359,9 @@ impl PointsTo {
         // If we aren't updating anything, and the new field map would be empty, just leave it
         // empty
         if tgts.is_empty() && !self.inner.contains_key(&src.var) {
-            return
+            return;
         }
-            
+
         self.force_mut(src.var).write(src.offset, tgts);
     }
 
@@ -403,8 +408,7 @@ impl PointsTo {
             }
         }
         // sweep
-        let dead: Vec<_> = self
-            .inner
+        let dead: Vec<_> = self.inner
             .keys()
             .filter(|x| !live.contains(x))
             .cloned()
@@ -461,8 +465,10 @@ impl PointsTo {
 
     /// Finds all locations where v may have been freed.
     pub fn free_sites(&self, v: &Var) -> Vec<Loc> {
-        self.get(&VarRef {var: v.clone(), offset: Some(0)})
-            .iter()
+        self.get(&VarRef {
+            var: v.clone(),
+            offset: Some(0),
+        }).iter()
             .flat_map(|d| self.get_var(&d.var).pt_to())
             .filter_map(|pt| match pt {
                 Var::Freed { ref site } => Some(site.clone()),

@@ -12,7 +12,9 @@ pub enum Var {
 }
 
 pub fn var_args() -> Vec<Var> {
-    ARGS.iter().map(|reg| Var::Register {register: *reg}).collect()
+    ARGS.iter()
+        .map(|reg| Var::Register { register: *reg })
+        .collect()
 }
 
 impl Var {

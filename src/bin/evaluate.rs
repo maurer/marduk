@@ -76,10 +76,8 @@ fn measure_uaf(names: &[&'static str], expected: &[(u64, u64)]) -> Vec<Measureme
         .iter()
         .map(|x| format!("samples/whole/{}", x))
         .collect();
-    [
-        Config::CONTEXT_INSENSITIVE,
-        Config::CONTEXT_SENSITIVE,
-    ].iter()
+    [Config::CONTEXT_INSENSITIVE, Config::CONTEXT_SENSITIVE]
+        .iter()
         .flat_map(|mode| measure_mode(&names, mode, expected))
         .collect()
 }
@@ -126,9 +124,7 @@ const ISISD: Case = Case {
 
 const OSPF6D: Case = Case {
     names: &["ospf6d"],
-    expected: &[
-        (0x42ed00, 0x437506),
-    ],
+    expected: &[(0x42ed00, 0x437506)],
 };
 
 const KNOWN_BUGS: &[Case] = &[

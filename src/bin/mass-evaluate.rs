@@ -33,10 +33,7 @@ fn log_measure(m: &Measurement) {
     }
 }
 
-const ALIAS_MODES: &[Config] = &[
-    Config::CONTEXT_INSENSITIVE,
-    Config::CONTEXT_SENSITIVE,
-];
+const ALIAS_MODES: &[Config] = &[Config::CONTEXT_INSENSITIVE, Config::CONTEXT_SENSITIVE];
 
 fn measure_uaf(name: &str) -> Vec<Measurement> {
     let names = vec![name.to_string()];

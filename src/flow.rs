@@ -1,15 +1,18 @@
-use constraints::{VarPath, Constraint};
+use constraints::{Constraint, VarPath};
 use datalog::*;
 use points_to::PointsTo;
+use points_to::VarRef;
 use regs::ARGS;
 use std::collections::BTreeSet;
 use var::Var;
-use points_to::VarRef;
 
 fn off_plus(base: &mut Option<u64>, off: Option<u64>) {
     match off {
-        Some(off_val) => {base.as_mut().map(|base_val| *base_val += off_val); ()}
-        None => *base = None
+        Some(off_val) => {
+            base.as_mut().map(|base_val| *base_val += off_val);
+            ()
+        }
+        None => *base = None,
     }
 }
 
@@ -23,8 +26,8 @@ fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
         // You can't write (*a + b) = c;, which is what a nonzero value would indicate here.
         return vec![VarRef {
             var: vp.base,
-            offset: vp.offsets[0]
-        }]
+            offset: vp.offsets[0],
+        }];
     } else {
         // If derefs > 2, that means we need to query the pts and recurse
         let (offset_0, offsets_rest) = vp.offsets.split_at(1);
@@ -32,15 +35,18 @@ fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
             var: vp.base,
             offset: offset_0[0],
         };
-        pts.get(&vr0).into_iter().flat_map(|vr| {
-            let mut offsets = offsets_rest.to_vec();
-            off_plus(&mut offsets[0], vr.offset);
-            let vpp = VarPath {
-                base: vr.var,
-                offsets: offsets
-            };
-            lhs_resolve(pts, vpp)
-        }).collect()
+        pts.get(&vr0)
+            .into_iter()
+            .flat_map(|vr| {
+                let mut offsets = offsets_rest.to_vec();
+                off_plus(&mut offsets[0], vr.offset);
+                let vpp = VarPath {
+                    base: vr.var,
+                    offsets: offsets,
+                };
+                lhs_resolve(pts, vpp)
+            })
+            .collect()
     }
 }
 
@@ -50,30 +56,33 @@ fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
     if vp.derefs() == 1 {
         return vec![VarRef {
             var: vp.base,
-            offset: vp.offsets[0]
-        }]
+            offset: vp.offsets[0],
+        }];
     } else {
         let (offset_0, offsets_rest) = vp.offsets.split_at(1);
         let vr0 = VarRef {
             var: vp.base,
             offset: offset_0[0],
         };
-        pts.get(&vr0).into_iter().flat_map(|vr| {
-            let mut offsets = offsets_rest.to_vec();
-            off_plus(&mut offsets[0], vr.offset);
-            let vpp = VarPath {
-                base: vr.var,
-                offsets: offsets
-            };
-            rhs_resolve(pts, vpp)
-        }).collect()
+        pts.get(&vr0)
+            .into_iter()
+            .flat_map(|vr| {
+                let mut offsets = offsets_rest.to_vec();
+                off_plus(&mut offsets[0], vr.offset);
+                let vpp = VarPath {
+                    base: vr.var,
+                    offsets: offsets,
+                };
+                rhs_resolve(pts, vpp)
+            })
+            .collect()
     }
 }
-       
+
 fn apply(pts: &mut PointsTo, c: &Constraint) {
     trace!("Applying {}", c);
     for rhs in &c.rhss {
-        if let Var::Alloc {ref site, ..} = rhs.base {
+        if let Var::Alloc { ref site, .. } = rhs.base {
             pts.make_stale(site);
         }
     }
@@ -131,8 +140,7 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     //TODO: Now that I have clear_frames, can drop_stack here be replaced by a call to
     //canonicalize()?
     pts.drop_stack();
-    let new_live: Vec<_> = i
-        .pts
+    let new_live: Vec<_> = i.pts
         .pt_to()
         .into_iter()
         .filter(|v| v.is_dyn() || v.is_stack())
@@ -171,6 +179,6 @@ pub fn count(i: &FlowCountIn) -> Vec<FlowCountOut> {
 
 pub fn empty_pts(i: &FlowEmptyPtsIn) -> Vec<FlowEmptyPtsOut> {
     vec![FlowEmptyPtsOut {
-        pts: PointsTo::new(i.loc.clone())
+        pts: PointsTo::new(i.loc.clone()),
     }]
 }

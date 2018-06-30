@@ -1,13 +1,16 @@
-use std::collections::{BTreeSet, BTreeMap};
 use super::{Constraint, VarPath};
 use bap::high::bil;
 use bap::high::bil::Statement;
 use load::Loc;
 use regs::Reg;
+use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 use var::Var;
 
-pub fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc, &mut BTreeMap<Var, u64>) -> Vec<A>>(
+pub fn move_walk<
+    A,
+    F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc, &mut BTreeMap<Var, u64>) -> Vec<A>,
+>(
     stmt: &Statement,
     cur_addr: &Loc,
     func_addr: &Loc,
@@ -18,8 +21,7 @@ pub fn move_walk<A, F: Fn(&bil::Variable, &bil::Expression, &Loc, &Loc, &mut BTr
         Statement::Jump(_) | Statement::Special | Statement::CPUException(_) => Vec::new(),
         Statement::While { ref body, .. } => {
             // We pass over the body twice to get the flow sensitivity on variables right
-            let mut out: Vec<A> = body
-                .iter()
+            let mut out: Vec<A> = body.iter()
                 .flat_map(|stmt| move_walk(stmt, cur_addr, func_addr, f, tmp_db))
                 .collect();
             out.extend(
@@ -57,14 +59,19 @@ pub enum E {
     Const(u64),
 }
 
-pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc, tmp_db: &BTreeMap<Var, u64>) -> Vec<E> {
+pub fn extract_expr(
+    e: &bil::Expression,
+    cur_addr: &Loc,
+    func_addr: &Loc,
+    tmp_db: &BTreeMap<Var, u64>,
+) -> Vec<E> {
     use bap::high::bil::Expression as BE;
     use num_traits::ToPrimitive;
     match *e {
         // TODO: Forward stack frame information in here so we can detect stack slots off %rbp
         BE::Var(ref bv) => {
             if bv.type_ == bil::Type::Immediate(1) {
-                return Vec::new()
+                return Vec::new();
             }
             let vp = if bv.name == "RSP" {
                 VarPath::stack_addr(func_addr, 0)
@@ -75,7 +82,7 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc, tmp_db
                         VarPath::temp(bv.name.as_str())
                     } else {
                         error!("Unrecognized variable name: {:?}", bv.name);
-                        return Vec::new()
+                        return Vec::new();
                     },
                 }
             };
@@ -104,32 +111,41 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc, tmp_db
             op,
         } => {
             if op == bil::BinOp::Add {
-            // Check for stack-relative addressing
+                // Check for stack-relative addressing
                 if let BE::Var(ref lv) = **lhs {
                     if lv.name == "RSP" {
                         match **rhs {
-                            BE::Const(ref bv) => 
-                                return vec![E::VP(VarPath::stack_addr(func_addr, bv.to_usize().unwrap()))],
+                            BE::Const(ref bv) => {
+                                return vec![E::VP(VarPath::stack_addr(
+                                    func_addr,
+                                    bv.to_usize().unwrap(),
+                                ))]
+                            }
                             _ => (),
                         }
                     }
                 } else if let BE::Var(ref rv) = **rhs {
                     if rv.name == "RSP" {
                         match **lhs {
-                            BE::Const(ref bv) =>
-                                return vec![E::VP(VarPath::stack_addr(func_addr, bv.to_usize().unwrap()))],
+                            BE::Const(ref bv) => {
+                                return vec![E::VP(VarPath::stack_addr(
+                                    func_addr,
+                                    bv.to_usize().unwrap(),
+                                ))]
+                            }
                             _ => (),
                         }
                     }
                 }
-            // Since we don't have stack relative addressing, it's time to do field math
+                // Since we don't have stack relative addressing, it's time to do field math
                 let lhe = extract_expr(lhs, cur_addr, func_addr, tmp_db);
                 let rhe = extract_expr(rhs, cur_addr, func_addr, tmp_db);
                 let mut out = Vec::new();
                 for e0 in &lhe {
                     for e1 in &rhe {
                         match (e0, e1) {
-                            (&E::Const(ref k), &E::VP(ref v)) | (&E::VP(ref v), &E::Const(ref k)) => out.push(E::VP(v.plus(*k))),
+                            (&E::Const(ref k), &E::VP(ref v))
+                            | (&E::VP(ref v), &E::Const(ref k)) => out.push(E::VP(v.plus(*k))),
                             // TODO this is a little iffy, doesn't do bitwidth right
                             // Unlikely to be a problem with pointers though
                             (&E::Const(ref k), &E::Const(ref k2)) => out.push(E::Const(*k + *k2)),
@@ -140,7 +156,7 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc, tmp_db
                         }
                     }
                 }
-                return out
+                return out;
             } else {
                 // Some kind of unknown computation is happening on the pointers. It might be
                 // subtraction, it might be some weird oring/anding, in any case, we no longer know
@@ -153,11 +169,14 @@ pub fn extract_expr(e: &bil::Expression, cur_addr: &Loc, func_addr: &Loc, tmp_db
                 let mut out = BTreeSet::new();
                 for e in used {
                     match e {
-                        E::VP(v) => {out.insert(E::VP(v.unknown())); ()}
+                        E::VP(v) => {
+                            out.insert(E::VP(v.unknown()));
+                            ()
+                        }
                         E::Const(_) => (),
                     }
                 }
-                return out.into_iter().collect()
+                return out.into_iter().collect();
             }
         }
         BE::IfThenElse {
@@ -180,7 +199,7 @@ fn extract_move_var(
     rhs: &bil::Expression,
     cur_addr: &Loc,
     func_addr: &Loc,
-    tmp_db: &mut BTreeMap<Var, u64>
+    tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Var> {
     match lhs.type_ {
         bil::Type::Memory { .. } => {
@@ -218,8 +237,8 @@ fn extract_move_var(
                 match eval {
                     E::VP(v) => if v.derefs() > 2 {
                         out.push(v.base)
-                    }
-                    E::Const(_) => ()
+                    },
+                    E::Const(_) => (),
                 }
             }
             out
@@ -232,7 +251,7 @@ fn extract_move(
     rhs: &bil::Expression,
     cur_addr: &Loc,
     func_addr: &Loc,
-    tmp_db: &mut BTreeMap<Var, u64>
+    tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Constraint> {
     match lhs.type_ {
         bil::Type::Memory { .. } => {
@@ -253,9 +272,9 @@ fn extract_move(
                 let lhs_expr = match &lhs_evar {
                     E::Const(_) => {
                         warn!("Ignoring write to constant address");
-                        continue
+                        continue;
                     }
-                    E::VP (ref lhs) => {
+                    E::VP(ref lhs) => {
                         if lhs.derefs() > 1 {
                             warn!("attempting to do a nested store");
                         }
@@ -276,7 +295,10 @@ fn extract_move(
                     }
                 }
                 if !out_exprs.is_empty() {
-                    out.push(Constraint {lhs: lhs_expr, rhss: out_exprs})
+                    out.push(Constraint {
+                        lhs: lhs_expr,
+                        rhss: out_exprs,
+                    })
                 }
             }
             out
@@ -301,8 +323,12 @@ fn extract_move(
                 .into_iter()
                 .filter_map(|eval| match eval {
                     E::VP(vp) => Some(vp),
-                    E::Const(k) => {ks.push(k); None}
-                }).collect();
+                    E::Const(k) => {
+                        ks.push(k);
+                        None
+                    }
+                })
+                .collect();
             // World's dumbest constant folding
             // If this resolved to a constant, only one constant, and
             // there are no pointer expressions, then put it in the temp db.
@@ -317,7 +343,7 @@ fn extract_move(
             } else {
                 vec![Constraint {
                     lhs: VarPath::var(lv),
-                    rhss: rhs_exprs
+                    rhss: rhs_exprs,
                 }]
             }
         }
@@ -337,7 +363,13 @@ pub fn extract_var_use(sema: &[Statement], cur: &Loc, func_loc: &Loc) -> Vec<Var
     let mut vars = Vec::new();
     let mut tmp_db = BTreeMap::new();
     for stmt in sema {
-        vars.extend(move_walk(stmt, cur, func_loc, &extract_move_var, &mut tmp_db));
+        vars.extend(move_walk(
+            stmt,
+            cur,
+            func_loc,
+            &extract_move_var,
+            &mut tmp_db,
+        ));
     }
     vars
 }

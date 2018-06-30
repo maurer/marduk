@@ -2,10 +2,10 @@ use constraints::{Constraint, VarPath};
 use datalog::*;
 use interned_string::InternedString;
 use load::Loc;
+use points_to::VarRef;
 use regs::Reg;
 use std::fmt::{Display, Formatter, Result};
 use var::Var;
-use points_to::VarRef;
 use {Config, LocType};
 pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
 
@@ -22,10 +22,14 @@ pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
 
 impl Display for Config {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "loc={}", match self.loc_type {
-            LocType::Addr => "addr",
-            LocType::AddrAndStack => "addr+stack",
-        })?;
+        write!(
+            f,
+            "loc={}",
+            match self.loc_type {
+                LocType::Addr => "addr",
+                LocType::AddrAndStack => "addr+stack",
+            }
+        )?;
         if self.undef_hack {
             write!(f, "&undef_hack")?;
         }
@@ -92,7 +96,10 @@ impl Display for Var {
                 Ok(())
             }
             Var::Freed { ref site } => write!(f, "freed@{}", site),
-            Var::Constructed { ref site, ref serial } => write!(f, "hack@{}+{}", site, serial),
+            Var::Constructed {
+                ref site,
+                ref serial,
+            } => write!(f, "hack@{}+{}", site, serial),
         }
     }
 }

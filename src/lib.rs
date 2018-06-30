@@ -32,30 +32,28 @@ pub use datalog::Database;
 #[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum LocType {
     Addr,
-    AddrAndStack
+    AddrAndStack,
 }
 
 #[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct Config {
     pub loc_type: LocType,
     pub load_only: bool,
-    pub undef_hack: bool
+    pub undef_hack: bool,
 }
 
 impl Config {
-    pub const CONTEXT_SENSITIVE: Self =
-        Self {
-            loc_type: LocType::AddrAndStack,
-            load_only: false,
-            undef_hack: false,
-        };
+    pub const CONTEXT_SENSITIVE: Self = Self {
+        loc_type: LocType::AddrAndStack,
+        load_only: false,
+        undef_hack: false,
+    };
 
-    pub const CONTEXT_INSENSITIVE: Self =
-        Config {
-            loc_type: LocType::Addr,
-            load_only: false,
-            undef_hack: false,
-        };
+    pub const CONTEXT_INSENSITIVE: Self = Config {
+        loc_type: LocType::Addr,
+        load_only: false,
+        undef_hack: false,
+    };
 
     pub fn uses_flow(&self) -> bool {
         !self.load_only
@@ -93,7 +91,7 @@ pub fn uaf(files: &[String], config: &Config) -> Database {
         db.insert_context_enable(datalog::ContextEnable { arg0: true });
     }
     if config.defines_undef() {
-        db.insert_undef_hack(datalog::UndefHack { arg0: true});
+        db.insert_undef_hack(datalog::UndefHack { arg0: true });
     }
 
     db
