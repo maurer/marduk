@@ -14,7 +14,7 @@ repository = "https://github.com/maurer/marduk"
 license = "MIT"
 
 [dependencies]
-num-traits = "0.1"
+num-traits = "0.2"
 mktemp = "0.3"
 log = "0.4"
 env_logger = "0.5"
