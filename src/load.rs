@@ -34,12 +34,10 @@ impl Stack {
         }
     }
     pub fn deloop(self) -> Self {
-        match *&self {
-            Stack::Return(ref tgt) => match tgt.stack.find(tgt.addr) {
-                Some(new) => return new,
-                None => (),
-            },
-            _ => (),
+        if let Stack::Return(ref tgt) = self {
+            if let Some(new) = tgt.stack.find(tgt.addr) {
+                return new;
+            }
         }
         self
     }
@@ -47,11 +45,8 @@ impl Stack {
         if limit == 0 {
             *self = Stack::EmptyStack;
         }
-        match *self {
-            Stack::Return(ref mut tgt) => {
-                tgt.stack.relimit(limit - 1);
-            }
-            _ => (),
+        if let Stack::Return(ref mut tgt) = *self {
+            tgt.stack.relimit(limit - 1);
         }
     }
 }
@@ -65,7 +60,7 @@ pub struct Loc {
 
 impl Loc {
     pub fn is_stacked(&self) -> bool {
-        !(self.stack == Stack::NoStack)
+        self.stack != Stack::NoStack
     }
 }
 
@@ -143,7 +138,7 @@ pub fn dump_plt(i: &LoadDumpPltIn) -> Vec<LoadDumpPltOut> {
         .map(|line| {
             let mut it = line.split(' ');
             let addr64 = u64::from_str_radix(it.next().unwrap(), 16).unwrap();
-            let unparsed = it.next().expect(&format!("No name? {}", line));
+            let unparsed = it.next().unwrap_or_else(|| panic!("No name? {}", line));
             let name = unparsed[1..].split('@').next().unwrap();
             LoadDumpPltOut {
                 pad_name: name.to_string(),

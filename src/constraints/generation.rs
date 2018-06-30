@@ -77,7 +77,7 @@ pub fn extract_expr(
                 VarPath::stack_addr(func_addr, 0)
             } else {
                 match Reg::from_str(bv.name.as_str()) {
-                    Ok(reg) => VarPath::reg(&reg),
+                    Ok(reg) => VarPath::reg(reg),
                     Err(_) => if bv.tmp {
                         VarPath::temp(bv.name.as_str())
                     } else {
@@ -114,26 +114,20 @@ pub fn extract_expr(
                 // Check for stack-relative addressing
                 if let BE::Var(ref lv) = **lhs {
                     if lv.name == "RSP" {
-                        match **rhs {
-                            BE::Const(ref bv) => {
-                                return vec![E::VP(VarPath::stack_addr(
-                                    func_addr,
-                                    bv.to_usize().unwrap(),
-                                ))]
-                            }
-                            _ => (),
+                        if let BE::Const(ref bv) = **rhs {
+                            return vec![E::VP(VarPath::stack_addr(
+                                func_addr,
+                                bv.to_usize().unwrap(),
+                            ))];
                         }
                     }
                 } else if let BE::Var(ref rv) = **rhs {
                     if rv.name == "RSP" {
-                        match **lhs {
-                            BE::Const(ref bv) => {
-                                return vec![E::VP(VarPath::stack_addr(
-                                    func_addr,
-                                    bv.to_usize().unwrap(),
-                                ))]
-                            }
-                            _ => (),
+                        if let BE::Const(ref bv) = **lhs {
+                            return vec![E::VP(VarPath::stack_addr(
+                                func_addr,
+                                bv.to_usize().unwrap(),
+                            ))];
                         }
                     }
                 }
@@ -156,7 +150,7 @@ pub fn extract_expr(
                         }
                     }
                 }
-                return out;
+                out
             } else {
                 // Some kind of unknown computation is happening on the pointers. It might be
                 // subtraction, it might be some weird oring/anding, in any case, we no longer know
@@ -176,7 +170,7 @@ pub fn extract_expr(
                         E::Const(_) => (),
                     }
                 }
-                return out.into_iter().collect();
+                out.into_iter().collect()
             }
         }
         BE::IfThenElse {

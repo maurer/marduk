@@ -1,5 +1,10 @@
+extern crate marduk;
+
+use self::marduk::Config;
 use super::ALIAS_MODES;
-use eval_common::*;
+use measurement::Measurement;
+use std::collections::BTreeMap;
+use std::f64::EPSILON;
 
 struct Stats {
     avg: f64,
@@ -48,7 +53,7 @@ fn space_formatter(t: f64) {
 }
 
 fn fp_formatter(t: f64) {
-    if t.floor() * 10.0 == (t * 10.0).floor() {
+    if (t.floor() * 10.0 - (t * 10.0).floor()).abs() < EPSILON {
         print!("{}", t.floor() as usize);
     } else {
         print!("{:.1}", t);
@@ -108,7 +113,7 @@ fn compare_modes(big: Config, small: Config, dat: &[Measurement]) {
     );
 }
 
-pub fn post_analysis(dat: Vec<Measurement>) {
+pub fn post_analysis(dat: &[Measurement]) {
     println!("BEGIN_TABLE");
     for mode in ALIAS_MODES {
         let mut fps = Vec::new();
@@ -117,7 +122,7 @@ pub fn post_analysis(dat: Vec<Measurement>) {
         for m in dat.iter().filter(|m| &m.mode == mode).cloned() {
             fps.push(m.false_positives as f64);
             spaces.push(m.space as f64);
-            let time = m.time.as_secs() as f64 + (m.time.subsec_nanos() as f64 / 1_000_000.0);
+            let time = m.time.as_secs() as f64 + (f64::from(m.time.subsec_nanos()) / 1_000_000.0);
             times.push(time);
         }
         let fp_stats = stats(&fps);

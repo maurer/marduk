@@ -28,7 +28,7 @@ impl InternedString {
         intern.1.insert(s.to_string(), out);
         out
     }
-    pub fn to_string(&self) -> String {
+    pub fn to_string(self) -> String {
         STRING_INTERN.lock().unwrap().0[self.index as usize].clone()
     }
 }

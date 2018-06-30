@@ -55,21 +55,21 @@ impl Config {
         undef_hack: false,
     };
 
-    pub fn uses_flow(&self) -> bool {
+    pub fn uses_flow(self) -> bool {
         !self.load_only
     }
-    pub fn uses_ctx(&self) -> bool {
+    pub fn uses_ctx(self) -> bool {
         match self.loc_type {
             LocType::AddrAndStack => true,
             LocType::Addr => false,
         }
     }
-    pub fn defines_undef(&self) -> bool {
+    pub fn defines_undef(self) -> bool {
         self.undef_hack
     }
 }
 
-pub fn uaf(files: &[String], config: &Config) -> Database {
+pub fn uaf(files: &[String], config: Config) -> Database {
     let mut db = Database::new();
     for file_name in files {
         use std::fs::File;

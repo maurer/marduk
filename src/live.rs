@@ -35,11 +35,10 @@ fn defined_walk(
                 panic!("Writing to memory, but the expression isn't a store");
             };
             for evar in extract_expr(index, cur_addr, func_addr, tmp_db) {
-                match evar {
-                    E::VP(v) => if v.derefs() == 1 {
+                if let E::VP(v) = evar {
+                    if v.derefs() == 1 {
                         out.push(v.base)
-                    },
-                    _ => (),
+                    }
                 }
             }
         }
@@ -79,19 +78,17 @@ fn used_walk(
                 panic!("Writing to memory, but the expression isn't a store");
             };
             for evar in extract_expr(index, cur_addr, func_addr, tmp_db) {
-                match evar {
-                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                if let E::VP(v) = evar {
+                    if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
-                    },
-                    _ => (),
+                    }
                 }
             }
             for evar in extract_expr(value, cur_addr, func_addr, tmp_db) {
-                match evar {
-                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                if let E::VP(v) = evar {
+                    if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
-                    },
-                    _ => (),
+                    }
                 }
             }
         }
@@ -101,11 +98,10 @@ fn used_walk(
                 return Vec::new();
             }
             for evar in extract_expr(rhs, cur_addr, func_addr, tmp_db) {
-                match evar {
-                    E::VP(v) => if !v.base.is_temp() && v.derefs() > 1 {
+                if let E::VP(v) = evar {
+                    if !v.base.is_temp() && v.derefs() > 1 {
                         out.push(v.base)
-                    },
-                    _ => (),
+                    }
                 }
             }
         }
@@ -249,5 +245,5 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
     }
     trace!("Generated self-referential region and assigned.");
     trace!("undef_out: {}", pts);
-    vec![LiveUndefLiveOut { pts: pts }]
+    vec![LiveUndefLiveOut { pts }]
 }

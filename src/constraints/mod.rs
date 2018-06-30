@@ -23,7 +23,9 @@ impl Constraint {
 }
 
 pub fn off_plus(base: &mut Option<u64>, off: u64) {
-    base.as_mut().map(|base_val| *base_val += off);
+    if let Some(base_val) = base.as_mut() {
+        *base_val += off;
+    }
 }
 
 impl VarPath {
@@ -36,8 +38,8 @@ impl VarPath {
         }
     }
 
-    pub fn reg(reg: &Reg) -> Self {
-        Self::var(Var::Register { register: *reg })
+    pub fn reg(reg: Reg) -> Self {
+        Self::var(Var::Register { register: reg })
     }
 
     pub fn temp(s: &str) -> VarPath {
@@ -55,7 +57,7 @@ impl VarPath {
     pub fn stack_addr(func_addr: &Loc, offset: usize) -> Self {
         Self::addr(Var::StackSlot {
             func_addr: func_addr.clone(),
-            offset: offset,
+            offset,
         })
     }
 

@@ -44,19 +44,9 @@ impl FieldMap {
         out
     }
 
-    fn force_mut(&mut self, offset: u64) -> &mut BTreeSet<VarRef> {
-        // If there wasn't an entry for it before, initialize it with the writes which could have
-        // gone anywhere.
-        //
-        // We'll only need this function if we start doing nondestructive updates to precise fields
-        // This is possible (e.g. with an ite or cmov) but not yet generated in constraints
-        let ub = &self.unbounded;
-        self.offsets.entry(offset).or_insert_with(|| ub.clone())
-    }
-
     pub fn merge(&mut self, other: &Self) {
         self.unbounded.extend(other.unbounded.iter().cloned());
-        for (k, v) in other.offsets.iter() {
+        for (k, v) in &other.offsets {
             let mut do_insert = false; // Bool to get around borrowck
             if let Some(our_v) = self.offsets.get_mut(k) {
                 our_v.extend(v.iter().cloned());
@@ -212,7 +202,7 @@ impl PointsTo {
         }
         for fm in self.inner.values_mut() {
             let mut u_new = Vec::new();
-            for vr in fm.unbounded.iter() {
+            for vr in &fm.unbounded {
                 if vr.var == fresh {
                     let mut vr_new = vr.clone();
                     vr_new.var = stale.clone();
@@ -254,7 +244,7 @@ impl PointsTo {
         for fm in self.inner.values_mut() {
             let mut u_new = Vec::new();
             let mut u_old = Vec::new();
-            for vr in fm.unbounded.iter() {
+            for vr in &fm.unbounded {
                 if vr.var == fresh {
                     let mut vr_new = vr.clone();
                     vr_new.var = stale.clone();

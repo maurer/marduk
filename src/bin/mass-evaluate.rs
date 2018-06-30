@@ -4,6 +4,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 mod eval_common;
+mod measurement;
 mod stats;
 use eval_common::*;
 
@@ -40,7 +41,7 @@ fn measure_uaf(name: &str) -> Vec<Measurement> {
     ALIAS_MODES
         .iter()
         .flat_map(|mode| {
-            let ms = measure_mode(&names, mode, &[]);
+            let ms = measure_mode(&names, *mode, &[]);
             if let Some(ref m) = ms {
                 log_measure(&m);
             }
@@ -67,5 +68,5 @@ fn main() {
         let mut out = File::create("out.json").unwrap();
         serde_json::to_writer(&mut out, &full).unwrap();
     }
-    stats::post_analysis(full);
+    stats::post_analysis(&full);
 }

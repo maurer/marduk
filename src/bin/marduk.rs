@@ -133,13 +133,13 @@ fn main() {
 
     run_marduk(
         &files,
-        &config,
+        config,
         args.is_present("progress"),
         args.is_present("debug"),
     );
 }
 
-fn run_marduk(files: &[String], config: &Config, progress: bool, debug: bool) {
+fn run_marduk(files: &[String], config: Config, progress: bool, debug: bool) {
     use std::time::Instant;
 
     let mut db = marduk::uaf(files, config);

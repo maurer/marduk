@@ -1,11 +1,13 @@
 // Macros need to be loaded at root
 #[macro_use]
 extern crate serde_derive;
+extern crate marduk;
 extern crate serde_json;
 
-mod eval_common;
+mod measurement;
 mod stats;
-use eval_common::*;
+use marduk::Config;
+use measurement::Measurement;
 
 pub const MEMORY_LIMIT: usize = 0;
 pub const TIME_LIMIT: u64 = 0;
@@ -16,5 +18,5 @@ fn main() {
     use std::fs::File;
     let mut in_file = File::open("out.json").unwrap();
     let dat: Vec<Measurement> = serde_json::from_reader(&mut in_file).unwrap();
-    stats::post_analysis(dat);
+    stats::post_analysis(&dat);
 }

@@ -9,8 +9,9 @@ use var::Var;
 fn off_plus(base: &mut Option<u64>, off: Option<u64>) {
     match off {
         Some(off_val) => {
-            base.as_mut().map(|base_val| *base_val += off_val);
-            ()
+            if let Some(base_val) = base.as_mut() {
+                *base_val += off_val;
+            }
         }
         None => *base = None,
     }
@@ -42,7 +43,7 @@ fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
                 off_plus(&mut offsets[0], vr.offset);
                 let vpp = VarPath {
                     base: vr.var,
-                    offsets: offsets,
+                    offsets,
                 };
                 lhs_resolve(pts, vpp)
             })
@@ -71,7 +72,7 @@ fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
                 off_plus(&mut offsets[0], vr.offset);
                 let vpp = VarPath {
                     base: vr.var,
-                    offsets: offsets,
+                    offsets,
                 };
                 rhs_resolve(pts, vpp)
             })
