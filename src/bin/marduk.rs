@@ -4,14 +4,14 @@ extern crate marduk;
 
 use marduk::Config;
 
-fn print_results(db: &mut marduk::datalog::Database) {
+fn print_results(db: &mut marduk::Database) {
     println!("UaF (free -> use):");
     for x in db.query_uaf_flow() {
         println!("{}", x);
     }
 }
 
-fn print_state(db: &mut marduk::datalog::Database) {
+fn print_state(db: &mut marduk::Database) {
     println!("PTS:");
     for x in db.query_flow() {
         println!("{}", x);
@@ -53,7 +53,10 @@ fn print_state(db: &mut marduk::datalog::Database) {
     }
 
     for x in db.query_constraints() {
-        println!("c: {}: {}", x.loc, marduk::printers::CB(&x.c));
+        println!("c: {}:", x.loc);
+        for c in &x.c {
+            println!("{}", c);
+        }
     }
 }
 

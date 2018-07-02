@@ -49,7 +49,7 @@ pub fn marduk(names: &[String], mode: Config) -> Option<Run> {
     Some(Run { db, time, space })
 }
 
-pub fn uaf_tuple(uaf: &marduk::datalog::AllUafResult) -> (u64, u64) {
+pub fn uaf_tuple(uaf: &marduk::AllUafResult) -> (u64, u64) {
     (
         uaf.free.addr.to_u64().unwrap(),
         uaf.use_.addr.to_u64().unwrap(),

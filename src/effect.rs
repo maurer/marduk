@@ -32,7 +32,7 @@ impl Effect {
             maybe_malloc,
         }
     }
-    pub fn apply(&mut self, other: &Self) {
+    fn apply(&mut self, other: &Self) {
         for site in &other.does_malloc {
             self.malloc(site)
         }
@@ -41,7 +41,7 @@ impl Effect {
         }
     }
 
-    pub fn malloc(&mut self, site: &Loc) {
+    fn malloc(&mut self, site: &Loc) {
         self.does_malloc.insert(site.clone());
         self.maybe_malloc.remove(site);
     }

@@ -33,7 +33,7 @@ impl Stack {
             _ => None,
         }
     }
-    pub fn deloop(self) -> Self {
+    fn deloop(self) -> Self {
         if let Stack::Return(ref tgt) = self {
             if let Some(new) = tgt.stack.find(tgt.addr) {
                 return new;

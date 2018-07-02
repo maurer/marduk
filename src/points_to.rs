@@ -14,12 +14,12 @@ pub struct VarRef {
 }
 
 impl VarRef {
-    pub fn is_freed(&self) -> bool {
+    fn is_freed(&self) -> bool {
         self.var.is_freed()
     }
 }
 
-pub type VarSet = BTreeSet<VarRef>;
+type VarSet = BTreeSet<VarRef>;
 
 #[derive(Default, Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
 pub struct FieldMap {
@@ -36,7 +36,7 @@ impl FieldMap {
         Self::default()
     }
 
-    pub fn pt_to(&self) -> BTreeSet<Var> {
+    fn pt_to(&self) -> BTreeSet<Var> {
         let mut out: BTreeSet<Var> = self.unbounded.iter().map(|v| v.var.clone()).collect();
         for vs in self.offsets.values() {
             out.extend(vs.iter().map(|v| v.var.clone()));
@@ -61,11 +61,11 @@ impl FieldMap {
         }
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.unbounded.is_empty() && self.offsets.is_empty()
     }
 
-    pub fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
+    fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
         let unbounded_remove: Vec<_> = self.unbounded
             .iter()
             .filter(|vr| f(&vr.var))
@@ -116,7 +116,7 @@ impl FieldMap {
         true
     }
 
-    pub fn write(&mut self, u_offset: Option<u64>, val: VarSet) {
+    fn write(&mut self, u_offset: Option<u64>, val: VarSet) {
         // If this is register-like (only accessed through one, specific address)
         if self.precise(u_offset) {
             //Reset the unbounded set before extending it, since we know the unbounded data only
@@ -137,7 +137,7 @@ impl FieldMap {
         }
     }
 
-    pub fn read(&self, u_offset: Option<u64>) -> VarSet {
+    fn read(&self, u_offset: Option<u64>) -> VarSet {
         if let Some(offset) = u_offset {
             match self.offsets.get(&offset) {
                 None => self.unbounded.clone(),

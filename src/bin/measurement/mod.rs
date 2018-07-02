@@ -19,7 +19,6 @@ pub struct Measurement {
 }
 
 mod printers {
-    use super::marduk::printers::fmt_vec;
     use super::Measurement;
     use std::fmt::{Display, Formatter, Result};
     fn fmt_space(f: &mut Formatter, space: usize) -> Result {
@@ -37,7 +36,17 @@ mod printers {
 
     impl Display for Measurement {
         fn fmt(&self, f: &mut Formatter) -> Result {
-            fmt_vec(f, &self.artifact)?;
+            write!(f, "[")?;
+            let mut first_art = true;
+            for art_name in &self.artifact {
+                if !first_art {
+                    write!(f, ", ")?;
+                }
+                first_art = false;
+                write!(f, "{}", art_name)?;
+            }
+            write!(f, "]")?;
+
             writeln!(
                 f,
                 "~{}\n+{} -{}",

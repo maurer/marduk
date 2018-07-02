@@ -22,8 +22,8 @@ use constraints::datalog as constraints;
 use context;
 use live;
 
-pub const VAR_ARG_0: Var = Var::Register { register: ARGS[0] };
-pub const VAR_ARG_1: Var = Var::Register { register: ARGS[1] };
+const VAR_ARG_0: Var = Var::Register { register: ARGS[0] };
+const VAR_ARG_1: Var = Var::Register { register: ARGS[1] };
 
 fn effect_merge(efs: &[&Effect]) -> Effect {
     let mut out = efs[0].clone();
