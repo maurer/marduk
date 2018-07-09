@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use bap::high::bil;
 use datalog::*;
 use load::Loc;
@@ -211,7 +212,7 @@ fn build_struct(
                         var: base.clone(),
                         offset: Some((w * WORD_SIZE) as u64),
                     },
-                    target_set,
+                    Rc::new(target_set),
                 );
                 new_bases.push(target);
             }

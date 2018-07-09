@@ -3,6 +3,7 @@
 //! and need to update and propagate data between them.
 use load::Loc;
 use regs::Reg;
+use std::rc::Rc;
 use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
 use var::Var;
@@ -19,7 +20,7 @@ impl VarRef {
     }
 }
 
-type VarSet = BTreeSet<VarRef>;
+type VarSet = Rc<BTreeSet<VarRef>>;
 
 #[derive(Default, Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
 pub struct FieldMap {
@@ -45,17 +46,17 @@ impl FieldMap {
     }
 
     pub fn merge(&mut self, other: &Self) {
-        self.unbounded.extend(other.unbounded.iter().cloned());
+        Rc::make_mut(&mut self.unbounded).extend(other.unbounded.iter().cloned());
         for (k, v) in &other.offsets {
             let mut do_insert = false; // Bool to get around borrowck
             if let Some(our_v) = self.offsets.get_mut(k) {
-                our_v.extend(v.iter().cloned());
+                Rc::make_mut(our_v).extend(v.iter().cloned());
             } else {
                 do_insert = true;
             }
             if do_insert {
                 let mut our_v = self.unbounded.clone();
-                our_v.extend(v.iter().cloned());
+                Rc::make_mut(&mut our_v).extend(v.iter().cloned());
                 self.offsets.insert(k.clone(), our_v);
             }
         }
@@ -72,12 +73,12 @@ impl FieldMap {
             .cloned()
             .collect();
         for vr in unbounded_remove {
-            self.unbounded.remove(&vr);
+            Rc::make_mut(&mut self.unbounded).remove(&vr);
         }
         for vs in self.offsets.values_mut() {
             let to_remove: Vec<_> = vs.iter().filter(|vr| f(&vr.var)).cloned().collect();
             for vr in to_remove {
-                vs.remove(&vr);
+                Rc::make_mut(vs).remove(&vr);
             }
         }
     }
@@ -121,18 +122,18 @@ impl FieldMap {
         if self.precise(u_offset) {
             //Reset the unbounded set before extending it, since we know the unbounded data only
             //came from the address we now overwrite.
-            self.unbounded.clear();
+            Rc::make_mut(&mut self.unbounded).clear();
         }
 
         if let Some(offset) = u_offset {
             // Destructive update
             self.offsets.insert(offset, val);
         } else {
-            self.unbounded.extend(val.clone());
+            Rc::make_mut(&mut self.unbounded).extend(val.iter().cloned());
             self.ub_write = true;
             // We don't understand where the write is, nondestructive updates for everyone
             for vs in self.offsets.values_mut() {
-                vs.extend(val.clone());
+                Rc::make_mut(vs).extend(val.iter().cloned());
             }
         }
     }
@@ -146,7 +147,7 @@ impl FieldMap {
         } else {
             let mut out = self.unbounded.clone();
             for v in self.offsets.values() {
-                out.extend(v.iter().cloned());
+                Rc::make_mut(&mut out).extend(v.iter().cloned());
             }
             out
         }
@@ -202,14 +203,14 @@ impl PointsTo {
         }
         for fm in self.inner.values_mut() {
             let mut u_new = Vec::new();
-            for vr in &fm.unbounded {
+            for vr in fm.unbounded.iter() {
                 if vr.var == fresh {
                     let mut vr_new = vr.clone();
                     vr_new.var = stale.clone();
                     u_new.push(vr_new);
                 }
             }
-            fm.unbounded.extend(u_new);
+            Rc::make_mut(&mut fm.unbounded).extend(u_new);
 
             for vs in fm.offsets.values_mut() {
                 let mut o_new = Vec::new();
@@ -220,7 +221,7 @@ impl PointsTo {
                         o_new.push(vr_new);
                     }
                 }
-                vs.extend(o_new);
+                Rc::make_mut(vs).extend(o_new);
             }
         }
     }
@@ -244,7 +245,7 @@ impl PointsTo {
         for fm in self.inner.values_mut() {
             let mut u_new = Vec::new();
             let mut u_old = Vec::new();
-            for vr in &fm.unbounded {
+            for vr in fm.unbounded.iter() {
                 if vr.var == fresh {
                     let mut vr_new = vr.clone();
                     vr_new.var = stale.clone();
@@ -253,9 +254,9 @@ impl PointsTo {
                 }
             }
             for vr in u_old {
-                fm.unbounded.remove(&vr);
+                Rc::make_mut(&mut fm.unbounded).remove(&vr);
             }
-            fm.unbounded.extend(u_new);
+            Rc::make_mut(&mut fm.unbounded).extend(u_new);
 
             for vs in fm.offsets.values_mut() {
                 let mut o_new = Vec::new();
@@ -269,9 +270,9 @@ impl PointsTo {
                     }
                 }
                 for vr in o_old {
-                    vs.remove(&vr);
+                    Rc::make_mut(vs).remove(&vr);
                 }
-                vs.extend(o_new);
+                Rc::make_mut(vs).extend(o_new);
             }
         }
     }
@@ -282,17 +283,17 @@ impl PointsTo {
     fn get_all(&self, v: &VarRef) -> VarSet {
         match self.inner.get(&v.var) {
             Some(k) => k.read(v.offset).clone(),
-            None => BTreeSet::new(),
+            None => Rc::new(BTreeSet::new()),
         }
     }
 
     /// Gets the set of what a variable may point to, not including any free references
     pub fn get(&self, v: &VarRef) -> VarSet {
-        self.get_all(v)
+        Rc::new(self.get_all(v)
             .iter()
             .filter(|x| !x.is_freed())
             .cloned()
-            .collect()
+            .collect())
     }
 
     pub fn get_var(&self, v: &Var) -> FieldMap {

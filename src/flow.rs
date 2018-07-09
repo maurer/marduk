@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use constraints::{Constraint, VarPath};
 use datalog::*;
 use points_to::PointsTo;
@@ -37,17 +38,17 @@ fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
             offset: offset_0[0],
         };
         pts.get(&vr0)
-            .into_iter()
-            .flat_map(|vr| {
-                let mut offsets = offsets_rest.to_vec();
-                off_plus(&mut offsets[0], vr.offset);
-                let vpp = VarPath {
-                    base: vr.var,
-                    offsets,
-                };
-                lhs_resolve(pts, vpp)
-            })
-            .collect()
+           .iter()
+           .flat_map(|vr| {
+               let mut offsets = offsets_rest.to_vec();
+               off_plus(&mut offsets[0], vr.offset);
+               let vpp = VarPath {
+                   base: vr.var.clone(),
+                   offsets,
+               };
+               lhs_resolve(pts, vpp)
+           })
+           .collect()
     }
 }
 
@@ -66,12 +67,12 @@ fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
             offset: offset_0[0],
         };
         pts.get(&vr0)
-            .into_iter()
-            .flat_map(|vr| {
+           .iter()
+           .flat_map(|vr| {
                 let mut offsets = offsets_rest.to_vec();
                 off_plus(&mut offsets[0], vr.offset);
                 let vpp = VarPath {
-                    base: vr.var,
+                    base: vr.var.clone(),
                     offsets,
                 };
                 rhs_resolve(pts, vpp)
@@ -101,7 +102,7 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
     trace!("LHS resolution:");
     for lhs in lhs_resolve(pts, c.lhs.clone()) {
         trace!("{}", lhs);
-        pts.set_alias(lhs, rhses.clone());
+        pts.set_alias(lhs, Rc::new(rhses.clone()));
     }
 }
 
