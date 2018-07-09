@@ -25,7 +25,7 @@ fn run_uaf(
         .iter()
         .map(|x| format!("samples/whole/{}", x))
         .collect();
-    let mut db = uaf(&names, &marduk::Config::CONTEXT_INSENSITIVE);
+    let mut db = uaf(&names, marduk::Config::CONTEXT_INSENSITIVE);
     db.run_rules();
 
     let mut false_positives_found = 0;
