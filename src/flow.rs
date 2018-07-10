@@ -1,10 +1,7 @@
-use std::rc::Rc;
 use constraints::{Constraint, VarPath};
 use datalog::*;
-use points_to::PointsTo;
-use points_to::VarRef;
+use points_to::{PointsTo, VarRef, VarSet};
 use regs::ARGS;
-use std::collections::BTreeSet;
 use var::Var;
 
 fn off_plus(base: &mut Option<u64>, off: Option<u64>) {
@@ -38,17 +35,17 @@ fn lhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
             offset: offset_0[0],
         };
         pts.get(&vr0)
-           .iter()
-           .flat_map(|vr| {
-               let mut offsets = offsets_rest.to_vec();
-               off_plus(&mut offsets[0], vr.offset);
-               let vpp = VarPath {
-                   base: vr.var.clone(),
-                   offsets,
-               };
-               lhs_resolve(pts, vpp)
-           })
-           .collect()
+            .iter()
+            .flat_map(|vr| {
+                let mut offsets = offsets_rest.to_vec();
+                off_plus(&mut offsets[0], vr.offset);
+                let vpp = VarPath {
+                    base: vr.var.clone(),
+                    offsets,
+                };
+                lhs_resolve(pts, vpp)
+            })
+            .collect()
     }
 }
 
@@ -67,8 +64,8 @@ fn rhs_resolve(pts: &PointsTo, vp: VarPath) -> Vec<VarRef> {
             offset: offset_0[0],
         };
         pts.get(&vr0)
-           .iter()
-           .flat_map(|vr| {
+            .iter()
+            .flat_map(|vr| {
                 let mut offsets = offsets_rest.to_vec();
                 off_plus(&mut offsets[0], vr.offset);
                 let vpp = VarPath {
@@ -90,19 +87,19 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
     }
 
     // This needs to be done afterwards, because we need all staleness applied first.
-    let mut rhses = BTreeSet::new();
+    let mut rhses = VarSet::new();
     for rhs in &c.rhss {
         rhses.extend(rhs_resolve(pts, rhs.clone()).into_iter());
     }
 
     trace!("RHS resolution:");
-    for rhs in &rhses {
+    for rhs in rhses.iter() {
         trace!("{}", rhs);
     }
     trace!("LHS resolution:");
     for lhs in lhs_resolve(pts, c.lhs.clone()) {
         trace!("{}", lhs);
-        pts.set_alias(lhs, Rc::new(rhses.clone()));
+        pts.set_alias(lhs, rhses.clone());
     }
 }
 

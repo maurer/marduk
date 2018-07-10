@@ -1,10 +1,9 @@
-use std::rc::Rc;
 use bap::high::bil;
 use datalog::*;
 use load::Loc;
-use points_to::{PointsTo, VarRef};
+use points_to::{PointsTo, VarRef, VarSet};
 use regs::Reg;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::str::FromStr;
 use var::{var_args, Var};
 
@@ -202,7 +201,7 @@ fn build_struct(
         for base in bases {
             for w in 0..width {
                 let target = construct(serial, loc);
-                let mut target_set = BTreeSet::new();
+                let mut target_set = VarSet::new();
                 target_set.insert(VarRef {
                     var: target.clone(),
                     offset: Some(0),
@@ -212,7 +211,7 @@ fn build_struct(
                         var: base.clone(),
                         offset: Some((w * WORD_SIZE) as u64),
                     },
-                    Rc::new(target_set),
+                    target_set,
                 );
                 new_bases.push(target);
             }
