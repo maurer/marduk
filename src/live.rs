@@ -199,7 +199,10 @@ fn build_struct(
     for _ in 0..depth {
         let mut new_bases: Vec<Var> = Vec::new();
         for base in bases {
-            for w in 0..width {
+            for mut w in 0..(width+1) {
+                if width == w {
+                    w = 0x68 / WORD_SIZE;
+                }
                 let target = construct(serial, loc);
                 let mut target_set = VarSet::new();
                 target_set.insert(VarRef {
