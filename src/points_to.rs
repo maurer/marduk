@@ -20,6 +20,7 @@ impl VarRef {
 }
 
 mod cow_varset {
+    const MAX_VAR_REF: usize = 2;
     use super::VarRef;
     use std::collections::BTreeSet;
     use std::ops::{Deref, DerefMut};
@@ -46,6 +47,53 @@ mod cow_varset {
     impl VarSet {
         pub fn new() -> Self {
             VarSet(Rc::new(BTreeSet::new()))
+        }
+        pub fn insert(&mut self, vr: VarRef) -> bool {
+            // 0.) Check if we're here already - we want to early return to avoid widening
+            if self.contains(&vr) {
+                return false;
+            }
+
+            // 1.) Check that we don't already have a v+? in there, if we do, no point in adding it
+            let vq = VarRef {
+                var: vr.var.clone(),
+                offset: None
+            };
+            if self.contains(&vq) {
+                return false;
+            }
+
+            // 2.) Count the number of v+x if we're some, or round up if we're none
+            let mut vr_alike = Vec::new();
+            for vri in self.iter() {
+                if vri.var == vr.var {
+                    vr_alike.push(vri.clone());
+                }
+            }
+
+            if vr_alike.len() > MAX_VAR_REF || vr.offset.is_none() {
+                for vra in &vr_alike {
+                    self.remove(vra);
+                }
+                let vrn = VarRef {
+                    var: vr.var.clone(),
+                    offset: None
+                };
+                return self.deref_mut().insert(vrn)
+            }
+
+            // No widening constraints, just insert it
+            self.deref_mut().insert(vr)
+        }
+    }
+
+    impl Extend<VarRef> for VarSet {
+        // Potentially, implementing extend like this could be n^2.
+        // I'm betting pretty hard on these sets being small...
+        fn extend<T: IntoIterator<Item=VarRef>>(&mut self, other: T) {
+            for vr in other {
+                self.insert(vr);
+            }
         }
     }
 }
