@@ -58,16 +58,6 @@ pub fn apply_effect(i: &EffectApplyEffectIn) -> Vec<EffectApplyEffectOut> {
     vec![EffectApplyEffectOut { effect2: out }]
 }
 
-pub fn remote_apply_effect(i: &EffectRemoteApplyEffectIn) -> Vec<EffectRemoteApplyEffectOut> {
-    if !::load::malloc_name(i.name) {
-        let mut out = i.effect.clone();
-        out.apply(i.effect_call);
-        vec![EffectRemoteApplyEffectOut { effect2: out }]
-    } else {
-        Vec::new()
-    }
-}
-
 pub fn malloc(i: &EffectMallocIn) -> Vec<EffectMallocOut> {
     let mut effect2 = i.effect.clone();
     effect2.malloc(i.local);
