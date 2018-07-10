@@ -195,7 +195,8 @@ fn build_struct(
     depth: usize,
 ) {
     const WORD_SIZE: usize = 8;
-    let mut bases: Vec<Var> = vec![var];
+    let root = construct(serial, loc);
+    let mut bases: Vec<Var> = vec![root.clone()];
     for _ in 0..depth {
         let mut new_bases: Vec<Var> = Vec::new();
         for base in bases {
@@ -221,6 +222,16 @@ fn build_struct(
         }
         bases = new_bases
     }
+    let mut root_set = VarSet::new();
+    root_set.insert(VarRef {
+        var: root,
+        offset: Some(0)
+    });
+    pts.set_alias(VarRef {
+        var: var,
+        offset: None
+    },
+    root_set);
 }
 
 pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
@@ -244,7 +255,7 @@ pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {
 
     let mut serial = 0;
     for var in undefs {
-        build_struct(&mut pts, &mut serial, var, i.loc, 4, 2);
+        build_struct(&mut pts, &mut serial, var, i.loc, 4, 1);
     }
     trace!("Generated self-referential region and assigned.");
     trace!("undef_out: {}", pts);
