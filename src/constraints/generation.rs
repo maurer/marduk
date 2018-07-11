@@ -92,7 +92,10 @@ pub fn extract_expr(
                 vec![E::VP(vp)]
             }
         }
-        BE::Const(ref e) => vec![E::Const(e.to_u64().unwrap())],
+        BE::Const(ref e) => match e.to_u64() {
+            Some(k) => vec![E::Const(k)],
+            None => Vec::new(),
+        },
         BE::Load { ref index, .. } => extract_expr(index, cur_addr, func_addr, tmp_db)
             .into_iter()
             .flat_map(|e| match e {

@@ -57,7 +57,7 @@ pub fn parse_str(i: &FmtStrParseStrIn) -> Vec<FmtStrParseStrOut> {
         if c[0] == '%' {
             if c[1] == '%' {
                 skip = true;
-            } else {
+            } else if arg < ARGS.len() {
                 out.push(FmtStrParseStrOut { arg: ARGS[arg] });
                 arg += 1;
             }
