@@ -1,5 +1,8 @@
 local_effect {base: Loc, local: Loc, effect: Effect^effect_merge}
 func_effect(Loc, Effect^effect_merge)
+fuse_call {call_loc: Loc, effect_call: Effect, ret_loc: Loc}
+
+local_fuse: fuse_call {call_loc, effect_call, ret_loc} <- func_effect(remote, effect_call) & call_site {call_loc, target_loc: remote, ret_loc}
 
 //TODO check all_funcs and don't run this rule if the link pad is in there
 unlinked_effect: func_effect(base, ~(Effect::nop())) <- link_pad { pad_loc: base }
@@ -7,5 +10,5 @@ unlinked_effect: func_effect(base, ~(Effect::nop())) <- link_pad { pad_loc: base
 local_init@5: local_effect {base, local: base, effect: ~(Effect::nop())} <- sym {loc: base}
 local_ret: func_effect(base, effect) <- local_effect {base, local, effect} & succ_ret {src: local}
 local_xfer: local_effect {base, local: local2, effect} <- local_effect {base, local, effect} & succ {src: local, dst: local2, is_call: ~false}
-local_call: local_effect {base, local: local2, effect: effect2} <- call_site {call_loc: local, target_loc: remote, ret_loc: local2} & func_effect(remote, effect_call) & local_effect {base, local, effect} + ::effect::apply_effect
+local_call: local_effect {base, local: local2, effect: effect2} <- fuse_call {call_loc: local, effect_call, ret_loc: local2} & local_effect {base, local, effect} + ::effect::apply_effect
 local_malloc: local_effect {base, local: local2, effect: effect2} <- succ_over {src: local, dst: local2} & local_effect {base, local, effect} & malloc_call {loc: local} + ::effect::malloc

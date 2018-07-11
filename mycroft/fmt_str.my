@@ -1,4 +1,6 @@
 printf_like {loc: Loc}
+printf_like_call {loc: Loc}
+printf_like_def {def: Loc, printf: Loc}
 fmt_addr {loc: Loc, addr: u64}
 str_const {addr: u64, str: String}
 func_uses(Reg, Loc)
@@ -7,7 +9,9 @@ printf_printf: printf_like {loc} <- link_pad {pad_loc: loc, pad_name: ~("printf"
 failure_printf: printf_like {loc} <- sym {loc, name: ~("failure".to_string())}
 frprintf_printf: printf_like {loc} <- link_pad {pad_loc: loc, pad_name: ~("fprintf".to_string())}
 printf_chk_printf: printf_like {loc} <- link_pad {pad_loc: loc, pad_name: ~("__printf_chk".to_string())}
-fmt_addr_find@5: fmt_addr {loc, addr} <- lift {loc: def, bil} & reaching {def, register: ~(ARGS[0]), reached: loc} & printf_like {loc: printf} & call_site {call_loc: loc, target_loc: printf} + ::fmt_str::const_move
+printf_like_call_tabling@5: printf_like_call {loc} <- printf_like{loc: printf} & call_site {call_loc: loc, target_loc: printf}
+printf_like_def_tabling@5: printf_like_def {def, printf} <- reaching {def, register: ~(ARGS[0]), reached: printf} & printf_like_call {loc: printf}
+fmt_addr_find@5: fmt_addr {loc, addr} <- lift {loc: def, bil} & printf_like_def{def, printf: loc} + ::fmt_str::const_move
 fmt_str_use: func_uses(arg, loc) <- fmt_addr {loc, addr} & str_const {addr, str} + ::fmt_str::parse_str
 fmt_str_lookup: str_const {addr, str} <- segment {start, end, contents} & fmt_addr {addr} + ::fmt_str::ascii_nullterm
 
