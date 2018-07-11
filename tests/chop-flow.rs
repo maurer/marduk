@@ -3,12 +3,14 @@ extern crate num_traits;
 use marduk::uaf;
 use num_traits::cast::ToPrimitive;
 
-fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limit: Option<usize>) {
+fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limit: Option<usize>, undef_hack: bool) {
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/chops/{}", x))
         .collect();
-    let mut db = uaf(&names, marduk::Config::CONTEXT_INSENSITIVE);
+    let mut config = marduk::Config::CONTEXT_INSENSITIVE;
+    config.undef_hack = undef_hack;
+    let mut db = uaf(&names, config);
     db.run_rules();
 
     let mut false_positives_found = 0;
@@ -46,14 +48,28 @@ fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limi
                 eprintln!("free: 0x{:x} -> use: 0x{:x}", unexpected.0, unexpected.1);
             }
             panic!()
+        } else if false_positives_found < false_positives {
+            eprintln!("Found fewer false positives than the limit ({} < {}), consider reducing the limit.", false_positives_found, false_positives);
         }
+    } else {
+        eprintln!("Found {} false positives. Consider setting the limit.", false_positives_found);
     }
 }
 
 // The false positives here could be removed with a liveness filter
 #[test]
 fn color() {
-    run_uaf(&["color.so"], &[(0x3f8c, 0x3fe0)], Some(3));
+    run_uaf(&["color.so"], &[(0x3f8c, 0x3fe0)], Some(0), false);
+}
+
+#[test]
+fn shadowsocks() {
+    run_uaf(&["ss.so"], &[(0x4cb6, 0x69e1), (0x4cb6, 0x69da)], Some(0), true);
+}
+
+#[test]
+fn mdadm() {
+    run_uaf(&["mdadm.so"], &[(0x20d4, 0x487d), (0x20d4, 0x46b1)], Some(19), true);
 }
 
 #[test]
@@ -88,5 +104,5 @@ fn isisd() {
     // We're getting more false positives now due to turning on the "undefined variables are
     // self-referential" code. Uncalled functions are now potentially buggy as opposed to
     // automatically clean.
-    run_uaf(&["isisd.so"], bugs.as_slice(), Some(281));
+    run_uaf(&["isisd.so"], bugs.as_slice(), Some(93), false);
 }
