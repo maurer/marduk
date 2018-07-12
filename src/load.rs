@@ -363,3 +363,20 @@ pub fn call_site_stack(i: &LoadCallSiteStackIn) -> Vec<LoadCallSiteStackOut> {
         target_loc_adjusted,
     }]
 }
+
+pub fn called_unstacked(i: &LoadCalledUnstackedIn) -> Vec<LoadCalledUnstackedOut> {
+    if !i.loc.is_stacked() {
+        vec![LoadCalledUnstackedOut { locs: vec![i.loc.clone()] }]
+    } else {
+        Vec::new()
+    }
+}
+
+pub fn called_filter(i: &LoadCalledFilterIn) -> Vec<LoadCalledFilterOut> {
+    trace!("locs={:?}, loc={}", i.locs, i.loc);
+    if i.locs.contains(i.loc) || i.loc.is_stacked() {
+        Vec::new()
+    } else {
+        vec![LoadCalledFilterOut {}]
+    }
+}

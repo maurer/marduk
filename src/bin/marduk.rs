@@ -41,7 +41,7 @@ fn print_state(db: &mut marduk::Database) {
         if x.call_loc.is_stacked() != x.target_loc.is_stacked() {
             println!("CALL_SITE BUG");
         }
-        println!("call_site {} -> {}", x.call_loc, x.target_loc);
+        println!("call_site {} - {} -> {}", x.call_loc, x.target_loc, x.ret_loc);
     }
 
     for x in db.query_used_var() {
@@ -57,6 +57,10 @@ fn print_state(db: &mut marduk::Database) {
         for c in &x.c {
             println!("{}", c);
         }
+    }
+    
+    for x in db.query_uncalled() {
+        println!("uncalled: {}", x.loc);
     }
 }
 

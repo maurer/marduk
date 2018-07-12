@@ -160,7 +160,7 @@ pub fn dyn_clear(i: &FlowDynClearIn) -> Vec<FlowDynClearOut> {
 
 pub fn base_pts(i: &FlowBasePtsIn) -> Vec<FlowBasePtsOut> {
     vec![FlowBasePtsOut {
-        pts: PointsTo::new(i.base.clone()),
+        pts: PointsTo::new(i.loc.clone()),
     }]
 }
 

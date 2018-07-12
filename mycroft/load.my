@@ -86,3 +86,8 @@ call_site_internal: call_site { call_loc, target_loc, ret_loc } <- succ { src: c
 // Inter-object call sites
 call_site_dyn@1: call_site { call_loc, target_loc: target_loc_adjusted, ret_loc } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } & lift {loc: call_loc, fallthrough: ret_loc} + ::load::call_site_stack
 call_site_live: live {loc} <- call_site {target_loc: loc}
+
+uncalled { loc: Loc }
+called { locs: LocSet^loc_merge }
+called_unstacked@2: called { locs } <- call_site {target_loc: loc} + ::load::called_unstacked
+uncalled_unstacked@3: uncalled { loc } <- sym { loc } & ~called { locs } + ::load::called_filter

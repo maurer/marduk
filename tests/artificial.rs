@@ -74,15 +74,12 @@ fn remalloc() {
 
 #[test]
 fn ll() {
-    // If we add field sensitivity to the flow, this should drop a bit, but still not zero
-    // Since called from main, double contexts
-    run_uaf(&["ll"], 4, 8);
+    run_uaf(&["ll"], 4, 4);
 }
 
 #[test]
 fn loop_() {
-    // Since both are called from main, there are two contexts under which the bugs occur
-    run_uaf(&["loop"], 2, 4);
+    run_uaf(&["loop"], 2, 2);
 }
 
 #[test]

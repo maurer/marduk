@@ -1,4 +1,4 @@
-?call_site: call_site { call_loc, target_loc }
+?call_site: call_site { call_loc, target_loc, ret_loc }
 ?succ: succ { src, dst, is_call }
 ?sym: sym { loc, name, end }
 ?get_disasms: lift {loc, disassembly: disasm}
@@ -17,3 +17,4 @@
 ?func: func {base, contains}
 ?live_vars: live_vars { loc, vars }
 ?used_var: used_var { loc, var }
+?uncalled: uncalled { loc }

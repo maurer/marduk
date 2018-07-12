@@ -9,7 +9,7 @@ fan_in_count@6: fan_in(loc, count) <- ~pred(loc, preds) + ::flow::count
 succ_one {src: Loc, dst: Loc}
 succ_one_by_fanin: succ_one {src, dst} <- succ {src, dst, is_call: ~false} & fan_in(dst, ~(1))
 
-pred_init@7: flow_in(loc, pts) <- malloc_call { loc } & func {base, contains: loc} & flow_enable(~true) + ::flow::base_pts
+pred_init@7: flow_in(loc, pts) <- uncalled { loc } & flow_enable(~true) + ::flow::base_pts
 pred_init_entry@7: flow_in(loc, pts) <- sym {loc} & flow_enable(~true) + ::flow::empty_pts
 pred_flow_skip@8: flow_in(dst, pts) <- flow_out(src, pts) & succ_one {src, dst}
 pred_flow@9: flow_in(dst, pts) <- flow_out(src, pts) & succ {src, dst, is_call: ~false}
