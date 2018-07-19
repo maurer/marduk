@@ -366,7 +366,9 @@ pub fn call_site_stack(i: &LoadCallSiteStackIn) -> Vec<LoadCallSiteStackOut> {
 
 pub fn called_unstacked(i: &LoadCalledUnstackedIn) -> Vec<LoadCalledUnstackedOut> {
     if !i.loc.is_stacked() {
-        vec![LoadCalledUnstackedOut { locs: vec![i.loc.clone()] }]
+        vec![LoadCalledUnstackedOut {
+            locs: vec![i.loc.clone()],
+        }]
     } else {
         Vec::new()
     }

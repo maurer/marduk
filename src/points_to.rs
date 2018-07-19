@@ -57,7 +57,7 @@ mod cow_varset {
             // 1.) Check that we don't already have a v+? in there, if we do, no point in adding it
             let vq = VarRef {
                 var: vr.var.clone(),
-                offset: None
+                offset: None,
             };
             if self.contains(&vq) {
                 return false;
@@ -77,9 +77,9 @@ mod cow_varset {
                 }
                 let vrn = VarRef {
                     var: vr.var.clone(),
-                    offset: None
+                    offset: None,
                 };
-                return self.deref_mut().insert(vrn)
+                return self.deref_mut().insert(vrn);
             }
 
             // No widening constraints, just insert it
@@ -90,7 +90,7 @@ mod cow_varset {
     impl Extend<VarRef> for VarSet {
         // Potentially, implementing extend like this could be n^2.
         // I'm betting pretty hard on these sets being small...
-        fn extend<T: IntoIterator<Item=VarRef>>(&mut self, other: T) {
+        fn extend<T: IntoIterator<Item = VarRef>>(&mut self, other: T) {
             for vr in other {
                 self.insert(vr);
             }
@@ -210,6 +210,21 @@ impl FieldMap {
             self.unbounded.extend(val.iter().cloned());
             self.ub_write = true;
             // We don't understand where the write is, nondestructive updates for everyone
+            for vs in self.offsets.values_mut() {
+                vs.extend(val.iter().cloned());
+            }
+        }
+    }
+
+    fn write_extend(&mut self, u_offset: Option<u64>, val: &VarSet) {
+        if let Some(offset) = u_offset {
+            self.offsets
+                .entry(offset)
+                .or_insert_with(VarSet::new)
+                .extend(val.iter().cloned());
+        } else {
+            self.unbounded.extend(val.iter().cloned());
+            self.ub_write = true;
             for vs in self.offsets.values_mut() {
                 vs.extend(val.iter().cloned());
             }
@@ -430,6 +445,11 @@ impl PointsTo {
         }
 
         self.force_mut(src.var).write(src.offset, tgts);
+    }
+
+    /// src->tgts + old tgts
+    pub fn extend_alias(&mut self, src: VarRef, tgts: &VarSet) {
+        self.force_mut(src.var).write_extend(src.offset, &tgts);
     }
 
     /// Remove temporary variables from the points-to information.

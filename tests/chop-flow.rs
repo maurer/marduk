@@ -3,7 +3,12 @@ extern crate num_traits;
 use marduk::uaf;
 use num_traits::cast::ToPrimitive;
 
-fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limit: Option<usize>, undef_hack: bool) {
+fn run_uaf(
+    names: &[&'static str],
+    expected: &[(u64, u64)],
+    false_positives_limit: Option<usize>,
+    undef_hack: bool,
+) {
     let names: Vec<_> = names
         .iter()
         .map(|x| format!("samples/chops/{}", x))
@@ -52,7 +57,10 @@ fn run_uaf(names: &[&'static str], expected: &[(u64, u64)], false_positives_limi
             eprintln!("Found fewer false positives than the limit ({} < {}), consider reducing the limit.", false_positives_found, false_positives);
         }
     } else {
-        eprintln!("Found {} false positives. Consider setting the limit.", false_positives_found);
+        eprintln!(
+            "Found {} false positives. Consider setting the limit.",
+            false_positives_found
+        );
     }
 }
 
@@ -64,12 +72,22 @@ fn color() {
 
 #[test]
 fn shadowsocks() {
-    run_uaf(&["ss.so"], &[(0x4cb6, 0x69e1), (0x4cb6, 0x69da)], Some(0), true);
+    run_uaf(
+        &["ss.so"],
+        &[(0x4cb6, 0x69e1), (0x4cb6, 0x69da)],
+        Some(0),
+        true,
+    );
 }
 
 #[test]
 fn mdadm() {
-    run_uaf(&["mdadm.so"], &[(0x20d4, 0x487d), (0x20d4, 0x46b1)], Some(19), true);
+    run_uaf(
+        &["mdadm.so"],
+        &[(0x20d4, 0x487d), (0x20d4, 0x46b1)],
+        Some(19),
+        true,
+    );
 }
 
 #[test]

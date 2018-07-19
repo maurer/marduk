@@ -200,7 +200,7 @@ fn build_struct(
     for _ in 0..depth {
         let mut new_bases: Vec<Var> = Vec::new();
         for base in bases {
-            for mut w in 0..(width+1) {
+            for mut w in 0..(width + 1) {
                 if width == w {
                     w = 0x68 / WORD_SIZE;
                 }
@@ -225,13 +225,15 @@ fn build_struct(
     let mut root_set = VarSet::new();
     root_set.insert(VarRef {
         var: root,
-        offset: Some(0)
+        offset: Some(0),
     });
-    pts.set_alias(VarRef {
-        var: var,
-        offset: None
-    },
-    root_set);
+    pts.set_alias(
+        VarRef {
+            var,
+            offset: None,
+        },
+        root_set,
+    );
 }
 
 pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {

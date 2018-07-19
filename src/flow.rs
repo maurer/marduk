@@ -97,9 +97,15 @@ fn apply(pts: &mut PointsTo, c: &Constraint) {
         trace!("{}", rhs);
     }
     trace!("LHS resolution:");
-    for lhs in lhs_resolve(pts, c.lhs.clone()) {
+    let lhsses = lhs_resolve(pts, c.lhs.clone());
+    let extend = lhsses.len() > 1;
+    for lhs in lhsses {
         trace!("{}", lhs);
-        pts.set_alias(lhs, rhses.clone());
+        if extend {
+            pts.extend_alias(lhs, &rhses);
+        } else {
+            pts.set_alias(lhs, rhses.clone());
+        }
     }
 }
 
