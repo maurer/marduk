@@ -449,7 +449,9 @@ impl PointsTo {
 
     /// src->tgts + old tgts
     pub fn extend_alias(&mut self, src: VarRef, tgts: &VarSet) {
-        self.force_mut(src.var).write_extend(src.offset, &tgts);
+        if !tgts.is_empty() {
+            self.force_mut(src.var).write_extend(src.offset, &tgts);
+        }
     }
 
     /// Remove temporary variables from the points-to information.

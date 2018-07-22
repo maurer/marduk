@@ -227,13 +227,7 @@ fn build_struct(
         var: root,
         offset: Some(0),
     });
-    pts.set_alias(
-        VarRef {
-            var,
-            offset: None,
-        },
-        root_set,
-    );
+    pts.set_alias(VarRef { var, offset: None }, root_set);
 }
 
 pub fn undef_live(i: &LiveUndefLiveIn) -> Vec<LiveUndefLiveOut> {

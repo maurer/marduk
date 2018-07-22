@@ -34,7 +34,7 @@ pub fn free_constraint(i: &ConstraintsFreeConstraintIn) -> Vec<ConstraintsFreeCo
         c: i.args
             .iter()
             .map(|arg_n| Constraint {
-                lhs: VarPath::reg(ARGS[*arg_n]).unknown().deref(),
+                lhs: VarPath::reg(ARGS[*arg_n]).deref(),
                 rhss: vec![VarPath {
                     base: Var::Freed {
                         site: i.loc.clone(),
