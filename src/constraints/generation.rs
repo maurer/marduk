@@ -1,11 +1,11 @@
 use super::{Constraint, VarPath};
-use bap::high::bil;
-use bap::high::bil::Statement;
 use crate::load::Loc;
 use crate::regs::Reg;
+use crate::var::Var;
+use bap::high::bil;
+use bap::high::bil::Statement;
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
-use crate::var::Var;
 
 pub fn move_walk<
     A,
@@ -21,7 +21,8 @@ pub fn move_walk<
         Statement::Jump(_) | Statement::Special | Statement::CPUException(_) => Vec::new(),
         Statement::While { ref body, .. } => {
             // We pass over the body twice to get the flow sensitivity on variables right
-            let mut out: Vec<A> = body.iter()
+            let mut out: Vec<A> = body
+                .iter()
                 .flat_map(|stmt| move_walk(stmt, cur_addr, func_addr, f, tmp_db))
                 .collect();
             out.extend(
@@ -78,12 +79,14 @@ pub fn extract_expr(
             } else {
                 match Reg::from_str(bv.name.as_str()) {
                     Ok(reg) => VarPath::reg(reg),
-                    Err(_) => if bv.tmp {
-                        VarPath::temp(bv.name.as_str())
-                    } else {
-                        error!("Unrecognized variable name: {:?}", bv.name);
-                        return Vec::new();
-                    },
+                    Err(_) => {
+                        if bv.tmp {
+                            VarPath::temp(bv.name.as_str())
+                        } else {
+                            error!("Unrecognized variable name: {:?}", bv.name);
+                            return Vec::new();
+                        }
+                    }
                 }
             };
             if let Some(k) = tmp_db.get(&vp.base) {
@@ -168,7 +171,6 @@ pub fn extract_expr(
                     match e {
                         E::VP(v) => {
                             out.insert(E::VP(v.unknown()));
-                            ()
                         }
                         E::Const(_) => (),
                     }
@@ -232,9 +234,11 @@ fn extract_move_var(
             let mut out = Vec::new();
             for eval in extract_expr(rhs, cur_addr, func_addr, &tmp_db) {
                 match eval {
-                    E::VP(v) => if v.derefs() > 2 {
-                        out.push(v.base)
-                    },
+                    E::VP(v) => {
+                        if v.derefs() > 2 {
+                            out.push(v.base)
+                        }
+                    }
                     E::Const(_) => (),
                 }
             }

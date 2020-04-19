@@ -1,8 +1,8 @@
+use crate::datalog::*;
+use crate::interned_string::InternedString;
 use bap::basic::{Bap, BasicDisasm, Image};
 use bap::high::bil::{Expression, Statement};
 use bap::high::bitvector::BitVector;
-use crate::datalog::*;
-use crate::interned_string::InternedString;
 use std::collections::BTreeSet;
 
 const STACK_MAX_DEPTH: usize = 1;
@@ -89,14 +89,12 @@ pub fn singleton_string(i: &LoadSingletonStringIn) -> Vec<LoadSingletonStringOut
     vec![LoadSingletonStringOut { names: s }]
 }
 
-// RUSTC-R see whether the let binding can be removed and this warning avoided
-#[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_segments(i: &LoadDumpSegmentsIn) -> Vec<LoadDumpSegmentsOut> {
     use num_traits::ToPrimitive;
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let segs = image.segments();
-        let out = segs.iter()
+        segs.iter()
             .map(|seg| {
                 let mem = seg.memory();
                 LoadDumpSegmentsOut {
@@ -108,8 +106,7 @@ pub fn dump_segments(i: &LoadDumpSegmentsIn) -> Vec<LoadDumpSegmentsOut> {
                     execute: seg.is_executable(),
                 }
             })
-            .collect();
-        out
+            .collect()
     })
 }
 
@@ -132,7 +129,8 @@ pub fn dump_plt(i: &LoadDumpPltIn) -> Vec<LoadDumpPltOut> {
             .output()
             .expect("objdump grep pipeline failure")
             .stdout,
-    ).unwrap();
+    )
+    .unwrap();
     out.split('\n')
         .filter(|x| *x != "")
         .map(|line| {
@@ -152,14 +150,12 @@ pub fn dump_plt(i: &LoadDumpPltIn) -> Vec<LoadDumpPltOut> {
         .collect()
 }
 
-// RUSTC-R see whether the let binding can be removed and this warning avoided
-#[cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 pub fn dump_syms(i: &LoadDumpSymsIn) -> Vec<LoadDumpSymsOut> {
     use num_traits::cast::ToPrimitive;
     Bap::with(|bap| {
         let image = get_image!(bap, i.contents);
         let syms = image.symbols();
-        let out = syms.iter()
+        syms.iter()
             .map(|sym| LoadDumpSymsOut {
                 name: sym.name(),
                 loc: Loc {
@@ -173,8 +169,7 @@ pub fn dump_syms(i: &LoadDumpSymsIn) -> Vec<LoadDumpSymsOut> {
                     .to_u64()
                     .unwrap(),
             })
-            .collect();
-        out
+            .collect()
     })
 }
 
@@ -227,13 +222,15 @@ pub fn sema_succ(i: &LoadSemaSuccIn) -> Vec<LoadSemaSuccOut> {
     }
     let stack = match &i.src.stack {
         &Stack::NoStack => Stack::NoStack,
-        s => if i.is_call {
-            let mut s = Stack::Return(Box::new(i.fall.clone())).deloop();
-            s.relimit(STACK_MAX_DEPTH);
-            s
-        } else {
-            s.clone()
-        },
+        s => {
+            if i.is_call {
+                let mut s = Stack::Return(Box::new(i.fall.clone())).deloop();
+                s.relimit(STACK_MAX_DEPTH);
+                s
+            } else {
+                s.clone()
+            }
+        }
     };
     targets
         .into_iter()

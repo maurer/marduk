@@ -1,6 +1,5 @@
 // Addresses are considered long literals, but I'd prefer not to insert an underscore every four
 // characters
-#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
 
 // Macros need to be loaded at root
 #[macro_use]

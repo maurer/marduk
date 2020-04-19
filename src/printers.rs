@@ -4,9 +4,9 @@ use crate::interned_string::InternedString;
 use crate::load::Loc;
 use crate::points_to::VarRef;
 use crate::regs::Reg;
-use std::fmt::{Display, Formatter, Result};
 use crate::var::Var;
 use crate::{Config, LocType};
+use std::fmt::{Display, Formatter, Result};
 pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
 
 pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
@@ -147,7 +147,7 @@ impl Display for CallSiteResult {
 
 impl Display for InternedString {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.get_string())
     }
 }
 

@@ -3,9 +3,9 @@
 //! and need to update and propagate data between them.
 use crate::load::Loc;
 use crate::regs::Reg;
+use crate::var::Var;
 use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
-use crate::var::Var;
 
 #[derive(Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
 pub struct VarRef {
@@ -76,7 +76,7 @@ mod cow_varset {
                     self.remove(vra);
                 }
                 let vrn = VarRef {
-                    var: vr.var.clone(),
+                    var: vr.var,
                     offset: None,
                 };
                 return self.deref_mut().insert(vrn);
@@ -135,7 +135,7 @@ impl FieldMap {
             if do_insert {
                 let mut our_v = self.unbounded.clone();
                 our_v.extend(v.iter().cloned());
-                self.offsets.insert(k.clone(), our_v);
+                self.offsets.insert(*k, our_v);
             }
         }
     }
@@ -145,7 +145,8 @@ impl FieldMap {
     }
 
     fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
-        let unbounded_remove: Vec<_> = self.unbounded
+        let unbounded_remove: Vec<_> = self
+            .unbounded
             .iter()
             .filter(|vr| f(&vr.var))
             .cloned()
@@ -265,7 +266,8 @@ impl PointsTo {
 
     /// Filters register definition based on a whitelist
     pub fn only_regs(&mut self, whitelist: &[Reg]) {
-        let to_kill: Vec<_> = self.inner
+        let to_kill: Vec<_> = self
+            .inner
             .keys()
             .filter(|v| match *v {
                 Var::Register { register, .. } => !whitelist.contains(register),
@@ -375,7 +377,7 @@ impl PointsTo {
     // I want it to return the empty set when it finds no element, so it can't return a reference.
     fn get_all(&self, v: &VarRef) -> VarSet {
         match self.inner.get(&v.var) {
-            Some(k) => k.read(v.offset).clone(),
+            Some(k) => k.read(v.offset),
             None => VarSet::new(),
         }
     }
@@ -412,19 +414,16 @@ impl PointsTo {
     /// If the predicate returns true, the variable will be removed.
     pub fn remove_predicate<F: Fn(&Var) -> bool>(&mut self, f: F) {
         let mut keys = Vec::new();
-        self.inner
-            .iter_mut()
-            .map(|(k, v)| {
-                if f(k) {
+        self.inner.iter_mut().for_each(|(k, v)| {
+            if f(k) {
+                keys.push(k.clone())
+            } else {
+                v.remove_predicate(&f);
+                if v.is_empty() {
                     keys.push(k.clone())
-                } else {
-                    v.remove_predicate(&f);
-                    if v.is_empty() {
-                        keys.push(k.clone())
-                    }
                 }
-            })
-            .count();
+            }
+        });
         for key in keys {
             self.inner.remove(&key);
         }
@@ -497,7 +496,8 @@ impl PointsTo {
             }
         }
         // sweep
-        let dead: Vec<_> = self.inner
+        let dead: Vec<_> = self
+            .inner
             .keys()
             .filter(|x| !live.contains(x))
             .cloned()
@@ -557,13 +557,14 @@ impl PointsTo {
         self.get(&VarRef {
             var: v.clone(),
             offset: Some(0),
-        }).iter()
-            .flat_map(|d| self.get_var(&d.var).pt_to())
-            .filter_map(|pt| match pt {
-                Var::Freed { ref site } => Some(site.clone()),
-                _ => None,
-            })
-            .collect()
+        })
+        .iter()
+        .flat_map(|d| self.get_var(&d.var).pt_to())
+        .filter_map(|pt| match pt {
+            Var::Freed { ref site } => Some(site.clone()),
+            _ => None,
+        })
+        .collect()
     }
 }
 
