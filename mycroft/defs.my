@@ -5,21 +5,21 @@ reaching {
 }
 
 // If we define some registers, then our definition reaches all our immediate successors
-reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} + ::use_def::expand_registers
+reaching_init: reaching {def: def_loc, register, reached} <- defines {loc: def_loc, registers} & succ_any {src: def_loc, dst: reached} +crate::use_def::expand_registers
 
 // If a definition reaches an instruction, and that instruction does not overwrite the register, it proceeds to the next one
-reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, dst: reached, is_call: ~false} & defines {loc: prev_loc, registers: prev_defines} + ::use_def::exclude_registers
+reaching_trans@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, dst: reached, is_call: ~false} & defines {loc: prev_loc, registers: prev_defines} +crate::use_def::exclude_registers
 
-reaching_trans_call_over@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, is_call: ~true} & succ_over {src: prev_loc, dst: reached} + ::use_def::exclude_call_registers
+reaching_trans_call_over@2: reaching {def, register, reached} <- reaching {def, register, reached: prev_loc} & succ {src: prev_loc, is_call: ~true} & succ_over {src: prev_loc, dst: reached} +crate::use_def::exclude_call_registers
 
-reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} + ::use_def::only_ret
+reaching_trans_ret@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_ret{src, dst} +crate::use_def::only_ret
 
-reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_call{src, dst} + ::use_def::only_args
+reaching_trans_call@2: reaching {def, register, reached: dst} <- reaching {def, register, reached: src} & succ_call{src, dst} +crate::use_def::only_args
 
 // This predicate currently confuses may_define and must_define.
 // When used in reaching_init, it's used as may_define
 // When used in reaching_trans, it's used as must_define
-// ::use_def::defines creates may_define
+//crate::use_def::defines creates may_define
 // If this turns out to be problematic, I can produce both
 
 defines {
@@ -28,13 +28,13 @@ defines {
 }
 
 // Write down what a semantics chunk overwrites
-define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} + ::use_def::defines
-define_funcs: defines {loc, registers: ~(::regs::caller_saved())} <- lift {loc, is_call: ~true}
+define_sema: defines {loc, registers} <- lift {loc, bil, is_call: ~false} +crate::use_def::defines
+define_funcs: defines {loc, registers: ~(crate::regs::caller_saved())} <- lift {loc, is_call: ~true}
 
 // Killsets
 kill(Loc, KillSpec)
-kill_registers: kill(loc, ks) <- lift {loc, is_ret: ~false} & defines {loc, registers} + ::use_def::killspec_regs
-kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} + ::use_def::stack_wipe
+kill_registers: kill(loc, ks) <- lift {loc, is_ret: ~false} & defines {loc, registers} +crate::use_def::killspec_regs
+kill_ret: kill(loc, ks) <- lift {loc, is_ret: ~true} & func {base, contains: loc} +crate::use_def::stack_wipe
 
 succ_ret{src: Loc, dst: Loc}
 func_ret{ret: Loc, func: Loc}

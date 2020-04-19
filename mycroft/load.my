@@ -8,25 +8,25 @@ bap_dump_segments: segment {
     read,
     write,
     execute
-} <- file {name: file_name, contents} + ::load::dump_segments
+} <- file {name: file_name, contents} +crate::load::dump_segments
 
 // Use objdump's disassembler to locate PLT entries via string munging
 objdump_dump_plt: link_pad {
     pad_loc,
     pad_name
-} <- file {name: file_name, contents} + ::load::dump_plt
+} <- file {name: file_name, contents} +crate::load::dump_plt
 
 // Use BAP to extract symbols from the object file
 bap_dump_syms: sym {
     loc,
     name,
     end
-} <- file {name: file_name, contents} + ::load::dump_syms
+} <- file {name: file_name, contents} +crate::load::dump_syms
 
-allsyms: all_funcs {names} <- sym {name} + ::load::singleton_string
+allsyms: all_funcs {names} <- sym {name} +crate::load::singleton_string
 
 // Use BAP to detect the architecture of the file
-bap_arch: prog_arch { file_name, arch } <- file {name: file_name, contents: contents} + ::load::get_arch
+bap_arch: prog_arch { file_name, arch } <- file {name: file_name, contents: contents} +crate::load::get_arch
 
 // ! Lifting
 // Mark all symbols as live
@@ -40,13 +40,13 @@ bap_sema: lift {
     fallthrough: fall,
     is_call: call,
     is_ret: ret
-} <- live {loc} & segment {file_name: file_name, contents: seg_contents, start: seg_start, end: seg_end} & prog_arch {file_name: file_name, arch: arch} + ::load::lift
+} <- live {loc} & segment {file_name: file_name, contents: seg_contents, start: seg_start, end: seg_end} & prog_arch {file_name: file_name, arch: arch} +crate::load::lift
 
 // Compute potential successors to a block based on the lifted semantics
-sema_succ: succ {src, dst, is_call} <- lift {loc: src, bil: bil, fallthrough: fall, is_call} + ::load::sema_succ
+sema_succ: succ {src, dst, is_call} <- lift {loc: src, bil: bil, fallthrough: fall, is_call} +crate::load::sema_succ
 
 // If an block performs a computed call, assume it returns doing nothing and skip it (a bit of a hack)
-skip_computed_call: succ {src, dst: fall, is_call: ~false} <- lift {loc: src, fallthrough: fall, is_call: ~true, bil: bil} + ::load::is_computed_jump
+skip_computed_call: succ {src, dst: fall, is_call: ~false} <- lift {loc: src, fallthrough: fall, is_call: ~true, bil: bil} +crate::load::is_computed_jump
 
 // Successors of live blocks are live
 live_succ_live: live { loc: dst } <- succ {src, dst} & live { loc: src }
@@ -56,16 +56,16 @@ live_call_live: live { loc: fall } <- lift { fallthrough: fall, is_call: ~true }
 
 // ! Annotations
 // Assume any function in the PLT with "malloc" in the name is an allocator
-malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_name } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_malloc_name
+malloc_call_by_name: malloc_call {loc} <- link_pad { pad_loc, pad_name: func_name } & succ { src: loc, dst: pad_loc, is_call: ~true } +crate::load::is_malloc_name
 
 // Whitelist of freeing functions
-free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_free_name
+free_call_by_name: free_call {loc, args} <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } +crate::load::is_free_name
 
 // ! Functions 
 // If this location is present, the function could return, e.g. you can step over it
 returning_call { loc: Loc }
 // If it's a remote function, pass it through a name based classifier (e.g. abort is noreturn)
-returning_call_by_name: returning_call { loc: pad_loc } <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } + ::load::is_returning_name
+returning_call_by_name: returning_call { loc: pad_loc } <- link_pad { pad_name: func_name, pad_loc } & succ { src: loc, dst: pad_loc, is_call: ~true } +crate::load::is_returning_name
 // If we can find a return that was considered reachable inside this function, then it could return
 returning_call_by_ret: returning_call { loc } <- func {base: loc, contains: ret_addr} & lift {loc: ret_addr, is_ret: ~true}
 
@@ -84,10 +84,10 @@ func_walk_over: func {base, contains: new_contains} <- succ_over {src: contains,
 call_site_internal: call_site { call_loc, target_loc, ret_loc } <- succ { src: call_loc, dst: target_loc, is_call: ~true } & lift {loc: call_loc, fallthrough: ret_loc}
 
 // Inter-object call sites
-call_site_dyn@1: call_site { call_loc, target_loc: target_loc_adjusted, ret_loc } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } & lift {loc: call_loc, fallthrough: ret_loc} + ::load::call_site_stack
+call_site_dyn@1: call_site { call_loc, target_loc: target_loc_adjusted, ret_loc } <- succ { src: call_loc, dst: pad_loc, is_call: ~true } & link_pad {pad_loc, pad_name: func_name} & sym { loc: target_loc, name: func_name } & lift {loc: call_loc, fallthrough: ret_loc} +crate::load::call_site_stack
 call_site_live: live {loc} <- call_site {target_loc: loc}
 
 uncalled { loc: Loc }
 called { locs: LocSet^loc_merge }
-called_unstacked@2: called { locs } <- call_site {target_loc: loc} + ::load::called_unstacked
-uncalled_unstacked@3: uncalled { loc } <- sym { loc } & ~called { locs } + ::load::called_filter
+called_unstacked@2: called { locs } <- call_site {target_loc: loc} +crate::load::called_unstacked
+uncalled_unstacked@3: uncalled { loc } <- sym { loc } & ~called { locs } +crate::load::called_filter

@@ -136,5 +136,4 @@ pub fn post_analysis(dat: &[Measurement]) {
     }
     println!("END_TABLE");
     compare_modes(ALIAS_MODES[0], ALIAS_MODES[1], &dat);
-    compare_modes(ALIAS_MODES[1], ALIAS_MODES[2], &dat);
 }

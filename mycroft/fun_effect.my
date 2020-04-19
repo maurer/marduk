@@ -10,5 +10,5 @@ unlinked_effect: func_effect(base, ~(Effect::nop())) <- link_pad { pad_loc: base
 local_init@5: local_effect {base, local: base, effect: ~(Effect::nop())} <- sym {loc: base}
 local_ret: func_effect(base, effect) <- local_effect {base, local, effect} & succ_ret {src: local}
 local_xfer: local_effect {base, local: local2, effect} <- local_effect {base, local, effect} & succ {src: local, dst: local2, is_call: ~false}
-local_call: local_effect {base, local: local2, effect: effect2} <- fuse_call {call_loc: local, effect_call, ret_loc: local2} & local_effect {base, local, effect} + ::effect::apply_effect
-local_malloc: local_effect {base, local: local2, effect: effect2} <- succ_over {src: local, dst: local2} & local_effect {base, local, effect} & malloc_call {loc: local} + ::effect::malloc
+local_call: local_effect {base, local: local2, effect: effect2} <- fuse_call {call_loc: local, effect_call, ret_loc: local2} & local_effect {base, local, effect} +crate::effect::apply_effect
+local_malloc: local_effect {base, local: local2, effect: effect2} <- succ_over {src: local, dst: local2} & local_effect {base, local, effect} & malloc_call {loc: local} +crate::effect::malloc

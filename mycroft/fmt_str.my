@@ -11,9 +11,9 @@ frprintf_printf: printf_like {loc} <- link_pad {pad_loc: loc, pad_name: ~("fprin
 printf_chk_printf: printf_like {loc} <- link_pad {pad_loc: loc, pad_name: ~("__printf_chk".to_string())}
 printf_like_call_tabling@5: printf_like_call {loc} <- printf_like{loc: printf} & call_site {call_loc: loc, target_loc: printf}
 printf_like_def_tabling@5: printf_like_def {def, printf} <- reaching {def, register: ~(ARGS[0]), reached: printf} & printf_like_call {loc: printf}
-fmt_addr_find@5: fmt_addr {loc, addr} <- lift {loc: def, bil} & printf_like_def{def, printf: loc} + ::fmt_str::const_move
-fmt_str_use: func_uses(arg, loc) <- fmt_addr {loc, addr} & str_const {addr, str} + ::fmt_str::parse_str
-fmt_str_lookup: str_const {addr, str} <- segment {start, end, contents} & fmt_addr {addr} + ::fmt_str::ascii_nullterm
+fmt_addr_find@5: fmt_addr {loc, addr} <- lift {loc: def, bil} & printf_like_def{def, printf: loc} +crate::fmt_str::const_move
+fmt_str_use: func_uses(arg, loc) <- fmt_addr {loc, addr} & str_const {addr, str} +crate::fmt_str::parse_str
+fmt_str_lookup: str_const {addr, str} <- segment {start, end, contents} & fmt_addr {addr} +crate::fmt_str::ascii_nullterm
 
 puts_uses: func_uses(~(ARGS[0]), loc) <- link_pad {pad_loc: puts, pad_name: ~("puts".to_string())} & call_site {call_loc: loc, target_loc: puts}
 strcpy_uses: func_uses(~(ARGS[0]), loc) <- link_pad {pad_loc: puts, pad_name: ~("strcpy".to_string())} & call_site {call_loc: loc, target_loc: puts}

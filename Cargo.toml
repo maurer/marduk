@@ -19,12 +19,15 @@ mktemp = "0.3"
 log = "0.4"
 env_logger = "0.5"
 lazy_static = "1.0"
-bap = "0.1"
-jemalloc-ctl = "0.1"
+jemallocator = "0.3"
+jemalloc-ctl = "0.3"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 clap = "2.32"
+
+[dependencies.bap]
+git = "https://github.com/maurer/bap-rust.git"
 
 [dependencies.mycroft]
 git = "https://github.com/maurer/mycroft.git"

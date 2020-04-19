@@ -1,9 +1,14 @@
 extern crate jemalloc_ctl;
+extern crate jemallocator;
 extern crate marduk;
 extern crate num_traits;
 
-pub use self::jemalloc_ctl::stats::Allocated;
-pub use self::jemalloc_ctl::Epoch;
+use self::jemallocator::Jemalloc;
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
+pub use self::jemalloc_ctl::epoch;
+pub use self::jemalloc_ctl::stats::allocated;
 pub use self::marduk::{uaf, Config, Database, LocType};
 pub use self::num_traits::cast::ToPrimitive;
 pub use std::collections::{BTreeMap, BTreeSet};
@@ -24,10 +29,8 @@ pub struct Run {
 }
 
 fn check_mem() -> usize {
-    let epoch = Epoch::new().unwrap();
-    let allocated = Allocated::new().unwrap();
-    epoch.advance().unwrap(); // Refresh the allocated statistic.
-    allocated.get().unwrap()
+    epoch::advance().unwrap(); // Refresh the allocated statistic.
+    allocated::read().unwrap()
 }
 
 pub fn marduk(names: &[String], mode: Config) -> Option<Run> {

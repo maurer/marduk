@@ -1,11 +1,11 @@
 uaf(Var, Loc, Loc)
 deref_var(Var, Loc)
 
-read_vars: deref_var(v, loc) <- lift {loc, bil, is_call: ~false} & func {base, contains: loc} + ::uaf::reads_vars
-use_vars: deref_var(v, loc) <- func_uses(r, loc) + ::uaf::use_vars
+read_vars: deref_var(v, loc) <- lift {loc, bil, is_call: ~false} & func {base, contains: loc} +crate::uaf::reads_vars
+use_vars: deref_var(v, loc) <- func_uses(r, loc) +crate::uaf::use_vars
 
 uaf_flow(Var, Loc, Loc)
-uaf_flow@11: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) + ::flow::is_freed
+uaf_flow@11: uaf_flow(v, loc, loc2) <- deref_var(v, loc2) & flow_in(loc2, pts) +crate::flow::is_freed
 
 all_uaf(Var, Loc, Loc)
 promote_steens_uaf: all_uaf(v, loc, loc2) <- uaf(v, loc, loc2)
