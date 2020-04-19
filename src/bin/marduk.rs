@@ -136,7 +136,8 @@ fn main() {
 
     config.undef_hack = args.is_present("undefined-initialize");
 
-    let files: Vec<String> = args.values_of("INPUTS")
+    let files: Vec<String> = args
+        .values_of("INPUTS")
         .expect("At least one input is required")
         .map(str::to_string)
         .collect();

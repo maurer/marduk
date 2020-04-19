@@ -1,11 +1,11 @@
-use bap::high::bil;
 use crate::datalog::*;
 use crate::load::Loc;
 use crate::points_to::{PointsTo, VarRef, VarSet};
 use crate::regs::Reg;
+use crate::var::{var_args, Var};
+use bap::high::bil;
 use std::collections::BTreeMap;
 use std::str::FromStr;
-use crate::var::{var_args, Var};
 
 use crate::constraints::generation::move_walk;
 

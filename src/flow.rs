@@ -145,7 +145,8 @@ pub fn stack_purge(i: &FlowStackPurgeIn) -> Vec<FlowStackPurgeOut> {
     //TODO: Now that I have clear_frames, can drop_stack here be replaced by a call to
     //canonicalize()?
     pts.drop_stack();
-    let new_live: Vec<_> = i.pts
+    let new_live: Vec<_> = i
+        .pts
         .pt_to()
         .into_iter()
         .filter(|v| v.is_dyn() || v.is_stack())

@@ -1,8 +1,8 @@
+use crate::constraints::Constraint;
+use crate::var::Var;
 use bap::basic::Arch;
 use bap::high::bil::Statement;
-use crate::constraints::Constraint;
 use std::collections::BTreeSet;
-use crate::var::Var;
 
 use crate::regs::{Reg, ARGS};
 type Bytes = Vec<u8>;

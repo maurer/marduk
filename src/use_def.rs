@@ -1,11 +1,11 @@
-use bap::high::bil::{Statement, Type, Variable};
 use crate::datalog::*;
 use crate::load::Loc;
 use crate::points_to::PointsTo;
 use crate::regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
+use crate::var::Var;
+use bap::high::bil::{Statement, Type, Variable};
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use crate::var::Var;
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum KillSpec {
@@ -63,9 +63,11 @@ fn defines_stmt(stmt: &Statement, defs: &mut BTreeSet<Reg>) {
                 }
             }
         }
-        Statement::While { ref body, .. } => for stmt in body {
-            defines_stmt(stmt, defs);
-        },
+        Statement::While { ref body, .. } => {
+            for stmt in body {
+                defines_stmt(stmt, defs);
+            }
+        }
         Statement::IfThenElse {
             ref then_clause,
             ref else_clause,
