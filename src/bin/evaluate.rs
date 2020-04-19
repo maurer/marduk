@@ -9,7 +9,7 @@ extern crate serde_json;
 
 mod eval_common;
 mod measurement;
-use eval_common::*;
+use crate::eval_common::*;
 
 pub const MEMORY_LIMIT: usize = 1024 * 1024 * 1024 * 100; // 100G
 pub const TIME_LIMIT: u64 = 24 * 60 * 60; // 24hrs, effectively infinite

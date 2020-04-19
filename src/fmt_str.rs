@@ -1,9 +1,9 @@
 use bap::basic::Cast;
 use bap::high::bil::{Expression, Statement};
 use bap::high::bitvector::BitVector;
-use datalog::*;
+use crate::datalog::*;
 use num_traits::ToPrimitive;
-use regs::ARGS;
+use crate::regs::ARGS;
 
 fn const_collapse(e: &Expression) -> Option<BitVector> {
     match *e {

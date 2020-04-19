@@ -1,8 +1,8 @@
 pub mod datalog;
 pub mod generation;
-use load::Loc;
-use regs::Reg;
-use var::Var;
+use crate::load::Loc;
+use crate::regs::Reg;
+use crate::var::Var;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct VarPath {

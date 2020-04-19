@@ -7,7 +7,7 @@ extern crate serde_json;
 mod measurement;
 mod stats;
 use marduk::Config;
-use measurement::Measurement;
+use crate::measurement::Measurement;
 
 pub const MEMORY_LIMIT: usize = 0;
 pub const TIME_LIMIT: u64 = 0;

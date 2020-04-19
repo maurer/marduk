@@ -1,11 +1,11 @@
 use super::{Constraint, VarPath};
 use bap::high::bil;
 use bap::high::bil::Statement;
-use load::Loc;
-use regs::Reg;
+use crate::load::Loc;
+use crate::regs::Reg;
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
-use var::Var;
+use crate::var::Var;
 
 pub fn move_walk<
     A,

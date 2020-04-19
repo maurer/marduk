@@ -1,13 +1,13 @@
 use bap::high::bil;
-use datalog::*;
-use load::Loc;
-use points_to::{PointsTo, VarRef, VarSet};
-use regs::Reg;
+use crate::datalog::*;
+use crate::load::Loc;
+use crate::points_to::{PointsTo, VarRef, VarSet};
+use crate::regs::Reg;
 use std::collections::BTreeMap;
 use std::str::FromStr;
-use var::{var_args, Var};
+use crate::var::{var_args, Var};
 
-use constraints::generation::move_walk;
+use crate::constraints::generation::move_walk;
 
 pub fn not_defined(i: &LiveNotDefinedIn) -> Vec<LiveNotDefinedOut> {
     if i.vars.contains(i.var) {
@@ -24,7 +24,7 @@ fn defined_walk(
     func_addr: &Loc,
     tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Var> {
-    use constraints::generation::{extract_expr, E};
+    use crate::constraints::generation::{extract_expr, E};
     let mut out = Vec::new();
     //TODO dedup
     match lhs.type_ {
@@ -62,7 +62,7 @@ fn used_walk(
     func_addr: &Loc,
     tmp_db: &mut BTreeMap<Var, u64>,
 ) -> Vec<Var> {
-    use constraints::generation::{extract_expr, E};
+    use crate::constraints::generation::{extract_expr, E};
     let mut out = Vec::new();
     //TODO dedup
     match lhs.type_ {

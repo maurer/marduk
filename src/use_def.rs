@@ -1,11 +1,11 @@
 use bap::high::bil::{Statement, Type, Variable};
-use datalog::*;
-use load::Loc;
-use points_to::PointsTo;
-use regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
+use crate::datalog::*;
+use crate::load::Loc;
+use crate::points_to::PointsTo;
+use crate::regs::{Reg, ARGS, CALLER_SAVED, RET_REG};
 use std::collections::BTreeSet;
 use std::str::FromStr;
-use var::Var;
+use crate::var::Var;
 
 #[derive(Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum KillSpec {
@@ -20,7 +20,7 @@ impl KillSpec {
     fn kill(&self, v: &Var) -> bool {
         // TODO: suppress kill if definition site and kill site are equal?
         use self::KillSpec::*;
-        use var::Var::*;
+        use crate::var::Var::*;
         match (self, v) {
             (&Registers(ref rs), &Register { ref register, .. }) => rs.contains(register),
             (&StackFrame(ref l), &StackSlot { ref func_addr, .. }) => func_addr == l,

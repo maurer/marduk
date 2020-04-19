@@ -1,8 +1,8 @@
 use bap::basic::{Bap, BasicDisasm, Image};
 use bap::high::bil::{Expression, Statement};
 use bap::high::bitvector::BitVector;
-use datalog::*;
-use interned_string::InternedString;
+use crate::datalog::*;
+use crate::interned_string::InternedString;
 use std::collections::BTreeSet;
 
 const STACK_MAX_DEPTH: usize = 1;

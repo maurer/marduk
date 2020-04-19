@@ -1,8 +1,8 @@
 use super::generation;
 use super::{Constraint, VarPath};
-use datalog::*;
-use regs::{ARGS, RET_REG};
-use var::Var;
+use crate::datalog::*;
+use crate::regs::{ARGS, RET_REG};
+use crate::var::Var;
 
 pub fn gen_constraints(i: &ConstraintsGenConstraintsIn) -> Vec<ConstraintsGenConstraintsOut> {
     vec![ConstraintsGenConstraintsOut {

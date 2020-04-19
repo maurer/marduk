@@ -14,7 +14,7 @@ pub use self::num_traits::cast::ToPrimitive;
 pub use std::collections::{BTreeMap, BTreeSet};
 pub use std::time::{Duration, Instant};
 
-pub use measurement::Measurement;
+pub use crate::measurement::Measurement;
 
 #[derive(Copy, Clone, Eq, Debug, PartialOrd, PartialEq)]
 pub struct Case {
@@ -36,9 +36,9 @@ fn check_mem() -> usize {
 pub fn marduk(names: &[String], mode: Config) -> Option<Run> {
     let mut db = uaf(names, mode);
     let pre = Instant::now();
-    let time_limit = Duration::from_secs(::TIME_LIMIT);
+    let time_limit = Duration::from_secs(crate::TIME_LIMIT);
     while !db.run_rules_once().is_empty() {
-        if check_mem() > ::MEMORY_LIMIT {
+        if check_mem() > crate::MEMORY_LIMIT {
             eprintln!("Over memory on {:?}", names);
             return None;
         }

@@ -1,5 +1,5 @@
-use datalog::*;
-use load::Stack;
+use crate::datalog::*;
+use crate::load::Stack;
 
 pub fn strip_stack(i: &ContextStripStackIn) -> Vec<ContextStripStackOut> {
     if i.stacked.stack == Stack::NoStack {

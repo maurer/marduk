@@ -1,11 +1,11 @@
 //! points_to contains the PointsTo type and relevant implementation details.
 //! It is used in flow/context sensitive analysis where we don't have a single solution but many,
 //! and need to update and propagate data between them.
-use load::Loc;
-use regs::Reg;
+use crate::load::Loc;
+use crate::regs::Reg;
 use std::collections::btree_map;
 use std::collections::{BTreeMap, BTreeSet};
-use var::Var;
+use crate::var::Var;
 
 #[derive(Eq, PartialEq, Ord, Debug, PartialOrd, Clone, Hash)]
 pub struct VarRef {
@@ -589,7 +589,7 @@ impl ::std::fmt::Display for PointsTo {
 
 impl ::std::fmt::Display for FieldMap {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        use printers;
+        use crate::printers;
         write!(f, "u: ")?;
         printers::fmt_vec(f, &self.unbounded.iter().collect::<Vec<_>>())?;
         for (k, v) in &self.offsets {

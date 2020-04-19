@@ -17,7 +17,7 @@ lazy_static! {
 fn run_uaf(
     names: &[&'static str],
     expected: &[(u64, u64)],
-    false_positives_limit: Option<usize>,
+    _false_positives_limit: Option<usize>,
     flow_false_positives_limit: Option<usize>,
 ) {
     let _memlock = MEMLOCK.lock().unwrap();

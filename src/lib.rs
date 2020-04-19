@@ -40,7 +40,7 @@ mod regs;
 mod uaf;
 mod use_def;
 mod var;
-pub use datalog::*;
+pub use crate::datalog::*;
 
 #[derive(Eq, Copy, Debug, PartialEq, Clone, Ord, PartialOrd, Serialize, Deserialize)]
 /// Describes the kind of location to use in the dataflow analysis.

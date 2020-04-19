@@ -1,5 +1,5 @@
-use load::Loc;
-use regs::{Reg, ARGS};
+use crate::load::Loc;
+use crate::regs::{Reg, ARGS};
 
 #[derive(Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Var {

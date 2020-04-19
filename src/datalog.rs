@@ -1,10 +1,10 @@
 use bap::basic::Arch;
 use bap::high::bil::Statement;
-use constraints::Constraint;
+use crate::constraints::Constraint;
 use std::collections::BTreeSet;
-use var::Var;
+use crate::var::Var;
 
-use regs::{Reg, ARGS};
+use crate::regs::{Reg, ARGS};
 type Bytes = Vec<u8>;
 type Sema = Vec<Statement>;
 type StringSet = BTreeSet<String>;
@@ -13,14 +13,14 @@ type Constraints = Vec<Constraint>;
 type LocSet = Vec<Loc>;
 type Vusize = Vec<usize>;
 type Vars = Vec<Var>;
-use effect::Effect;
-use load::Loc;
-use points_to::PointsTo;
-use use_def::KillSpec;
+use crate::effect::Effect;
+use crate::load::Loc;
+use crate::points_to::PointsTo;
+use crate::use_def::KillSpec;
 
-use constraints::datalog as constraints;
-use context;
-use live;
+use crate::constraints::datalog as constraints;
+use crate::context;
+use crate::live;
 
 const VAR_ARG_0: Var = Var::Register { register: ARGS[0] };
 const VAR_ARG_1: Var = Var::Register { register: ARGS[1] };

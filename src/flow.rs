@@ -1,8 +1,8 @@
-use constraints::{Constraint, VarPath};
-use datalog::*;
-use points_to::{PointsTo, VarRef, VarSet};
-use regs::ARGS;
-use var::Var;
+use crate::constraints::{Constraint, VarPath};
+use crate::datalog::*;
+use crate::points_to::{PointsTo, VarRef, VarSet};
+use crate::regs::ARGS;
+use crate::var::Var;
 
 fn off_plus(base: &mut Option<u64>, off: Option<u64>) {
     match off {

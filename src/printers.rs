@@ -1,12 +1,12 @@
-use constraints::{Constraint, VarPath};
-use datalog::*;
-use interned_string::InternedString;
-use load::Loc;
-use points_to::VarRef;
-use regs::Reg;
+use crate::constraints::{Constraint, VarPath};
+use crate::datalog::*;
+use crate::interned_string::InternedString;
+use crate::load::Loc;
+use crate::points_to::VarRef;
+use crate::regs::Reg;
 use std::fmt::{Display, Formatter, Result};
-use var::Var;
-use {Config, LocType};
+use crate::var::Var;
+use crate::{Config, LocType};
 pub struct CB<'a, T: Display + 'a>(pub &'a Vec<T>);
 
 pub fn fmt_vec<T: Display>(f: &mut Formatter, v: &[T]) -> Result {
@@ -155,10 +155,10 @@ impl Display for Loc {
     fn fmt(&self, f: &mut Formatter) -> Result {
         write!(f, "0x{:x}", self.addr)?;
         match self.stack {
-            ::load::Stack::Return(ref loc) => {
+            crate::load::Stack::Return(ref loc) => {
                 write!(f, "+{}", loc)?;
             }
-            ::load::Stack::EmptyStack => {
+            crate::load::Stack::EmptyStack => {
                 write!(f, "{{}}")?;
             }
             _ => (),

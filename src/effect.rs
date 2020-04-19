@@ -1,5 +1,5 @@
-use datalog::*;
-use load::Loc;
+use crate::datalog::*;
+use crate::load::Loc;
 use std::collections::BTreeSet;
 
 #[derive(Debug, Clone, Eq, Ord, Hash, PartialOrd, PartialEq, Default)]

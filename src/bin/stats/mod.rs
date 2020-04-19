@@ -2,7 +2,7 @@ extern crate marduk;
 
 use self::marduk::Config;
 use super::ALIAS_MODES;
-use measurement::Measurement;
+use crate::measurement::Measurement;
 use std::collections::BTreeMap;
 use std::f64::EPSILON;
 

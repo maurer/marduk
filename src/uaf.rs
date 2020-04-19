@@ -1,9 +1,9 @@
-use datalog::*;
-use var::Var;
+use crate::datalog::*;
+use crate::var::Var;
 
 pub fn reads_vars(i: &UafReadsVarsIn) -> Vec<UafReadsVarsOut> {
     //TODO this is not well modularized
-    ::constraints::generation::extract_var_use(i.bil, i.loc, i.base)
+    crate::constraints::generation::extract_var_use(i.bil, i.loc, i.base)
         .into_iter()
         .map(|v| UafReadsVarsOut { v })
         .collect()
