@@ -38,5 +38,12 @@ git = "https://github.com/maurer/mycroft.git"
 [dependencies.mycroft-macros]
 git = "https://github.com/maurer/mycroft.git"
 
+[dev-dependencies]
+criterion = "0.3"
+
 [profile.release]
 debug = true
+
+[[bench]]
+name = "load_lift"
+harness = false

@@ -81,6 +81,13 @@ impl Config {
         undef_hack: false,
     };
 
+    /// Default config to just load
+    pub const LOAD_ONLY: Self = Config {
+        loc_type: LocType::Addr,
+        load_only: true,
+        undef_hack: false,
+    };
+
     /// Whether the configuration implies flow sensitivity
     pub fn uses_flow(self) -> bool {
         !self.load_only
